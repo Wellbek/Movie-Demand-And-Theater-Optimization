@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fill the Right Seats · Proposal</title>
+<style>
+:root{--bg:#141414;--bg2:#1c1c1c;--line:#2e2e2e;--text:#fff;--text2:#e0e0e0;--muted:#a3a3a3;--red:#e50914;--green:#46d369;--amber:#f5b301;--blue:#54b9ff;
+  --font:"Helvetica Neue",Helvetica,Arial,"Segoe UI",Roboto,sans-serif;color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:var(--font)}
+.deck{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+.slide{position:absolute;width:1280px;height:720px;background:var(--bg);padding:56px 72px;display:none;flex-direction:column;transform-origin:center;overflow:hidden}
+.slide.on{display:flex}
+.slide::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 90% 0%,rgba(229,9,20,.18),transparent 55%);pointer-events:none}
+.slide > *{position:relative}
+.kick{font-size:14px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--red)}
+h1{font-size:76px;line-height:1;margin:18px 0 20px;font-weight:900;letter-spacing:-.035em}
+h2{font-size:44px;line-height:1.05;margin:12px 0 26px;font-weight:900;letter-spacing:-.025em;max-width:24ch}
+p,li{font-size:21px;line-height:1.45;color:var(--text2)}
+.small{font-size:16px;color:var(--muted)}
+.cols{display:grid;gap:22px}
+.c2{grid-template-columns:1fr 1fr}.c3{grid-template-columns:repeat(3,1fr)}.c4{grid-template-columns:repeat(4,1fr)}
+.box{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:20px 22px}
+.box h3{margin:0 0 8px;font-size:22px}
+.box p,.box li{font-size:17px;margin:0}
+.box ul{margin:0;padding-left:20px}
+.box li+li{margin-top:6px}
+.box.rec{border:2px solid var(--green)}
+.tag{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px;margin-bottom:10px}
+.t-g{background:rgba(70,211,105,.15);color:var(--green)}.t-r{background:rgba(229,9,20,.2);color:#ff6b72}.t-a{background:rgba(245,179,1,.15);color:var(--amber)}.t-n{background:#333;color:#ddd}.t-b{background:rgba(84,185,255,.15);color:var(--blue)}
+.big{font-size:96px;font-weight:900;letter-spacing:-.04em;line-height:1;color:var(--green)}
+.num{font-size:44px;font-weight:900;letter-spacing:-.03em;line-height:1.05}
+table{border-collapse:collapse;width:100%;font-size:17px}
+th{text-align:left;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:9px 10px;white-space:nowrap;border-bottom:1px solid #262626;color:var(--text2);vertical-align:top}
+.flow{display:flex;align-items:stretch;gap:12px}
+.flow .box{flex:1}
+.arrow{align-self:center;color:var(--muted);font-size:28px}
+.foot{position:absolute;left:72px;right:140px;bottom:26px;display:flex;justify-content:space-between;font-size:13px;color:#666}
+a{color:#fff}
+.cta{display:inline-block;background:#fff;color:#000;font-weight:800;padding:12px 26px;border-radius:4px;text-decoration:none;font-size:19px}
+.decision{border-left:6px solid var(--red);background:var(--bg2);padding:22px 28px;border-radius:0 10px 10px 0}
+.math{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;line-height:1.85;background:#0f0f0f;border:1px solid var(--line);border-radius:10px;padding:16px 20px;color:#fff}
+.math i{font-family:var(--font);font-style:normal;color:var(--muted);font-size:14px;margin-left:10px}
+.decision p{font-size:26px;color:#fff;margin:0}
+svg text{font-family:var(--font)}
+.progress{position:fixed;left:0;bottom:0;height:4px;background:var(--red);transition:width .3s;z-index:5}
+.navbtns{position:fixed;right:18px;bottom:14px;display:flex;gap:8px;z-index:5}
+.navbtns button{background:rgba(255,255,255,.12);border:0;color:#fff;width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer}
+.navbtns button:hover{background:rgba(255,255,255,.25)}
+.count{display:none}
+@media print{
+  html,body{height:auto;background:#141414}
+  .deck{position:static;display:block}
+  .slide{display:flex !important;position:relative;transform:none !important;page-break-after:always;margin:0}
+  .progress,.navbtns,.count{display:none}
+  @page{size:1280px 720px;margin:0}
+}
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+<!-- 1 -->
+<section class="slide">
+  <div class="kick">Proposal · weekly showtime planning</div>
+  <h1>Fill the right seats.</h1>
+  <p style="max-width:44ch;font-size:25px">A decision-support tool that helps your programming manager decide which film plays in which hall, and when, using the purchase records you already have.</p>
+  <div style="margin-top:auto" class="decision"><p>Today we ask for one decision: approve a <b>4-week data audit and offline replay study</b> at one venue. Not production adoption.</p></div>
+  <div class="foot"><span>IE437 Assignment 1 · fictional operator · all figures from fictional data</span><span class="pg"></span></div>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <div class="kick">The problem</div>
+  <h2>Every week, someone decides 105 screen-slots per venue by hand.</h2>
+  <div class="cols c3">
+    <div class="box"><span class="tag t-n">Who</span><h3>The programming manager</h3><p>Chooses film, hall and time for next week's schedule before it is published, within distributor show commitments.</p></div>
+    <div class="box"><span class="tag t-r">Why it matters</span><h3>Seats are perishable</h3><p>A popular film in a small hall turns people away. A weak film in a big hall leaves seats empty. Both are lost for good.</p></div>
+    <div class="box"><span class="tag t-g">Expected value</span><h3>More admissions, same assets</h3><p>Same films, halls and staff; only the arrangement changes. The size of the gain is not yet known for your venues; measuring it is the point of the study.</p></div>
+  </div>
+  <p class="small" style="margin-top:26px">Scope of the first step: one venue, one week at a time, film slate and show limits given. Film booking, pricing, and multi-venue planning come later.</p>
+  <div class="foot"><span>Problem, users, value</span><span class="pg"></span></div>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <div class="kick">Your data</div>
+  <h2>Purchase records tell us a lot, but not everything a schedule needs.</h2>
+  <div class="cols c2">
+    <div class="box"><span class="tag t-g">We can see</span><ul>
+      <li>Tickets per screening, by film, weekday/weekend and time of day</li>
+      <li>Group sizes (families buy in 3s and 4s)</li>
+      <li>Repeat buyers and which films share an audience</li></ul></div>
+    <div class="box"><span class="tag t-r">We cannot see</span><ul>
+      <li><b>Halls and seat counts:</b> no room field, so sell-outs are invisible</li>
+      <li><b>Empty screenings:</b> zero purchases leave no row</li>
+      <li><b>Untried options:</b> only films at times someone already chose</li>
+      <li>Runtimes, prices, contract terms, purchase time</li></ul></div>
+  </div>
+  <p class="small" style="margin-top:24px">In our fictional test data: 81 of 420 screenings sold out (true demand unknown), 3 had zero sales, and 50% of film-time combinations were never tried.</p>
+  <div class="foot"><span>Available information</span><span class="pg"></span></div>
+</section>
+
+<!-- 4 -->
+<section class="slide">
+  <div class="kick">Assumptions and open questions</div>
+  <h2>What we assumed, and what only you can confirm.</h2>
+  <table>
+    <tr><th>Working assumption</th><th>Why</th><th>Question for you</th></tr>
+    <tr><td>Each venue is planned on its own</td><td>Keeps the first step checkable</td><td>How many customers use more than one venue?</td></tr>
+    <tr><td>Film slate and min/max shows are given</td><td>Film booking is a separate decision</td><td>Who sets show commitments, and how firm are they?</td></tr>
+    <tr><td>Fixed time slots; runtime + cleaning must fit</td><td>Makes the plan an exact assignment</td><td>What is your real slot grid and cleaning time?</td></tr>
+    <tr><td>Goal is admissions</td><td>No price or cost data</td><td>Do you manage to admissions, revenue or margin?</td></tr>
+    <tr><td>Similar films do not steal each other's audience</td><td>Keeps the optimizer exact</td><td>To be tested with shared-audience data</td></tr>
+    <tr><td>The schedule is fixed for the week</td><td>Published before sales start</td><td>When is it published, and how often changed?</td></tr>
+  </table>
+  <div class="foot"><span>Assumptions and unresolved questions</span><span class="pg"></span></div>
+</section>
+
+<!-- 5 -->
+<section class="slide">
+  <div class="kick">Options considered</div>
+  <h2>Four ways to help. We recommend the second.</h2>
+  <div class="cols c4">
+    <div class="box"><span class="tag t-n">A</span><h3>Rule of thumb</h3><p>Shows in proportion to last week's sales, biggest film in the biggest hall. Simple, but blind to time-of-day fit.</p><p class="small" style="margin-top:10px">Used as our baseline.</p></div>
+    <div class="box rec"><span class="tag t-g">B · recommended</span><h3>Estimate + optimize</h3><p>Estimate demand per film and time slot, then compute the best arrangement under your rules. Exact, explainable, runs offline.</p></div>
+    <div class="box"><span class="tag t-a">C · later</span><h3>Audience overlap</h3><p>Also model films stealing each other's audience. Needs evidence first; loses the exactness guarantee.</p></div>
+    <div class="box"><span class="tag t-r">D · not now</span><h3>Self-learning policy</h3><p>Adjusts the schedule from live sales. Needs purchase timestamps and live testing; too early.</p></div>
+  </div>
+  <p class="small" style="margin-top:22px">Rejected as the main deliverable: an audience dashboard alone (informs, but does not decide). Later add-on: scoring social-media and review comments as positive/negative and weighting them by comment count, to guess demand for new releases that have no sales yet.</p>
+  <div class="foot"><span>Alternatives and recommendation</span><span class="pg"></span></div>
+</section>
+
+<!-- 6 -->
+<section class="slide">
+  <div class="kick">How it works</div>
+  <h2>From records to a schedule your manager can defend.</h2>
+  <div class="flow">
+    <div class="box"><span class="tag t-n">Input</span><h3>Records</h3><p>Purchase rows, plus the screening log with hall and seats (requested).</p></div><div class="arrow">&rarr;</div>
+    <div class="box"><span class="tag t-b">Step 1</span><h3>Demand</h3><p>Expected tickets per film, time slot and day type. Little data leans on the overall pattern; sell-outs count as "at least full".</p></div><div class="arrow">&rarr;</div>
+    <div class="box"><span class="tag t-b">Step 2</span><h3>Best plan</h3><p>The arrangement with the most expected tickets that respects every rule: show limits, one film per hall, runtimes.</p></div><div class="arrow">&rarr;</div>
+    <div class="box"><span class="tag t-g">Output</span><h3>Plan + reasons</h3><p>Schedule, comparison to the baseline, and why each film sits where it does.</p></div>
+  </div>
+  <div class="box" style="margin-top:22px"><p><b>The manager stays in charge:</b> reviews, edits, approves. The tool never publishes on its own.</p></div>
+  <div class="foot"><span>Inputs, processing, outputs, workflow</span><span class="pg"></span></div>
+</section>
+
+
+<!-- optimization -->
+<section class="slide">
+  <div class="kick">The optimization, precisely</div>
+  <h2 style="margin-bottom:18px">An integer program, solved exactly as a network flow.</h2>
+  <div class="cols" style="grid-template-columns:400px 1fr;gap:20px;align-items:start">
+    <div>
+      <div class="math">maximize &Sigma; v(f,h,d,s) &middot; x(f,h,d,s)<br>subject to<br>
+      &nbsp;&Sigma;<sub>f</sub> x &le; 1 <i>one film per hall and time</i><br>
+      &nbsp;min<sub>f</sub> &le; &Sigma; x &le; max<sub>f</sub> <i>show limits</i><br>
+      &nbsp;&Sigma;<sub>h</sub> x &le; 1 <i>never two halls at once</i><br>
+      &nbsp;x = 0 if runtime + cleaning &gt; slot <i>fit</i><br>
+      &nbsp;x &isin; {0,1}<br>
+      v = E[min(demand, seats)] <i>expected tickets</i></div>
+      <p class="small" style="margin-top:12px;font-size:15px"><b style="color:#fff">Why this method.</b> About 7<sup>105</sup> &asymp; 10<sup>88</sup> possible weeks, so trying all is impossible. The rules are nested capacity limits, which makes the problem a min-cost flow: its best solution is automatically whole-numbered and found exactly in milliseconds. Unlike a greedy rule, the flow can move a film out of one slot when its limited shows are worth more elsewhere.</p>
+    </div>
+    <div><svg viewBox="0 0 900 410" width="100%" role="img" aria-label="The schedule as a flow network: source, films, film-at-a-time, hall-at-a-time, sink" style="max-width:900px;display:block;font-family:Helvetica Neue,Helvetica,Arial,sans-serif">
+  <defs><marker id="fgA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#777"/></marker>
+  <marker id="fgG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#46d369"/></marker></defs>
+  <!-- edges: grey = possible, green = used in the optimal plan -->
+  <g stroke="#555" stroke-width="1.2" fill="none" marker-end="url(#fgA)">
+    <path d="M58 200 L118 77"/><path d="M58 205 L118 187"/><path d="M58 210 L118 297"/>
+    <path d="M240 77 L318 45"/><path d="M240 77 L318 95"/><path d="M240 187 L318 155"/><path d="M240 187 L318 205"/><path d="M240 297 L318 265"/><path d="M240 297 L318 315"/>
+    <path d="M470 45 L578 65"/><path d="M470 45 L578 125"/><path d="M470 155 L578 125"/>
+    <path d="M470 95 L578 295"/><path d="M470 205 L578 235"/><path d="M470 205 L578 295"/><path d="M470 265 L578 65"/><path d="M470 265 L578 125"/><path d="M470 315 L578 235"/>
+    <path d="M730 65 L848 200"/><path d="M730 125 L848 203"/><path d="M730 235 L848 207"/><path d="M730 295 L848 210"/>
+  </g>
+  <g stroke="#46d369" stroke-width="3" fill="none" marker-end="url(#fgG)">
+    <path d="M470 155 L578 65"/><path d="M470 45 L578 125"/><path d="M470 95 L578 235"/><path d="M470 315 L578 295"/>
+  </g>
+  <!-- edge value labels -->
+  <text x="486" y="178" fill="#46d369" font-size="13" font-weight="700">130 in Hall 1</text>
+  <text x="486" y="40" fill="#999" font-size="12">78 in Hall 1 / 75 in Hall 2</text>
+  <!-- nodes -->
+  <circle cx="40" cy="205" r="18" fill="#2a2a2a" stroke="#888"/><text x="40" y="210" fill="#fff" font-size="14" font-weight="800" text-anchor="middle">S</text>
+  <circle cx="866" cy="205" r="18" fill="#2a2a2a" stroke="#888"/><text x="866" y="210" fill="#fff" font-size="14" font-weight="800" text-anchor="middle">T</text>
+  <g font-size="12" font-weight="800" fill="#fff">
+    <rect x="120" y="60" width="120" height="34" rx="5" fill="hsl(4 62% 32%)"/><text x="180" y="81" text-anchor="middle">ORBITFALL</text>
+    <rect x="120" y="170" width="120" height="34" rx="5" fill="hsl(38 62% 32%)"/><text x="180" y="191" text-anchor="middle">PAPER LANTERNS</text>
+    <rect x="120" y="280" width="120" height="34" rx="5" fill="hsl(200 62% 32%)"/><text x="180" y="301" text-anchor="middle">NEON TIDE</text>
+  </g>
+  <g font-size="11" fill="#e0e0e0">
+    <rect x="320" y="31" width="150" height="28" rx="4" fill="#232323" stroke="hsl(4 62% 45%)"/><text x="395" y="49" text-anchor="middle">ORBITFALL · Sat 10:00</text>
+    <rect x="320" y="81" width="150" height="28" rx="4" fill="#232323" stroke="hsl(4 62% 45%)"/><text x="395" y="99" text-anchor="middle">ORBITFALL · Sat 19:00</text>
+    <rect x="320" y="141" width="150" height="28" rx="4" fill="#232323" stroke="hsl(38 62% 45%)"/><text x="395" y="159" text-anchor="middle">PAPER L. · Sat 10:00</text>
+    <rect x="320" y="191" width="150" height="28" rx="4" fill="#232323" stroke="hsl(38 62% 45%)"/><text x="395" y="209" text-anchor="middle">PAPER L. · Sat 19:00</text>
+    <rect x="320" y="251" width="150" height="28" rx="4" fill="#232323" stroke="hsl(200 62% 45%)"/><text x="395" y="269" text-anchor="middle">NEON TIDE · Sat 10:00</text>
+    <rect x="320" y="301" width="150" height="28" rx="4" fill="#232323" stroke="hsl(200 62% 45%)"/><text x="395" y="319" text-anchor="middle">NEON TIDE · Sat 19:00</text>
+    <rect x="580" y="51" width="150" height="28" rx="4" fill="#232323" stroke="#777"/><text x="655" y="69" text-anchor="middle">Hall 1 (220) · Sat 10:00</text>
+    <rect x="580" y="111" width="150" height="28" rx="4" fill="#232323" stroke="#777"/><text x="655" y="129" text-anchor="middle">Hall 2 (120) · Sat 10:00</text>
+    <rect x="580" y="221" width="150" height="28" rx="4" fill="#232323" stroke="#777"/><text x="655" y="239" text-anchor="middle">Hall 1 (220) · Sat 19:00</text>
+    <rect x="580" y="281" width="150" height="28" rx="4" fill="#232323" stroke="#777"/><text x="655" y="299" text-anchor="middle">Hall 2 (120) · Sat 19:00</text>
+  </g>
+  <!-- column captions -->
+  <g font-size="12" fill="#a3a3a3" text-anchor="middle">
+    <text x="40" y="360" font-weight="700" fill="#fff">source</text><text x="40" y="378">supplies shows</text>
+    <text x="180" y="360" font-weight="700" fill="#fff">film</text><text x="180" y="378">min ≤ shows ≤ max</text>
+    <text x="395" y="360" font-weight="700" fill="#fff">film at a time</text><text x="395" y="378">capacity 1: never in two halls</text>
+    <text x="655" y="360" font-weight="700" fill="#fff">hall at a time</text><text x="655" y="378">capacity 1: one film per hall</text>
+    <text x="866" y="360" font-weight="700" fill="#fff">sink</text>
+    <text x="524" y="400" fill="#46d369">edge value = expected tickets; green = chosen</text>
+  </g>
+</svg>
+<p class="small" style="margin-top:6px">One unit of flow = one screening. Example from the demo, Saturday: the family film earns 130 in Hall 1 at 10:00, the blockbuster only 78, so the flow sends the blockbuster to Hall 2 in the morning and Hall 1 in the evening.</p></div>
+  </div>
+  <div class="foot"><span>Optimization strategy: formulation, graph, rationale</span><span class="pg"></span></div>
+</section>
+
+<!-- converge -->
+<section class="slide">
+  <div class="kick">Watching it converge</div>
+  <h2 style="margin-bottom:16px">Prices on shows steer the plan to the proven optimum.</h2>
+  <div class="cols" style="grid-template-columns:1fr 430px;gap:28px;align-items:start">
+    <div><svg viewBox="0 0 700 380" width="700" role="img" aria-label="Upper and lower bounds converging"><line x1="64" x2="686" y1="339.8807231740682" y2="339.8807231740682" stroke="#2a2a2a"/><text x="56" y="344.8807231740682" text-anchor="end" fill="#a3a3a3" font-size="14">6,600</text><line x1="64" x2="686" y1="280.546770079615" y2="280.546770079615" stroke="#2a2a2a"/><text x="56" y="285.546770079615" text-anchor="end" fill="#a3a3a3" font-size="14">6,700</text><line x1="64" x2="686" y1="221.21281698516177" y2="221.21281698516177" stroke="#2a2a2a"/><text x="56" y="226.21281698516177" text-anchor="end" fill="#a3a3a3" font-size="14">6,800</text><line x1="64" x2="686" y1="161.8788638907086" y2="161.8788638907086" stroke="#2a2a2a"/><text x="56" y="166.8788638907086" text-anchor="end" fill="#a3a3a3" font-size="14">6,900</text><line x1="64" x2="686" y1="102.54491079625542" y2="102.54491079625542" stroke="#2a2a2a"/><text x="56" y="107.54491079625542" text-anchor="end" fill="#a3a3a3" font-size="14">7,000</text><line x1="64" x2="686" y1="43.210957701802215" y2="43.210957701802215" stroke="#2a2a2a"/><text x="56" y="48.210957701802215" text-anchor="end" fill="#a3a3a3" font-size="14">7,100</text><text x="64" y="360" text-anchor="middle" fill="#a3a3a3" font-size="14">0</text><text x="232.1081081081081" y="360" text-anchor="middle" fill="#a3a3a3" font-size="14">20</text><text x="400.2162162162162" y="360" text-anchor="middle" fill="#a3a3a3" font-size="14">40</text><text x="568.3243243243244" y="360" text-anchor="middle" fill="#a3a3a3" font-size="14">60</text><text x="375" y="378" text-anchor="middle" fill="#a3a3a3" font-size="14">iteration</text><line x1="64" x2="686" y1="199.83278956571115" y2="199.83278956571115" stroke="#fff" stroke-dasharray="6 5" stroke-opacity=".6"/><text x="686" y="221.83278956571115" text-anchor="end" fill="#fff" font-size="14">exact optimum 6,836</text><polyline fill="none" stroke="#ff6b72" stroke-width="3" points="64,100.00000000000009 72.4054054054054,100.00000000000009 80.8108108108108,100.00000000000009 89.21621621621622,100.00000000000009 97.62162162162161,159.6494234621925 106.02702702702703,190.6847485477607 114.43243243243244,190.6847485477607 122.83783783783784,190.6847485477607 131.24324324324323,194.12399845771083 139.64864864864865,194.12399845771083 148.05405405405406,195.02994512580275 156.45945945945945,195.02994512580275 164.86486486486487,195.02994512580275 173.27027027027026,195.46082190459822 181.67567567567568,195.46082190459822 190.0810810810811,198.10764225920346 198.48648648648648,198.10764225920346 206.8918918918919,198.10764225920346 215.2972972972973,198.10764225920346 223.7027027027027,198.10764225920346 232.1081081081081,198.10764225920346 240.51351351351352,198.5633591005984 248.9189189189189,198.5633591005984 257.3243243243243,198.5633591005984 265.72972972972974,198.5633591005984 274.1351351351351,198.59041017981627 282.5405405405405,198.59041017981627 290.94594594594594,198.61978318545874 299.35135135135135,198.61978318545874 307.7567567567568,198.63424229212688 316.1621621621622,198.63424229212688 324.56756756756755,199.0508499765669 332.97297297297297,199.0508499765669 341.3783783783784,199.0508499765669 349.7837837837838,199.0508499765669 358.18918918918916,199.0508499765669 366.5945945945946,199.0508499765669 375,199.0508499765669 383.4054054054054,199.0508499765669 391.81081081081084,199.0508499765669 400.2162162162162,199.0508499765669 408.6216216216216,199.22255981524958 417.02702702702703,199.22255981524958 425.43243243243245,199.35918599587154 433.8378378378378,199.35918599587154 442.2432432432432,199.35918599587154 450.64864864864865,199.35918599587154 459.05405405405406,199.4521696577221 467.4594594594595,199.4521696577221 475.86486486486484,199.47702931334427 484.27027027027026,199.47702931334427 492.6756756756757,199.47702931334427 501.0810810810811,199.47702931334427 509.4864864864865,199.47702931334427 517.8918918918919,199.47702931334427 526.2972972972973,199.47702931334427 534.7027027027027,199.47702931334427 543.1081081081081,199.51920237271332 551.5135135135135,199.51920237271332 559.918918918919,199.51920237271332 568.3243243243244,199.51920237271332 576.7297297297297,199.51920237271332 585.1351351351351,199.58646822017204 593.5405405405405,199.58646822017204 601.9459459459459,199.58646822017204 610.3513513513514,199.58646822017204 618.7567567567568,199.6714644628714 627.1621621621622,199.6714644628714 635.5675675675676,199.6714644628714 643.972972972973,199.6714644628714 652.3783783783783,199.6714644628714 660.7837837837837,199.6714644628714 669.1891891891892,199.7364114413655 677.5945945945946,199.7364114413655 686,199.78583864111053"/><polyline fill="none" stroke="#46d369" stroke-width="3" points="64,316.26641876221873 72.4054054054054,280.7367199994023 80.8108108108108,278.40289790337164 89.21621621621622,217.16658111967453 97.62162162162161,208.56343998702238 106.02702702702703,208.56343998702238 114.43243243243244,200.9058448179419 122.83783783783784,200.9058448179419 131.24324324324323,200.9058448179419 139.64864864864865,200.9058448179419 148.05405405405406,200.9058448179419 156.45945945945945,200.9058448179419 164.86486486486487,200.9058448179419 173.27027027027026,200.0586075043571 181.67567567567568,200.0586075043571 190.0810810810811,200.0586075043571 198.48648648648648,200.0586075043571 206.8918918918919,200.0586075043571 215.2972972972973,200.0586075043571 223.7027027027027,200.0586075043571 232.1081081081081,200.0586075043571 240.51351351351352,200.0586075043571 248.9189189189189,200.0586075043571 257.3243243243243,200.0586075043571 265.72972972972974,200.0586075043571 274.1351351351351,200.0586075043571 282.5405405405405,200.0586075043571 290.94594594594594,200.0586075043571 299.35135135135135,200.0586075043571 307.7567567567568,200.0586075043571 316.1621621621622,200.0586075043571 324.56756756756755,200.0586075043571 332.97297297297297,200.0586075043571 341.3783783783784,200.0586075043571 349.7837837837838,200.0586075043571 358.18918918918916,200.0586075043571 366.5945945945946,200.0586075043571 375,200.0586075043571 383.4054054054054,200.0586075043571 391.81081081081084,200.0586075043571 400.2162162162162,200.0586075043571 408.6216216216216,200.0586075043571 417.02702702702703,200.0586075043571 425.43243243243245,200.0586075043571 433.8378378378378,200.0586075043571 442.2432432432432,200.0586075043571 450.64864864864865,200.0586075043571 459.05405405405406,200.0586075043571 467.4594594594595,200.0586075043571 475.86486486486484,200.0586075043571 484.27027027027026,200.0586075043571 492.6756756756757,200.0586075043571 501.0810810810811,200.0586075043571 509.4864864864865,200.0586075043571 517.8918918918919,200.0586075043571 526.2972972972973,200.0586075043571 534.7027027027027,200.0586075043571 543.1081081081081,200.0586075043571 551.5135135135135,200.0586075043571 559.918918918919,200.0586075043571 568.3243243243244,200.0586075043571 576.7297297297297,200.0586075043571 585.1351351351351,200.0586075043571 593.5405405405405,200.0586075043571 601.9459459459459,200.0586075043571 610.3513513513514,200.0586075043571 618.7567567567568,200.0586075043571 627.1621621621622,200.0586075043571 635.5675675675676,200.0586075043571 643.972972972973,200.0586075043571 652.3783783783783,200.0586075043571 660.7837837837837,200.0586075043571 669.1891891891892,200.0586075043571 677.5945945945946,200.0586075043571 686,200.0586075043571"/><text x="88.8108108108108" y="92.00000000000009" fill="#ff6b72" font-size="15" font-weight="700">upper bound (dual)</text><text x="88.8108108108108" y="336.26641876221873" fill="#46d369" font-size="15" font-weight="700">best real schedule</text></svg></div>
+    <div>
+      <ol style="margin:0;padding-left:22px">
+        <li style="font-size:17px">Give every film a <b>price per show</b> (start at 0).</li>
+        <li style="font-size:17px">Plan each time slot on its own for tickets minus prices: an <b style="color:#ff6b72">upper bound</b> no schedule can beat.</li>
+        <li style="font-size:17px">Repair it into a valid week: a <b style="color:#46d369">real schedule</b>.</li>
+        <li style="font-size:17px">Raise prices of films over their limit, lower those under, repeat.</li></ol>
+      <p style="font-size:17px;margin-top:12px">After 74 rounds the gap is 0.5 tickets: the plan is proven best, matching the exact network-flow answer (6,836).</p>
+      <div class="box" style="margin-top:10px"><p><b>Bonus for the manager:</b> the final prices are shadow prices. Allowing one more PAPER LANTERNS show (cap 28) would add about 25 expected tickets; allowing one more NEON TIDE show (cap 28) would add about 8 expected tickets. That tells you which distributor limits cost you most.</p></div>
+    </div>
+  </div>
+  <div class="foot"><span>Optimization sequence: Lagrangian relaxation with subgradient steps (live in the demo)</span><span class="pg"></span></div>
+</section>
+
+<!-- baseline -->
+<section class="slide">
+  <div class="kick">The comparison point</div>
+  <h2>How the rule of thumb builds its week.</h2>
+  <div class="cols c2" style="align-items:start">
+    <div class="box"><ol style="margin:0;padding-left:22px">
+      <li><b>Score</b> each film by its tickets in the last history week.</li>
+      <li><b>Quota</b> = open screen-slots &times; share of all scores, clipped to min-max, adjusted to sum to the open slots.</li>
+      <li><b>Fill</b> 19:00, 22:00, 16:00, 13:00, 10:00; biggest hall first; all days.</li>
+      <li><b>Pick</b> the top-scoring film with quota left that fits and is not already on at that time.</li></ol>
+      <p class="small" style="margin-top:14px">Sensible and common in spirit, but blind to time-of-day demand. It is our proposed reference; your real practice is unknown and would replace it in the trial.</p></div>
+    <div><table style="font-size:16px"><tr><th>Film</th><th>Last week</th><th>Share</th><th>105 &times; share</th><th>Limits</th><th>Shows</th></tr><tr><td>ORBITFALL</td><td>2,800</td><td>38%</td><td>40.0</td><td>14-35</td><td><b>35</b></td></tr><tr><td>NEON TIDE</td><td>1,538</td><td>21%</td><td>21.9</td><td>7-28</td><td><b>26</b></td></tr><tr><td>PAPER LANTERNS</td><td>1,908</td><td>26%</td><td>27.2</td><td>10-28</td><td><b>28</b></td></tr><tr><td>GIGGLE SQUAD</td><td>494</td><td>7%</td><td>7.0</td><td>5-21</td><td><b>7</b></td></tr><tr><td>THE LEDGER</td><td>303</td><td>4%</td><td>4.3</td><td>3-14</td><td><b>4</b></td></tr><tr><td>QUIET HARBOR</td><td>316</td><td>4%</td><td>4.5</td><td>3-14</td><td><b>5</b></td></tr></table>
+      <p class="small" style="margin-top:12px">Rounded quotas are clipped to the limits (ORBITFALL 40 &rarr; 35); leftover slots go to the top-scoring films still below their maximum. Scored with the same expected tickets as the optimizer: 8,091 vs 8,636.</p></div>
+  </div>
+  <div class="foot"><span>Baseline computation</span><span class="pg"></span></div>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+  <div class="kick">Demonstration · fictional venue</div>
+  <h2>Same films, same halls: +545 more expected tickets in one week.</h2>
+  <div class="cols c2" style="align-items:start">
+    <div>
+      <div class="big">+545</div>
+      <p style="margin:6px 0 18px">expected tickets vs the rule of thumb (+6.7%), 8,636 vs 8,091</p>
+      <table>
+        <tr><th></th><th>Rule of thumb</th><th>Optimized</th></tr>
+        <tr><td>Turned away (expected)</td><td>2,222</td><td><b>1,491</b></td></tr>
+        <tr><td>Empty seats (expected)</td><td>5,909</td><td><b>5,364</b></td></tr>
+        <tr><td>Rules broken</td><td>0</td><td><b>0</b></td></tr>
+      </table>
+    </div>
+    <div class="box">
+      <span class="tag t-g">Biggest single change · Sat 10:00</span>
+      <table style="font-size:16px"><tr><th>Hall</th><th>Rule of thumb</th><th>Optimized</th></tr><tr><td>Hall 1 (220)</td><td>ORBITFALL · 78</td><td><b>PAPER LANTERNS · 130</b></td></tr><tr><td>Hall 2 (120)</td><td>QUIET HARBOR · 18</td><td><b>ORBITFALL · 75</b></td></tr><tr><td>Hall 3 (60)</td><td>THE LEDGER · 7</td><td><b>NEON TIDE · 45</b></td></tr><tr><td>Total</td><td>103</td><td><b style="color:#46d369">249 (+146)</b></td></tr></table>
+      <p class="small" style="margin-top:12px">The rule put the blockbuster in Hall 1 in the morning; the optimizer gives that hall to the family film and moves the blockbuster to a smaller one. It also accepts small losses elsewhere (Mon 19:00: -36) because the week is planned as a whole.</p>
+      <p style="margin-top:14px"><a class="cta" href="demo.html">Open the live demo</a></p>
+    </div>
+  </div>
+  <div class="foot"><span>Representative demonstration and baseline comparison · model estimates on fictional data</span><span class="pg"></span></div>
+</section>
+
+<!-- 8 -->
+<section class="slide">
+  <div class="kick">What we learned</div>
+  <h2>The model must not over-trust options nobody has tried.</h2>
+  <div class="cols c2" style="align-items:center">
+    <div><svg viewBox="0 0 560 360" width="560" role="img" aria-label="Promised versus simulated tickets by caution level"><line x1="62" x2="544" y1="316" y2="316" stroke="#2a2a2a"/><text x="54" y="321" text-anchor="end" fill="#a3a3a3" font-size="13">6,500</text><line x1="62" x2="544" y1="264" y2="264" stroke="#2a2a2a"/><text x="54" y="269" text-anchor="end" fill="#a3a3a3" font-size="13">7,000</text><line x1="62" x2="544" y1="212" y2="212" stroke="#2a2a2a"/><text x="54" y="217" text-anchor="end" fill="#a3a3a3" font-size="13">7,500</text><line x1="62" x2="544" y1="160" y2="160" stroke="#2a2a2a"/><text x="54" y="165" text-anchor="end" fill="#a3a3a3" font-size="13">8,000</text><line x1="62" x2="544" y1="107.99999999999999" y2="107.99999999999999" stroke="#2a2a2a"/><text x="54" y="112.99999999999999" text-anchor="end" fill="#a3a3a3" font-size="13">8,500</text><line x1="62" x2="544" y1="56" y2="56" stroke="#2a2a2a"/><text x="54" y="61" text-anchor="end" fill="#a3a3a3" font-size="13">9,000</text><text x="62" y="336" text-anchor="middle" fill="#a3a3a3" font-size="13">0</text><text x="142.33333333333331" y="336" text-anchor="middle" fill="#a3a3a3" font-size="13">0.5</text><text x="222.66666666666666" y="336" text-anchor="middle" fill="#a3a3a3" font-size="13">1</text><text x="303" y="336" text-anchor="middle" fill="#a3a3a3" font-size="13">1.5</text><text x="383.3333333333333" y="336" text-anchor="middle" fill="#a3a3a3" font-size="13">2</text><text x="463.6666666666667" y="336" text-anchor="middle" fill="#a3a3a3" font-size="13">2.5</text><text x="544" y="336" text-anchor="middle" fill="#a3a3a3" font-size="13">3</text><text x="303" y="356" text-anchor="middle" fill="#a3a3a3" font-size="13">caution level</text><line x1="62" x2="544" y1="296.3812792010519" y2="296.3812792010519" stroke="#a3a3a3" stroke-dasharray="6 5"/><text x="544" y="314.3812792010519" text-anchor="end" fill="#a3a3a3" font-size="13">rule of thumb, simulated</text><polyline fill="none" stroke="#46d369" stroke-width="3" points="62,59.66746661393642 142.33333333333331,63.28313266333878 222.66666666666666,64.89109171512236 303,72.24982142693284 383.3333333333333,93.8845216402454 463.6666666666667,96.78111376648386 544,117.69287548626401"/><circle cx="62" cy="59.66746661393642" r="4.5" fill="#46d369"/><circle cx="142.33333333333331" cy="63.28313266333878" r="4.5" fill="#46d369"/><circle cx="222.66666666666666" cy="64.89109171512236" r="4.5" fill="#46d369"/><circle cx="303" cy="72.24982142693284" r="4.5" fill="#46d369"/><circle cx="383.3333333333333" cy="93.8845216402454" r="4.5" fill="#46d369"/><circle cx="463.6666666666667" cy="96.78111376648386" r="4.5" fill="#46d369"/><circle cx="544" cy="117.69287548626401" r="4.5" fill="#46d369"/><polyline fill="none" stroke="#f5b301" stroke-width="3" points="62,306.3748099303757 142.33333333333331,276.6880368170873 222.66666666666666,265.91453471202374 303,223.60604283219396 383.3333333333333,190.01683107787943 463.6666666666667,190.42003078022324 544,192.28958647831797"/><circle cx="62" cy="306.3748099303757" r="4.5" fill="#f5b301"/><circle cx="142.33333333333331" cy="276.6880368170873" r="4.5" fill="#f5b301"/><circle cx="222.66666666666666" cy="265.91453471202374" r="4.5" fill="#f5b301"/><circle cx="303" cy="223.60604283219396" r="4.5" fill="#f5b301"/><circle cx="383.3333333333333" cy="190.01683107787943" r="4.5" fill="#f5b301"/><circle cx="463.6666666666667" cy="190.42003078022324" r="4.5" fill="#f5b301"/><circle cx="544" cy="192.28958647831797" r="4.5" fill="#f5b301"/><rect x="62" y="8" width="12" height="12" fill="#46d369"/><text x="80" y="19" fill="#e0e0e0" font-size="14">what the model promises</text><rect x="62" y="30" width="12" height="12" fill="#f5b301"/><text x="80" y="41" fill="#e0e0e0" font-size="14">what the simulated cinema sells</text></svg></div>
+    <div>
+      <p>In a simulated cinema where the true demand is known, trusting the model fully promised <b>8,965</b> tickets but really sold <b>6,593</b>, less than the rule of thumb (6,689). The optimizer had chased guesses about film-time combinations never screened.</p>
+      <p>With a caution setting, the plan sold <b>7,711</b> in the same simulation.</p>
+      <p class="small"><span class="tag t-a">simulation</span> This checks the mechanism only. Real effects on your venues are untested; the caution level must be set in the replay study and trial.</p>
+    </div>
+  </div>
+  <div class="foot"><span>What the demonstration established, and what it did not</span><span class="pg"></span></div>
+</section>
+
+<!-- 9 -->
+<section class="slide">
+  <div class="kick">Evaluation plan</div>
+  <h2>Three stages, each with a clear way to stop.</h2>
+  <div class="cols c3">
+    <div class="box"><span class="tag t-b">Stage 0 · data audit</span><p>Receive records and screening log for one venue. Measure sell-outs, empty screenings, coverage.</p><p class="small" style="margin-top:10px"><b>Continue if</b> the screening log exists with halls and seats.<br><b>Stop if</b> it cannot be provided (fall back to demand analytics only).</p></div>
+    <div class="box"><span class="tag t-b">Stage 1 · offline replay</span><p>Rebuild past weeks. Compare tool plans with what was actually screened, on the slots both chose.</p><p class="small" style="margin-top:10px"><b>Continue if</b> estimates beat simple averages on held-out weeks.<br><b>Stop if</b> overlap is too small to judge, or the tool loses.</p></div>
+    <div class="box"><span class="tag t-b">Stage 2 · advisory trial</span><p>Alternate weeks: manager's own plan vs tool-assisted plan. Track admissions per show, sell-outs, overrides.</p><p class="small" style="margin-top:10px"><b>Adopt if</b> tool weeks beat own weeks by the margin agreed beforehand.<br><b>Revise or stop</b> otherwise.</p></div>
+  </div>
+  <p class="small" style="margin-top:22px">Thresholds and trial length are agreed with you before any trial data is collected; they depend on how much admissions vary week to week, which the audit measures.</p>
+  <div class="foot"><span>Real-world evaluation, success and stopping criteria</span><span class="pg"></span></div>
+</section>
+
+<!-- 10 -->
+<section class="slide">
+  <div class="kick">What we need</div>
+  <h2>Information requests and responsibilities.</h2>
+  <table>
+    <tr><th>Request</th><th>Priority</th><th>Why</th><th>If unavailable</th></tr>
+    <tr><td>Screening log: film, hall, date, time</td><td>High</td><td>Reveals empty screenings and sell-outs</td><td>Demand analytics only; no hall assignment</td></tr>
+    <tr><td>Seats per hall</td><td>High</td><td>Detects sell-outs; values big vs small halls</td><td>Operator estimate, flagged</td></tr>
+    <tr><td>Runtimes, slot rules, cleaning time</td><td>High</td><td>Feasible schedules</td><td>Manager-supplied defaults</td></tr>
+    <tr><td>Min/max show commitments</td><td>High</td><td>Hard rules</td><td>Manager enters weekly</td></tr>
+    <tr><td>Purchase time, price per ticket</td><td>Medium</td><td>Booking curves, revenue goal</td><td>Stay with admissions, weekly plan</td></tr>
+  </table>
+  <p class="small" style="margin-top:18px"><b>You:</b> data extracts, one interview with the programming manager, a sponsor. <b>Us:</b> audit report, replay study, go/no-go recommendation.</p>
+  <div class="foot"><span>Information requests, stages, responsibilities</span><span class="pg"></span></div>
+</section>
+
+<!-- 11 -->
+<section class="slide">
+  <div class="kick">Risks and the decision</div>
+  <h2>Honest limits, small first step.</h2>
+  <div class="cols c2">
+    <div class="box"><span class="tag t-r">Limits and risks</span><ul>
+      <li>All results so far are on fictional data</li>
+      <li>Untried combinations stay uncertain until tested</li>
+      <li>No pricing, holidays, film ageing, audience overlap yet</li>
+      <li>Account data must be handled under your privacy rules</li></ul></div>
+    <div class="box"><span class="tag t-g">Later, if the trial succeeds</span><ul>
+      <li>Multi-venue coordination, if customers share venues</li>
+      <li>Mid-week adjustments with purchase timestamps</li>
+      <li>Revenue instead of admissions</li>
+      <li>Social-media and review sentiment (positive/negative &times; comment count) as an early signal for new releases</li></ul></div>
+  </div>
+  <div class="decision" style="margin-top:28px"><p>Decision requested: approve the <b>data audit and offline replay</b> for one venue, with a named data contact and one manager interview.</p></div>
+  <p class="small" style="margin-top:14px">Cost and timeline estimates follow the audit, once data volume and quality are known.</p>
+  <div class="foot"><span>Limitations, risks, next decision</span><span class="pg"></span></div>
+</section>
+
+</div>
+<div class="progress" id="prog"></div>
+<div class="count" id="count"></div>
+<div class="navbtns"><button type="button" id="prev" aria-label="Previous slide">&#8249;</button><button type="button" id="next" aria-label="Next slide">&#8250;</button></div>
+<script>
+(function () {
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var i = Math.max(0, Math.min(slides.length - 1, (parseInt(location.hash.slice(1), 10) || 1) - 1));
+  function fit() {
+    var s = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+    slides.forEach(function (el) { el.style.transform = 'scale(' + s + ')'; });
+  }
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function (el, k) { el.classList.toggle('on', k === i); });
+    document.getElementById('prog').style.width = ((i + 1) / slides.length * 100) + '%';
+    document.getElementById('count').textContent = (i + 1) + ' / ' + slides.length + '  ·  arrow keys to navigate';
+    history.replaceState(null, '', '#' + (i + 1));
+  }
+  document.addEventListener('keydown', function (e) {
+    if (['ArrowRight', 'PageDown', ' '].indexOf(e.key) >= 0) { e.preventDefault(); show(i + 1); }
+    if (['ArrowLeft', 'PageUp'].indexOf(e.key) >= 0) { e.preventDefault(); show(i - 1); }
+  });
+  document.getElementById('next').onclick = function () { show(i + 1); };
+  document.getElementById('prev').onclick = function () { show(i - 1); };
+  slides.forEach(function (el, k) { var pg = el.querySelector('.pg'); if (pg) pg.textContent = k + 1; });
+  window.addEventListener('resize', fit);
+  fit(); show(i);
+})();
+</script>
+</body>
+</html>

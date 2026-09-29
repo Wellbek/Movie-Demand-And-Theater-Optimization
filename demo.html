@@ -1,0 +1,2092 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SLOTWISE · Showtime Planner Demo</title>
+<style>
+:root{
+  --bg:#141414; --bg2:#1b1b1b; --line:#2c2c2c; --line2:#454545;
+  --text:#fff; --text2:#e5e5e5; --muted:#a3a3a3; --dim:#6f6f6f;
+  --red:#e50914; --red2:#b20710; --green:#46d369; --amber:#f5b301;
+  --font:"Helvetica Neue",Helvetica,Arial,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--bg);scroll-behavior:smooth;scroll-padding-top:70px}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid #fff;outline-offset:2px;border-radius:3px}
+.wrap{padding:0 4%}
+section{padding-top:2.6rem}
+h2{font-size:1.5rem;font-weight:800;margin:0 0 .3rem;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0 0 1rem;font-size:.92rem}
+.muted{color:var(--muted)}
+.up{color:var(--green)} .down{color:#ff6b72}
+
+/* nav + hero */
+.nav{position:fixed;inset:0 0 auto 0;height:60px;z-index:40;display:flex;align-items:center;gap:2rem;padding:0 4%;background:linear-gradient(180deg,rgba(0,0,0,.85),rgba(0,0,0,0));transition:background .3s}
+.nav.solid{background:#141414}
+.brand{font-weight:900;font-size:1.6rem;letter-spacing:-.03em;color:var(--red);text-decoration:none;transform:scaleY(1.12);display:inline-block}
+.nav ul{display:flex;gap:1.2rem;list-style:none;margin:0;padding:0;font-size:.88rem}
+.nav ul a{color:var(--text2);text-decoration:none}
+.nav .right{margin-left:auto}
+@media (max-width:760px){.nav ul{display:none}}
+.hero{position:relative;padding:110px 4% 2.4rem;background:radial-gradient(ellipse at 78% 20%,#5c0a0e 0%,#1d0506 45%,#141414 75%)}
+.hero h1{font-size:clamp(2.2rem,5vw,3.8rem);line-height:1.02;margin:0 0 .7rem;font-weight:900;letter-spacing:-.03em;max-width:15ch}
+.hero p{font-size:1.08rem;color:var(--text2);max-width:58ch;margin:0 0 1.4rem}
+.hero-row{display:flex;flex-wrap:wrap;gap:2rem;align-items:flex-end;justify-content:space-between}
+.gain{text-align:right}
+.gain .v{font-size:clamp(2.6rem,6vw,4.4rem);font-weight:900;letter-spacing:-.04em;line-height:1;color:var(--green)}
+.gain .l{color:var(--text2);font-size:.95rem}
+.btns{display:flex;flex-wrap:wrap;gap:.7rem}
+.btn{display:inline-flex;align-items:center;gap:.5rem;border:0;border-radius:4px;padding:.6rem 1.4rem;font-size:1rem;font-weight:700;cursor:pointer;text-decoration:none}
+.btn svg{width:1.2em;height:1.2em}
+.btn.play{background:#fff;color:#000} .btn.play:hover{background:rgba(255,255,255,.75)}
+.btn.info{background:rgba(109,109,110,.7);color:#fff} .btn.info:hover{background:rgba(109,109,110,.45)}
+.btn.red{background:var(--red);color:#fff} .btn.red:hover{background:var(--red2)}
+.btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--text2);font-size:.85rem;padding:.4rem .9rem;font-weight:600}
+.btn.ghost:hover{border-color:#fff;color:#fff}
+.chip{display:inline-block;font-size:.64rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:.14rem .42rem;border-radius:3px;vertical-align:middle;white-space:nowrap}
+.chip.fict{background:#3a3a3a;color:#ddd}
+.chip.calc{background:rgba(70,211,105,.15);color:var(--green)}
+.chip.mock{background:rgba(245,179,1,.15);color:var(--amber)}
+.chip.todo{border:1px dashed var(--line2);color:var(--muted)}
+
+/* theater */
+.stage-head{display:flex;flex-wrap:wrap;align-items:center;gap:1rem;margin-bottom:1rem}
+.clock{font-size:2rem;font-weight:900;letter-spacing:-.02em;min-width:8.5ch}
+.clock small{display:block;font-size:.78rem;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+input[type=range],input[type=checkbox]{accent-color:var(--red)}
+#scrub{flex:1;min-width:200px}
+.theaters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+@media (max-width:1100px){.theaters{grid-template-columns:minmax(0,1fr)}}
+.theater{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:1rem 1.1rem}
+.theater.best{border-color:rgba(70,211,105,.55)}
+.theater h3{margin:0;font-size:1.05rem;display:flex;justify-content:space-between;gap:.5rem;align-items:baseline}
+.theater h3 span{font-size:.8rem;color:var(--muted);font-weight:500}
+.halls{display:flex;gap:.9rem;align-items:flex-end;margin-top:.9rem;flex-wrap:wrap}
+.hall{display:flex;flex-direction:column;gap:.3rem;min-width:0}
+.hall .film{font-size:.72rem;font-weight:800;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:1.1rem;transition:color .3s}
+.hall svg{display:block}
+.hall .cap{font-size:.7rem;color:var(--muted);display:flex;justify-content:space-between;gap:.4rem}
+.hall .away{font-size:.72rem;height:1rem;color:#ff8a90;font-weight:700}
+.seat{fill:#303030;transition:fill .35s}
+.screen{fill:#fff;fill-opacity:.35}
+.totals{display:flex;justify-content:space-between;align-items:baseline;margin-top:.8rem;padding-top:.7rem;border-top:1px solid var(--line)}
+.totals .n{font-size:1.9rem;font-weight:900;letter-spacing:-.02em}
+.totals .s{font-size:.8rem;color:var(--muted);text-align:right}
+.delta{display:flex;align-items:center;justify-content:center;gap:1rem;margin:1rem 0 0;font-size:1rem;flex-wrap:wrap}
+.delta b{font-size:1.4rem}
+.spark{margin-top:.6rem}
+.spark svg{width:100%;height:auto;display:block}
+.spark text{fill:var(--muted);font-size:11px}
+
+/* why cards */
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
+@media (max-width:1000px){.cards{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:1rem 1.1rem}
+.card .k{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.card .big{font-size:1.9rem;font-weight:900;letter-spacing:-.02em;margin:.2rem 0}
+.card p{margin:.3rem 0 0;font-size:.88rem;color:var(--text2)}
+.swap{display:grid;grid-template-columns:4.2rem minmax(0,1fr) 1rem minmax(0,1fr);gap:.2rem .4rem;font-size:.78rem;margin-top:.5rem;align-items:center}
+.swap .h{color:var(--muted)}
+.swap .f{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.swap .ar{color:var(--muted);text-align:center}
+
+/* schedule */
+.seg{display:inline-flex;background:#0f0f0f;border:1px solid var(--line2);border-radius:4px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:.4rem .9rem;font-weight:700;font-size:.85rem;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed=true]{background:#fff;color:#000}
+.sched-head{display:flex;flex-wrap:wrap;gap:.8rem;justify-content:space-between;align-items:center;margin-bottom:.7rem}
+.legend{display:flex;flex-wrap:wrap;gap:.3rem .9rem;font-size:.76rem;color:var(--text2)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:.3rem}
+.sched{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--bg2)}
+table.plan{border-collapse:separate;border-spacing:2px;width:100%;min-width:860px}
+table.plan th{font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:.35rem .3rem;text-align:center}
+table.plan td.l{font-size:.72rem;color:var(--muted);white-space:nowrap;padding:0 .4rem}
+table.plan td.l b{color:#fff;font-size:.85rem}
+table.plan tr.gap td{height:5px}
+.tile{display:block;width:100%;height:30px;border:0;border-radius:3px;cursor:pointer;padding:0 .35rem;text-align:left;font-size:.64rem;font-weight:800;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .2s,transform .12s}
+.tile:hover{transform:scale(1.05)}
+.tile.dim{opacity:.18}
+.tile.now{outline:2px solid #fff;outline-offset:1px}
+.tile.empty{background:#101010;border:1px dashed #333}
+.tile.closed{background:repeating-linear-gradient(45deg,#111,#111 5px,#1c1c1c 5px,#1c1c1c 10px);cursor:default}
+.explain{margin-top:.8rem;background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--red);border-radius:6px;padding:.8rem 1rem;font-size:.86rem;display:none}
+.explain.show{display:block}
+.explain table{border-collapse:collapse;margin-top:.4rem;font-size:.8rem}
+.explain td{padding:.2rem .8rem .2rem 0}
+
+/* how */
+.how{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1rem}
+@media (max-width:1000px){.how{grid-template-columns:minmax(0,1fr)}}
+.steps{margin:.5rem 0 .8rem;padding-left:1.2rem;font-size:.88rem;color:var(--text2)}
+.steps li{margin:.3rem 0}
+.math{font-family:var(--mono);font-size:.8rem;line-height:1.8;background:#0f0f0f;border:1px solid var(--line);border-radius:6px;padding:.7rem .9rem;overflow-x:auto;white-space:nowrap}
+.math span{color:var(--muted);font-family:var(--font);font-size:.74rem;margin-left:.6rem}
+table.bt{border-collapse:collapse;width:100%;font-size:.8rem;margin-bottom:.4rem}
+table.bt th{font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:right;padding:.3rem .4rem;font-weight:700}
+table.bt td{padding:.28rem .4rem;border-top:1px solid var(--line);text-align:right}
+table.bt th:first-child,table.bt td:first-child{text-align:left;font-weight:800}
+/* converge */
+.conv-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:1rem;align-items:flex-start}
+.conv-ctl{display:flex;flex-direction:column;gap:.5rem;min-width:220px}
+.conv-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:1.2rem;margin-top:1rem;align-items:start}
+.conv-grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.2rem;margin-top:1rem}
+@media (max-width:1000px){.conv-grid,.conv-grid2{grid-template-columns:minmax(0,1fr)}}
+.conv-read{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}
+.conv-read div{background:#101010;border-radius:6px;padding:.5rem .7rem}
+.conv-read b{display:block;font-size:1.35rem;font-weight:900}
+.conv-read span{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.prow{display:grid;grid-template-columns:8.5rem minmax(0,1fr) 3.4rem;gap:.5rem;align-items:center;font-size:.76rem;margin-top:.3rem}
+.prow .nm{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .track{position:relative;height:10px;background:#101010;border-radius:5px}
+.prow .track::after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:#555}
+.prow .bar{position:absolute;top:0;bottom:0;border-radius:5px;transition:left .15s,width .15s}
+.prow .num{text-align:right;font-family:var(--mono)}
+.crow{display:grid;grid-template-columns:8.5rem minmax(0,1fr) 6rem;gap:.5rem;align-items:center;font-size:.76rem;margin-top:.35rem}
+.crow .track{position:relative;height:10px;background:#101010;border-radius:5px}
+.crow .ok{position:absolute;top:0;bottom:0;background:rgba(255,255,255,.16);border-radius:5px}
+.crow .dot{position:absolute;top:-3px;width:16px;height:16px;border-radius:50%;margin-left:-8px;transition:left .15s;border:2px solid #fff}
+.crow .num{text-align:right;font-family:var(--mono)}
+.mini{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin-top:.4rem}
+.mini .col{display:grid;grid-template-rows:repeat(15,10px);gap:2px}
+.mini i{display:block;border-radius:2px;background:#101010;transition:background .15s}
+.algo-top{display:flex;flex-wrap:wrap;justify-content:space-between;gap:1rem;align-items:flex-start}
+.algo-body{display:grid;grid-template-columns:330px minmax(0,1fr);gap:1.2rem;margin-top:1rem;align-items:start}
+@media (max-width:1100px){.algo-body{grid-template-columns:minmax(0,1fr)}}
+.algo-read{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.5rem;margin-top:.6rem}
+@media (max-width:800px){.algo-read{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.algo-read div{background:#101010;border-radius:6px;padding:.5rem .7rem}
+.algo-read b{display:block;font-size:1.15rem;font-weight:900}
+.algo-read span{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.algo-move{grid-column:1/-1;font-size:.84rem;color:var(--text2);background:transparent !important;padding:.2rem 0 !important}
+.algo-2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:1rem;align-items:start}
+@media (max-width:1000px){.algo-2{grid-template-columns:minmax(0,1fr)}}
+.bar2{position:absolute;left:0;top:0;bottom:0;border-radius:5px;transition:width .1s}
+/* levers */
+.levers{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:1rem}
+@media (max-width:1000px){.levers{grid-template-columns:minmax(0,1fr)}}
+.field{display:flex;flex-direction:column;gap:.25rem}
+.field label,.lbl{font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem}
+input[type=number]{background:#0f0f0f;border:1px solid var(--line2);border-radius:4px;padding:.45rem .5rem;width:100%}
+input[type=number]:focus{border-color:#fff;outline:none}
+table.films{width:100%;border-collapse:collapse;font-size:.82rem}
+table.films th{font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding:.3rem .4rem;font-weight:700}
+table.films td{padding:.25rem .4rem;border-top:1px solid var(--line)}
+table.films input[type=number]{padding:.25rem .35rem;width:4.4rem}
+table.films td.nm{font-weight:800;white-space:nowrap}
+.actions{display:flex;flex-wrap:wrap;gap:.7rem;align-items:center;margin-top:1rem}
+.alert{border-radius:6px;padding:.9rem 1.1rem;margin-top:1rem;border-left:4px solid var(--red);background:rgba(229,9,20,.12)}
+.alert.warn{border-color:var(--amber);background:rgba(245,179,1,.08)}
+.alert b{display:block;margin-bottom:.2rem}
+.alert .fix{color:var(--muted);font-size:.85rem}
+.stale #results{opacity:.4}
+
+/* cases */
+.cases{display:flex;flex-wrap:wrap;gap:.6rem}
+.case{background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:.55rem .8rem;cursor:pointer;text-align:left;display:flex;gap:.6rem;align-items:center;font-size:.85rem}
+.case:hover{border-color:#fff}
+.case .kind{font-size:.62rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:.12rem .4rem;border-radius:3px}
+.kind.Normal{background:rgba(70,211,105,.15);color:var(--green)}
+.kind.Boundary{background:rgba(84,185,255,.15);color:#54b9ff}
+.kind.Failure{background:rgba(229,9,20,.2);color:#ff6b72}
+.case .ok{font-weight:900;font-size:.72rem;color:var(--green)}
+.case .no{font-weight:900;font-size:.72rem;color:#ff6b72}
+.caseout{margin-top:.8rem;font-size:.86rem;color:var(--text2);min-height:1.3rem}
+
+/* dial + details */
+.dial{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:1rem;align-items:center}
+@media (max-width:1000px){.dial{grid-template-columns:minmax(0,1fr)}}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:11px;font-family:var(--font)}
+details{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:.8rem 1.1rem;margin-top:.8rem}
+details summary{cursor:pointer;font-weight:800}
+details p,details li{font-size:.86rem;color:var(--text2)}
+details ul,details ol{padding-left:1.2rem}
+.legend4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.8rem;margin-top:.8rem}
+@media (max-width:900px){.legend4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.legend4 div{font-size:.82rem;color:var(--text2)}
+.legend4 .chip{margin-bottom:.35rem}
+table.heat{border-collapse:separate;border-spacing:2px;font-size:.74rem;margin-top:.6rem}
+table.heat th{color:var(--muted);font-weight:700;padding:.2rem .4rem;font-size:.68rem}
+table.heat td{text-align:center;padding:.3rem .45rem;border-radius:3px}
+table.heat td.f{text-align:left;font-weight:800;white-space:nowrap}
+table.heat td.un{outline:1px dashed var(--red);outline-offset:-1px}
+.formula{font-family:var(--mono);font-size:.78rem;background:#0f0f0f;border-radius:4px;padding:.15rem .4rem}
+footer{padding:2.5rem 4% 3rem;color:var(--dim);font-size:.78rem;border-top:1px solid #222;margin-top:3rem}
+.toast{position:fixed;left:50%;bottom:1.2rem;transform:translateX(-50%) translateY(30px);opacity:0;visibility:hidden;background:#fff;color:#000;font-weight:700;padding:.6rem 1rem;border-radius:4px;z-index:80;transition:all .25s;font-size:.88rem}
+.toast.show{transform:translateX(-50%);opacity:1;visibility:visible}
+</style>
+</head>
+<body>
+<header class="nav" id="nav">
+  <a class="brand" href="#top">SLOTWISE</a>
+  <ul><li><a href="#watch">Watch the week</a></li><li><a href="#why">Why it's better</a></li><li><a href="#schedule">Schedule</a></li><li><a href="#how">How it works</a></li><li><a href="#levers">Change inputs</a></li><li><a href="#cases">Test cases</a></li><li><a href="#method">Method</a></li></ul>
+  <span class="right chip fict">All data fictional</span>
+</header>
+
+<div class="hero" id="top">
+  <div class="hero-row">
+    <div>
+      <h1>Same films. Same halls. Better week.</h1>
+      <p>A fictional cinema, RIVERSIDE, has 6 films and 3 halls to fill for 12-18 Oct. SLOTWISE estimates demand from 4 weeks of ticket purchases, then finds the arrangement of films, halls and times that sells the most expected tickets.</p>
+      <div class="btns">
+        <button class="btn play" type="button" id="playBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l15 8-15 8z" fill="currentColor"/></svg><span>Play the week</span></button>
+        <a class="btn info" href="#levers">Change inputs</a>
+      </div>
+    </div>
+    <div class="gain" id="heroGain"></div>
+  </div>
+</div>
+
+<main class="wrap" id="main">
+<div id="alerts"></div>
+<div id="results">
+
+<section id="watch">
+  <h2>Watch the week</h2>
+  <p class="sub">Each dot is a seat, filled with the tickets the model expects. Left: a common rule of thumb. Right: the optimized plan.</p>
+  <div class="stage-head">
+    <div class="clock" id="clock"></div>
+    <input type="range" id="scrub" min="0" max="34" value="0" aria-label="Screening time">
+    <button class="btn ghost" type="button" id="endBtn">Jump to week total</button>
+  </div>
+  <div class="theaters">
+    <div class="theater" id="thBase"></div>
+    <div class="theater best" id="thProp"></div>
+  </div>
+  <div class="delta" id="delta"></div>
+  <div class="spark" id="spark"></div>
+</section>
+
+<section id="why">
+  <h2>Why this is an optimization</h2>
+  <p class="sub">Nothing new is added. Only the arrangement changes, and the optimizer checks every arrangement allowed by the rules to find the best one.</p>
+  <div class="cards" id="whyCards"></div>
+</section>
+
+<section id="schedule">
+  <h2>The full schedule</h2>
+  <div class="sched-head">
+    <div class="seg" role="group" aria-label="Plan">
+      <button type="button" data-view="proposed" aria-pressed="true">Optimized</button>
+      <button type="button" data-view="baseline" aria-pressed="false">Rule of thumb</button>
+      <button type="button" data-view="diff" aria-pressed="false">Only changes</button>
+    </div>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div class="sched"><table class="plan" id="planTable"></table></div>
+  <div class="explain" id="explain"></div>
+</section>
+</div>
+
+<section id="how">
+  <h2>How each plan is built</h2>
+  <p class="sub">Both plans use the same films, halls, show limits and demand estimates. They differ only in how they decide.</p>
+  <div class="how">
+    <div class="card">
+      <div class="k">Rule of thumb (baseline)</div>
+      <ol class="steps">
+        <li><b>Score</b> each film by its tickets in the last history week (a film with no history gets the median score).</li>
+        <li><b>Quota</b>: shows = open screen-slots &times; the film's share of all scores, rounded and clipped to its min-max; leftover slots go to the top-scoring films still below their maximum.</li>
+        <li><b>Fill</b> slots in the order 19:00, 22:00, 16:00, 13:00, 10:00, biggest hall first, all 7 days.</li>
+        <li><b>Pick</b> the highest-scoring film that still has quota, fits the slot and is not already on in another hall at that time.</li>
+      </ol>
+      <div style="overflow-x:auto"><table class="bt" id="baseTable"></table></div>
+      <p class="muted" style="font-size:.8rem">It never looks at demand per time slot, so a family film and a late-night blockbuster are treated alike. A reasonable reference, not the operator's known practice.</p>
+    </div>
+    <div class="card">
+      <div class="k">SLOTWISE optimizer</div>
+      <p style="margin:.4rem 0 .5rem">An <b>integer program</b>: choose x = 1 if film f plays in hall h on day d at slot s.</p>
+      <div class="math">
+        maximize &nbsp; &Sigma; v(f,h,d,s) &middot; x(f,h,d,s)<br>
+        subject to<br>
+        &nbsp; &Sigma;<sub>f</sub> x &le; 1 &nbsp;&nbsp;&nbsp;&nbsp; for each hall, day, slot <span>one film per hall</span><br>
+        &nbsp; min<sub>f</sub> &le; &Sigma;<sub>h,d,s</sub> x &le; max<sub>f</sub> &nbsp; for each film <span>show limits</span><br>
+        &nbsp; &Sigma;<sub>h</sub> x &le; 1 &nbsp;&nbsp;&nbsp;&nbsp; for each film, day, slot <span>never two halls at once</span><br>
+        &nbsp; x = 0 if runtime + cleaning &gt; slot length <span>slot fit</span><br>
+        &nbsp; x &isin; {0, 1}<br>
+        where v = E[min(demand, seats)] &nbsp;<span>expected tickets, demand lowered by caution &times; uncertainty</span>
+      </div>
+      <p style="margin:.7rem 0 .3rem"><b>As a graph.</b> Each unit of flow from S to T is one screening. It passes through a film, then "that film at that time" (capacity 1), then "that hall at that time" (capacity 1). Its value is the expected tickets on the last-but-one edge.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1rem" id="algos">
+    <div class="k">Every algorithm the tool runs, step by step</div>
+    <div class="seg" role="group" aria-label="Algorithm" id="algoTabs" style="margin-top:.6rem;flex-wrap:wrap">
+      <button type="button" data-tab="estimate" aria-pressed="false">1 Demand estimate</button>
+      <button type="button" data-tab="greedy" aria-pressed="false">2 Rule of thumb</button>
+      <button type="button" data-tab="flow" aria-pressed="true">3 Optimal plan (flow)</button>
+      <button type="button" data-tab="lagrange" aria-pressed="false">4 Proof &amp; prices</button>
+    </div>
+    <div class="algo-top">
+      <div>
+        <h3 id="algoTitle" style="margin:.9rem 0 .3rem;font-size:1.1rem"></h3>
+        <p id="algoWhat" style="margin:0;font-size:.88rem;color:var(--text2);max-width:70ch"></p>
+      </div>
+      <div class="conv-ctl"><button class="btn play" type="button" id="algoPlay"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l15 8-15 8z" fill="currentColor"/></svg><span>Run the algorithm</span></button><input type="range" id="algoScrub" min="0" max="0" value="0" aria-label="Step"><span class="muted" id="algoStep" style="font-size:.78rem"></span></div>
+    </div>
+    <div class="algo-body">
+      <div class="math" id="algoMath" style="white-space:normal"></div>
+      <div id="algoStage"></div>
+    </div>
+  </div>
+  <div class="cards" style="margin-top:1rem">
+    <div class="card"><div class="k">Why not try everything?</div><p>Each of the 105 screen-slots can hold one of 6 films or stay empty: about 7<sup>105</sup> &asymp; 10<sup>88</sup> arrangements. Checking them one by one is impossible.</p></div>
+    <div class="card"><div class="k">Why a network flow?</div><p>The rules form nested capacity limits, exactly the shape of a flow network. For such problems the best flow is automatically whole-numbered, so the exact best schedule is found in milliseconds (min-cost flow, successive shortest paths).</p></div>
+    <div class="card"><div class="k">Why not a greedy rule?</div><p>Greedy filling commits slot by slot. The flow can reroute: it moves a film out of one slot when its limited shows are worth more elsewhere, which is how it finds trades like the accepted loss above.</p></div>
+  </div>
+</section>
+
+<section id="levers">
+  <h2>Change the inputs</h2>
+  <p class="sub">Edit anything and press Run. Results update and are marked stale until you do.</p>
+  <div class="levers">
+    <div class="card">
+      <div class="fields">
+        <div class="field"><label for="cap0">Hall 1 seats</label><input type="number" id="cap0" min="0" max="1000"></div>
+        <div class="field"><label for="cap1">Hall 2 seats</label><input type="number" id="cap1" min="0" max="1000"></div>
+        <div class="field"><label for="cap2">Hall 3 seats</label><input type="number" id="cap2" min="0" max="1000"></div>
+        <div class="field"><label for="slotLength">Slot length (min)</label><input type="number" id="slotLength" min="60" max="300"></div>
+        <div class="field"><label for="changeover">Cleaning (min)</label><input type="number" id="changeover" min="0" max="90"></div>
+        <div class="field"><label for="seed">Data seed</label><input type="number" id="seed" min="0"></div>
+      </div>
+      <div class="field" style="margin-top:1rem"><span class="lbl">Caution for untried film-time combinations: <b id="kappaV" style="color:#fff"></b></span><input type="range" id="kappa" min="0" max="3" step="0.5"></div>
+      <p class="muted" style="font-size:.78rem;margin:.3rem 0 0">0 = trust the model fully. Higher = a combination never screened before must look clearly better to win a slot.</p>
+    </div>
+    <div class="card"><table class="films" id="filmsTable"></table></div>
+  </div>
+  <div class="actions">
+    <button class="btn red" type="button" id="runBtn">Run</button>
+    <button class="btn ghost" type="button" id="resetBtn">Reset</button>
+    <span class="muted" id="runline" style="font-size:.82rem"></span>
+  </div>
+</section>
+
+<section id="cases">
+  <h2>Test cases</h2>
+  <p class="sub">Each loads its inputs, runs, and checks the expected outcome.</p>
+  <div class="cases" id="caseRow"></div>
+  <div class="caseout" id="caseOut"></div>
+</section>
+
+<section id="dial">
+  <h2>How much to trust combinations nobody has tried</h2>
+  <div class="dial">
+    <p class="sub" style="margin:0">The records only show what the previous programmer chose to screen. For everything else the model extrapolates, and an optimizer is drawn to exactly those guesses. Here the plan is rebuilt for each caution level and scored against the hidden truth of this simulated world <span class="chip mock">mock</span>. In reality the truth is unknown, which is why caution is set by policy and checked in a trial.</p>
+    <div class="card chart" id="sweep"></div>
+  </div>
+</section>
+
+<section id="method">
+  <h2>What is real here</h2>
+  <div class="legend4">
+    <div><span class="chip fict">Fictional</span><br>Purchase rows, schedule log, halls, films, show limits.</div>
+    <div><span class="chip calc">Calculated</span><br>Demand estimates, expected tickets, both plans, constraint checks.</div>
+    <div><span class="chip mock">Mock</span><br>The "hidden truth" used to generate the data and score the caution chart.</div>
+    <div><span class="chip todo">Not built</span><br>Multi-venue, mid-week changes, pricing, holidays, film ageing, audience overlap between films, social-media and review sentiment (positive/negative &times; comment count) as an early signal for new releases, real data.</div>
+  </div>
+  <details>
+    <summary>How the numbers are calculated</summary>
+    <ol>
+      <li><b>Data.</b> 14k fictional purchase rows (the six assignment fields) are summed per screening. A schedule log (an information request) adds the hall, so sold-out screenings and screenings with zero sales become visible.</li>
+      <li><b>Demand.</b> For each film, time slot and weekday/weekend: <span class="formula">estimate = (k &middot; pattern + sum of tickets) / (k + screenings)</span>. The pattern is film &times; time &times; day type; with few screenings it dominates, with many the data does. Sold-out screenings count as "at least capacity".</li>
+      <li><b>Value of a slot.</b> <span class="formula">expected tickets = E[min(demand, seats)]</span>, with demand lowered by the caution level &times; its uncertainty.</li>
+      <li><b>Plan and baseline.</b> See "How each plan is built" above.</li>
+    </ol>
+  </details>
+  <details>
+    <summary>Demand estimates</summary>
+    <div style="overflow-x:auto"><table class="heat" id="heat"></table></div>
+    <p class="muted">Expected tickets per screening if seats were unlimited. Dashed = never screened in the history (model guess only).</p>
+  </details>
+  <details>
+    <summary>Data at a glance</summary>
+    <p id="dataStats"></p>
+    <div class="actions"><button class="btn ghost" type="button" id="dlRows">Download purchase rows (CSV)</button><button class="btn ghost" type="button" id="dlPlan">Download both plans (CSV)</button></div>
+  </details>
+  <details>
+    <summary>Reproduce a result</summary>
+    <p>The same inputs always give the same plans; the run fingerprint (next to the Run button) proves it. The data is regenerated from the seed. The file works offline, with no server or installation.</p>
+  </details>
+</section>
+</main>
+<footer>SLOTWISE is a fictional prototype for IE437 Assignment 1. All films, venues, accounts and numbers are invented.</footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+/*
+ * SLOTWISE engine - weekly showtime planning for one venue.
+ *
+ * Everything in this file is deterministic for a given input object.
+ * It runs unchanged in the browser (inlined into demo.html) and in Node (tests).
+ *
+ * Pipeline:
+ *   validate inputs -> generate fictional history (seeded) -> parse extra rows
+ *   -> aggregate purchases to screenings -> estimate demand (Gamma-Poisson with
+ *   sold-out imputation) -> value every (film, cell) as E[min(D, capacity)]
+ *   -> proposed plan (exact min-cost flow) and baseline plan (rule of thumb)
+ *   -> score both on the same estimate and on the hidden fictional truth.
+ */
+(function (root) {
+  'use strict';
+
+  // ---------------------------------------------------------------------------
+  // Fixed calendar of the fictional venue
+  // ---------------------------------------------------------------------------
+  const VENUE = 'RIVERSIDE';
+  const SLOTS = ['10:00', '13:00', '16:00', '19:00', '22:00'];
+  const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const DAY_TYPES = ['Weekday', 'Weekend'];
+  const dayTypeOfWeekday = (w) => (w >= 4 ? 1 : 0); // Mon-Thu weekday, Fri-Sun weekend
+  const HISTORY_START = '2026-09-14'; // a Monday
+  const HISTORY_WEEKS = 4;
+  const PLAN_START = '2026-10-12'; // the Monday after the history window
+  const M_BIG = 1e9; // weight that turns a preference into a hard requirement in the flow
+
+  // ---------------------------------------------------------------------------
+  // Fictional world. TRUTH is the hidden generator: it is used only to create
+  // the fictional purchase history and for the clearly labeled simulation check.
+  // The estimator and the optimizer never read it.
+  // ---------------------------------------------------------------------------
+  const FILMS = [
+    { id: 'ORBITFALL', genre: 'Sci-fi blockbuster', segment: 'action', runtime: 148, min: 14, max: 35, inHistory: true, active: true, hue: 4 },
+    { id: 'NEON TIDE', genre: 'Action thriller', segment: 'action', runtime: 118, min: 7, max: 28, inHistory: true, active: true, hue: 200 },
+    { id: 'PAPER LANTERNS', genre: 'Family animation', segment: 'family', runtime: 96, min: 10, max: 28, inHistory: true, active: true, hue: 38 },
+    { id: 'GIGGLE SQUAD', genre: 'Comedy', segment: 'casual', runtime: 102, min: 5, max: 21, inHistory: true, active: true, hue: 120 },
+    { id: 'THE LEDGER', genre: 'Mystery drama', segment: 'drama', runtime: 124, min: 3, max: 14, inHistory: true, active: true, hue: 265 },
+    { id: 'QUIET HARBOR', genre: 'Arthouse drama', segment: 'drama', runtime: 110, min: 3, max: 14, inHistory: true, active: true, hue: 170 },
+    { id: 'GLASS MERIDIAN', genre: 'Sci-fi thriller (new release)', segment: 'action', runtime: 131, min: 5, max: 21, inHistory: false, active: false, hue: 320 },
+  ];
+
+  const TRUTH = {
+    dispersion: 4, // negative-binomial shape: screening-to-screening noise
+    weekendMultiplier: 1.7,
+    films: {
+      'ORBITFALL': { base: 95, profile: [0.35, 0.6, 0.9, 1.5, 1.15] },
+      'NEON TIDE': { base: 58, profile: [0.3, 0.6, 0.85, 1.4, 1.2] },
+      'PAPER LANTERNS': { base: 72, profile: [0.95, 1.3, 1.15, 0.45, 0.08] },
+      'GIGGLE SQUAD': { base: 45, profile: [0.25, 0.6, 0.8, 1.3, 1.0] },
+      'THE LEDGER': { base: 34, profile: [0.08, 0.55, 0.7, 1.3, 0.9] },
+      'QUIET HARBOR': { base: 26, profile: [0.3, 0.8, 0.9, 1.45, 0.6] },
+      'GLASS MERIDIAN': { base: 70, profile: [0.3, 0.55, 0.85, 1.45, 1.25] },
+    },
+    // How the fictional incumbent programmed the venue during the history window
+    // (rows = rooms H1..H3, columns = slots). Only rooms are shuffled day to day,
+    // so film-by-daypart coverage is decided by the incumbent - blind spot 3.
+    incumbent: [
+      ['PAPER LANTERNS', 'PAPER LANTERNS', 'ORBITFALL', 'ORBITFALL', 'ORBITFALL'],
+      ['GIGGLE SQUAD', 'NEON TIDE', 'PAPER LANTERNS', 'NEON TIDE', 'NEON TIDE'],
+      ['THE LEDGER', 'QUIET HARBOR', 'THE LEDGER', 'GIGGLE SQUAD', 'QUIET HARBOR'],
+    ],
+    groupSize: { family: [0.15, 0.35, 0.2, 0.3], other: [0.38, 0.47, 0.1, 0.05] },
+    segments: { action: 700, family: 400, drama: 300, casual: 900 },
+  };
+
+  const HISTORY_ROOMS = [
+    { id: 'H1', name: 'Hall 1', capacity: 220 },
+    { id: 'H2', name: 'Hall 2', capacity: 120 },
+    { id: 'H3', name: 'Hall 3', capacity: 60 },
+  ];
+
+  function defaultInputs() {
+    return {
+      seed: 437,
+      priorStrength: 3, // pseudo-screenings the prior is worth
+      kappa: 2, // pessimism: value cells at mean - kappa * sd
+      slotLength: 180,
+      changeover: 20,
+      useScheduleLog: true,
+      rooms: HISTORY_ROOMS.map((r) => ({ ...r })),
+      films: FILMS.map((f) => ({ id: f.id, genre: f.genre, runtime: f.runtime, min: f.min, max: f.max, active: f.active })),
+      extraRows: '',
+      locks: {}, // "d|s|r" -> film id
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Deterministic randomness
+  // ---------------------------------------------------------------------------
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function normalSample(rng) {
+    const u = Math.max(rng(), 1e-12);
+    const v = rng();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function gammaSample(rng, shape) {
+    if (shape < 1) return gammaSample(rng, shape + 1) * Math.pow(Math.max(rng(), 1e-12), 1 / shape);
+    const d = shape - 1 / 3;
+    const c = 1 / Math.sqrt(9 * d);
+    for (;;) {
+      let x, v;
+      do {
+        x = normalSample(rng);
+        v = 1 + c * x;
+      } while (v <= 0);
+      v = v * v * v;
+      const u = rng();
+      if (u < 1 - 0.0331 * x * x * x * x) return d * v;
+      if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+    }
+  }
+  function poissonSample(rng, lambda) {
+    // Sum of Poisson(<=30) chunks keeps Knuth's method numerically safe.
+    let total = 0;
+    let rest = lambda;
+    while (rest > 0) {
+      const l = Math.min(rest, 30);
+      rest -= l;
+      const L = Math.exp(-l);
+      let k = 0;
+      let p = 1;
+      do {
+        k++;
+        p *= rng();
+      } while (p > L);
+      total += k - 1;
+    }
+    return total;
+  }
+  function pickIndex(rng, probs) {
+    const u = rng();
+    let acc = 0;
+    for (let i = 0; i < probs.length; i++) {
+      acc += probs[i];
+      if (u < acc) return i;
+    }
+    return probs.length - 1;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dates
+  // ---------------------------------------------------------------------------
+  function parseDate(s) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!m) return null;
+    const t = Date.UTC(+m[1], +m[2] - 1, +m[3]);
+    const d = new Date(t);
+    if (d.getUTCFullYear() !== +m[1] || d.getUTCMonth() !== +m[2] - 1 || d.getUTCDate() !== +m[3]) return null;
+    return t;
+  }
+  function addDays(iso, n) {
+    const d = new Date(parseDate(iso) + n * 86400000);
+    return d.toISOString().slice(0, 10);
+  }
+  function weekdayIndex(iso) {
+    return (new Date(parseDate(iso)).getUTCDay() + 6) % 7; // Mon = 0
+  }
+
+  // ---------------------------------------------------------------------------
+  // Fictional history generation (seeded)
+  // ---------------------------------------------------------------------------
+  function generateWorld(seed) {
+    const rng = mulberry32(seed);
+    const rows = [];
+    const scheduleLog = [];
+    const segmentOf = {};
+    FILMS.forEach((f) => (segmentOf[f.id] = f.segment));
+    const segNames = Object.keys(TRUTH.segments);
+    const segOffset = {};
+    let off = 0;
+    segNames.forEach((s) => {
+      segOffset[s] = off;
+      off += TRUTH.segments[s];
+    });
+    const accountTag = (seg, i) => 'AC-' + String(segOffset[seg] + i + 1).padStart(4, '0');
+
+    for (let day = 0; day < HISTORY_WEEKS * 7; day++) {
+      const date = addDays(HISTORY_START, day);
+      const dt = dayTypeOfWeekday(weekdayIndex(date));
+      // Daily room shuffles of the incumbent pattern (film-by-slot coverage is kept).
+      const grid = TRUTH.incumbent.map((r) => r.slice());
+      for (let s = 0; s < SLOTS.length; s++) {
+        if (rng() < 0.3) [grid[1][s], grid[2][s]] = [grid[2][s], grid[1][s]];
+        if (rng() < 0.15) [grid[0][s], grid[1][s]] = [grid[1][s], grid[0][s]];
+      }
+      for (let r = 0; r < HISTORY_ROOMS.length; r++) {
+        for (let s = 0; s < SLOTS.length; s++) {
+          const film = grid[r][s];
+          const tf = TRUTH.films[film];
+          const mean = tf.base * tf.profile[s] * (dt ? TRUTH.weekendMultiplier : 1);
+          const lambda = gammaSample(rng, TRUTH.dispersion) * (mean / TRUTH.dispersion);
+          const demand = poissonSample(rng, lambda);
+          const cap = HISTORY_ROOMS[r].capacity;
+          let sold = Math.min(demand, cap);
+          scheduleLog.push({ play_day: date, curtain_time: SLOTS[s], room: HISTORY_ROOMS[r].id, capacity: cap, title_tag: film });
+          const seg = segmentOf[film];
+          const gs = seg === 'family' ? TRUTH.groupSize.family : TRUTH.groupSize.other;
+          while (sold > 0) {
+            const g = Math.min(pickIndex(rng, gs) + 1, sold);
+            sold -= g;
+            const accSeg = rng() < 0.7 ? seg : segNames[Math.floor(rng() * segNames.length)];
+            const n = TRUTH.segments[accSeg];
+            const idx = Math.floor(n * Math.pow(rng(), 2)); // a few loyal heavy buyers
+            rows.push({ title_tag: film, venue_tag: VENUE, play_day: date, curtain_time: SLOTS[s], account_tag: accountTag(accSeg, idx), passes_bought: g });
+          }
+        }
+      }
+    }
+    return { rows, scheduleLog };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Validation
+  // ---------------------------------------------------------------------------
+  const isInt = (v) => Number.isInteger(v);
+
+  function validateInputs(inp) {
+    const errors = [];
+    if (!isInt(inp.seed) || inp.seed < 0 || inp.seed > 2 ** 31) errors.push({ field: 'seed', msg: 'Seed must be a whole number between 0 and 2147483648.' });
+    if (!(inp.priorStrength > 0 && inp.priorStrength <= 100)) errors.push({ field: 'priorStrength', msg: 'Prior strength must be greater than 0 and at most 100 pseudo-screenings.' });
+    if (!(inp.kappa >= 0 && inp.kappa <= 3)) errors.push({ field: 'kappa', msg: 'Pessimism must be between 0 and 3 standard deviations.' });
+    if (!isInt(inp.slotLength) || inp.slotLength < 60 || inp.slotLength > 300) errors.push({ field: 'slotLength', msg: 'Slot length must be a whole number of minutes between 60 and 300.' });
+    if (!isInt(inp.changeover) || inp.changeover < 0 || inp.changeover > 90) errors.push({ field: 'changeover', msg: 'Changeover must be a whole number of minutes between 0 and 90.' });
+    inp.rooms.forEach((r, i) => {
+      if (!isInt(r.capacity) || r.capacity < 0 || r.capacity > 1000) errors.push({ field: 'room' + i, msg: r.name + ': capacity must be a whole number from 0 (closed) to 1000 seats.' });
+    });
+    inp.films.forEach((f, i) => {
+      if (!f.active) return;
+      if (!isInt(f.runtime) || f.runtime < 30 || f.runtime > 300) errors.push({ field: 'film' + i, msg: f.id + ': runtime must be a whole number of minutes between 30 and 300.' });
+      if (!isInt(f.min) || f.min < 0) errors.push({ field: 'film' + i, msg: f.id + ': minimum shows must be a whole number of at least 0.' });
+      if (!isInt(f.max) || f.max < 0) errors.push({ field: 'film' + i, msg: f.id + ': maximum shows must be a whole number of at least 0.' });
+      if (isInt(f.min) && isInt(f.max) && f.min > f.max) errors.push({ field: 'film' + i, msg: f.id + ': minimum shows (' + f.min + ') exceed maximum shows (' + f.max + ').' });
+    });
+    if (!inp.films.some((f) => f.active)) errors.push({ field: 'films', msg: 'The slate is empty: activate at least one film.' });
+    return errors;
+  }
+
+  const HEADER = ['title_tag', 'venue_tag', 'play_day', 'curtain_time', 'account_tag', 'passes_bought'];
+
+  function parseExtraRows(text) {
+    const rows = [];
+    const errors = [];
+    const lines = String(text || '').split(/\r?\n/);
+    lines.forEach((raw, i) => {
+      const line = raw.trim();
+      if (!line || line.startsWith('#')) return;
+      const parts = line.split(',').map((p) => p.trim());
+      if (parts.join(',').toLowerCase() === HEADER.join(',')) return;
+      const where = 'Extra row ' + (i + 1);
+      if (parts.length !== 6) {
+        errors.push({ line: i + 1, msg: where + ': expected 6 comma-separated fields (' + HEADER.join(', ') + '), found ' + parts.length + '.' });
+        return;
+      }
+      const [title, venue, day, time, account, passes] = parts;
+      const bad = [];
+      if (!title) bad.push('title_tag is empty');
+      if (!venue) bad.push('venue_tag is empty');
+      if (parseDate(day) === null) bad.push('play_day "' + day + '" is not a valid YYYY-MM-DD date');
+      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) bad.push('curtain_time "' + time + '" is not HH:mm (24-hour)');
+      else if (!SLOTS.includes(time)) bad.push('curtain_time ' + time + ' is not on the venue slot grid (' + SLOTS.join(', ') + ')');
+      if (!account) bad.push('account_tag is empty');
+      if (!/^\d+$/.test(passes) || +passes < 1) bad.push('passes_bought "' + passes + '" must be a positive whole number of tickets');
+      if (bad.length) {
+        errors.push({ line: i + 1, msg: where + ': ' + bad.join('; ') + '.' });
+        return;
+      }
+      rows.push({ title_tag: title, venue_tag: venue, play_day: day, curtain_time: time, account_tag: account, passes_bought: +passes, extra: true });
+    });
+    return { rows, errors };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Probability helpers
+  // ---------------------------------------------------------------------------
+  function logGamma(x) {
+    // Lanczos approximation, adequate for x > 0.
+    const g = 7;
+    const c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+    if (x < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x);
+    x -= 1;
+    let a = c[0];
+    const t = x + g + 0.5;
+    for (let i = 1; i < g + 2; i++) a += c[i] / (x + i);
+    return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+  }
+
+  // E[min(D, cap)] for D ~ NegBin(shape, mean): Poisson(lambda) with lambda ~ Gamma(shape, mean/shape).
+  function expectedSales(shape, mean, cap) {
+    if (cap <= 0 || mean <= 0) return 0;
+    const p = shape / (shape + mean); // success probability
+    const lq = Math.log(1 - p);
+    let lp = shape * Math.log(p); // log P(D = 0)
+    let cdf = 0;
+    let e = 0;
+    for (let d = 0; d < cap; d++) {
+      cdf += Math.exp(lp);
+      e += 1 - Math.min(cdf, 1);
+      lp += Math.log((d + shape) / (d + 1)) + lq;
+    }
+    return e;
+  }
+
+  // E[D | D >= c] for D ~ NegBin(shape, mu): the imputed demand behind a sold-out screening.
+  function negBinTailMean(shape, mu, c) {
+    if (c <= 0) return mu;
+    const p = shape / (shape + mu);
+    const lq = Math.log(1 - p);
+    let lp = shape * Math.log(p);
+    let below = 0;
+    let belowMean = 0;
+    for (let d = 0; d < c; d++) {
+      const pd = Math.exp(lp);
+      below += pd;
+      belowMean += d * pd;
+      lp += Math.log((d + shape) / (d + 1)) + lq;
+    }
+    const tail = 1 - below;
+    if (tail < 1e-9) return c + 0.5; // mu far below capacity: demand barely exceeded it
+    return Math.max(c, (mu - belowMean) / tail);
+  }
+
+  // Predictive shape for tickets at one screening: screening noise NegBin(r, lambda)
+  // mixed over the uncertain lambda (mean m, variance v), matched by moments.
+  function predictiveShape(rHat, m, v) {
+    const excess = (m * m + v) / rHat + v; // Var[D] - E[D]
+    return excess > 1e-9 ? (m * m) / excess : 1e6;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Aggregation and demand estimation
+  // ---------------------------------------------------------------------------
+  function aggregate(rows, scheduleLog, useLog, filmIds) {
+    const byKey = new Map();
+    rows.forEach((r) => {
+      const k = r.title_tag + '|' + r.play_day + '|' + r.curtain_time;
+      byKey.set(k, (byKey.get(k) || 0) + r.passes_bought);
+    });
+    const screenings = [];
+    const warnings = [];
+    const known = new Set(filmIds);
+    if (useLog) {
+      const logged = new Set();
+      scheduleLog.forEach((e) => {
+        const k = e.title_tag + '|' + e.play_day + '|' + e.curtain_time;
+        logged.add(k);
+        const tickets = byKey.get(k) || 0;
+        screenings.push({ film: e.title_tag, day: e.play_day, time: e.curtain_time, room: e.room, capacity: e.capacity, tickets, censored: tickets >= e.capacity, zero: tickets === 0 });
+      });
+      let unlogged = 0;
+      byKey.forEach((tickets, k) => {
+        if (logged.has(k)) return;
+        const [film, day, time] = k.split('|');
+        unlogged++;
+        screenings.push({ film, day, time, room: null, capacity: null, tickets, censored: false, zero: false });
+      });
+      if (unlogged) warnings.push(unlogged + ' screening(s) in the purchase rows are missing from the schedule log; their room and capacity are unknown, so a sell-out cannot be detected for them.');
+    } else {
+      byKey.forEach((tickets, k) => {
+        const [film, day, time] = k.split('|');
+        screenings.push({ film, day, time, room: null, capacity: null, tickets, censored: false, zero: false });
+      });
+    }
+    const out = screenings.filter((s) => known.has(s.film));
+    const foreign = new Set(screenings.filter((s) => !known.has(s.film)).map((s) => s.film));
+    if (foreign.size) warnings.push('Rows for titles not on next week\'s slate were ignored: ' + [...foreign].join(', ') + '.');
+    out.forEach((s) => {
+      s.slot = SLOTS.indexOf(s.time);
+      s.dayType = dayTypeOfWeekday(weekdayIndex(s.day));
+    });
+    return { screenings: out, warnings };
+  }
+
+  function estimateDemand(screenings, filmIds, k, trace) {
+    const F = filmIds.length;
+    const S = SLOTS.length;
+    const T = DAY_TYPES.length;
+    const fIndex = new Map(filmIds.map((f, i) => [f, i]));
+    const obs = screenings.map((s) => ({ f: fIndex.get(s.film), s: s.slot, t: s.dayType, y: s.tickets, cens: s.censored, cap: s.capacity }));
+    const cellKey = (f, s, t) => (f * S + s) * T + t;
+    const nCells = F * S * T;
+    const overall = obs.length ? obs.reduce((a, o) => a + o.y, 0) / obs.length : 1;
+    let mu = new Array(nCells).fill(overall);
+    let a = new Array(F).fill(1);
+    let b = new Array(S).fill(1);
+    let g = new Array(T).fill(1);
+    let yImp = obs.map((o) => o.y);
+    let rHat = 5; // screening-level overdispersion (negative-binomial shape), re-estimated below
+    const filmObs = new Array(F).fill(0);
+    obs.forEach((o) => filmObs[o.f]++);
+    const cellObs = Array.from({ length: nCells }, () => []);
+    obs.forEach((o, i) => cellObs[cellKey(o.f, o.s, o.t)].push(i));
+    const priorOf = (c) => {
+      const f = Math.floor(c / (S * T)), s = Math.floor(c / T) % S, t = c % T;
+      return Math.max(a[f] * b[s] * g[t], 0.05);
+    };
+
+    for (let iter = 0; iter < 12; iter++) {
+      // E-step: sold-out screenings contribute E[D | D >= capacity] instead of the capped count.
+      yImp = obs.map((o) => (o.cens ? negBinTailMean(rHat, mu[cellKey(o.f, o.s, o.t)], o.cap) : o.y));
+      // Prior structure: multiplicative film x slot x day-type model (Poisson IPF = Poisson GLM fit).
+      for (let r = 0; r < 25; r++) {
+        const num = new Array(F).fill(0), den = new Array(F).fill(0);
+        obs.forEach((o, i) => { num[o.f] += yImp[i]; den[o.f] += b[o.s] * g[o.t]; });
+        for (let f = 0; f < F; f++) if (den[f] > 0) a[f] = num[f] / den[f];
+        const nb = new Array(S).fill(0), db = new Array(S).fill(0);
+        obs.forEach((o, i) => { nb[o.s] += yImp[i]; db[o.s] += a[o.f] * g[o.t]; });
+        for (let s = 0; s < S; s++) if (db[s] > 0) b[s] = nb[s] / db[s];
+        const ng = new Array(T).fill(0), dg = new Array(T).fill(0);
+        obs.forEach((o, i) => { ng[o.t] += yImp[i]; dg[o.t] += a[o.f] * b[o.s]; });
+        for (let t = 0; t < T; t++) if (dg[t] > 0) g[t] = ng[t] / dg[t];
+        // identifiability: slot index averages 1 over observed slots, weekday index is 1
+        const seenS = b.filter((_, s) => db[s] > 0);
+        const mb = seenS.length ? seenS.reduce((x, y) => x + y, 0) / seenS.length : 1;
+        b = b.map((v) => v / mb);
+        a = a.map((v) => v * mb);
+        const g0 = g[0] || 1;
+        g = g.map((v) => v / g0);
+        a = a.map((v) => v * g0);
+      }
+      // Films with no screenings at all borrow the median film factor.
+      const seenA = a.filter((_, f) => filmObs[f] > 0).sort((x, y) => x - y);
+      const medA = seenA.length ? seenA[Math.floor((seenA.length - 1) / 2)] : overall;
+      for (let f = 0; f < F; f++) if (!filmObs[f]) a[f] = medA;
+      // Posterior mean per cell: (k * prior mean + sum y) / (k + n).
+      mu = mu.map((_, c) => {
+        const idx = cellObs[c];
+        const sy = idx.reduce((acc, i) => acc + yImp[i], 0);
+        return (k * priorOf(c) + sy) / (k + idx.length);
+      });
+      // Overdispersion by moments from uncensored screenings: Var = mean + mean^2 / r.
+      let num = 0, den = 0;
+      cellObs.forEach((idx) => {
+        const ys = idx.filter((i) => !obs[i].cens).map((i) => obs[i].y);
+        if (ys.length < 3) return;
+        const m = ys.reduce((x, y) => x + y, 0) / ys.length;
+        const v = ys.reduce((x, y) => x + (y - m) * (y - m), 0) / (ys.length - 1);
+        num += (ys.length - 1) * m * m;
+        den += (ys.length - 1) * (v - m);
+      });
+      rHat = den > 0 ? Math.min(Math.max(num / den, 0.5), 200) : 200;
+      if (trace) {
+        const prev = trace.length ? trace[trace.length - 1].mu : null;
+        trace.push({ iter, rHat, mu: mu.slice(), imputed: obs.reduce((acc, o, i) => acc + (o.cens ? yImp[i] - o.y : 0), 0), delta: prev ? Math.max(...mu.map((m, c) => Math.abs(m - prev[c]))) : null });
+      }
+    }
+
+    const cells = [];
+    for (let f = 0; f < F; f++) for (let s = 0; s < S; s++) for (let t = 0; t < T; t++) {
+      const c = cellKey(f, s, t);
+      const idx = cellObs[c];
+      const nObs = idx.length;
+      const sy = idx.reduce((acc, i) => acc + yImp[i], 0);
+      const raw = idx.reduce((acc, i) => acc + obs[i].y, 0);
+      const prior = priorOf(c);
+      const mean = (k * prior + sy) / (k + nObs);
+      // Quasi-Poisson Gamma posterior: a screening is noisier than Poisson by phi = 1 + mean / r,
+      // so both prior pseudo-counts and data are deflated by phi. The mean is unchanged.
+      const phi = 1 + mean / rHat;
+      const alpha = (k * prior + sy) / phi;
+      const beta = (k + nObs) / phi;
+      cells.push({
+        film: filmIds[f], slot: s, dayType: t, n: nObs, nCensored: idx.filter((i) => obs[i].cens).length,
+        rawMean: nObs ? raw / nObs : null, priorMean: prior, priorWeight: k / (k + nObs),
+        alpha, beta, phi, mean, sd: Math.sqrt(alpha) / beta,
+      });
+    }
+    return { cells, factors: { film: Object.fromEntries(filmIds.map((f, i) => [f, a[i]])), slot: b, dayType: g, rHat, filmHasData: Object.fromEntries(filmIds.map((f, i) => [f, filmObs[i] > 0])) } };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Min-cost flow (successive shortest paths with Bellman-Ford; unit augmentations)
+  // ---------------------------------------------------------------------------
+  function makeGraph(n) {
+    return { n, head: new Array(n).fill(-1), to: [], cap: [], cost: [], next: [] };
+  }
+  function addEdge(G, u, v, cap, cost) {
+    const id = G.to.length;
+    G.to.push(v, u); G.cap.push(cap, 0); G.cost.push(cost, -cost);
+    G.next.push(G.head[u], G.head[v]);
+    G.head[u] = id; G.head[v] = id + 1;
+    return id;
+  }
+  function minCostFlow(G, s, t, onAugment) {
+    let totalCost = 0;
+    let flow = 0;
+    for (;;) {
+      const dist = new Array(G.n).fill(Infinity);
+      const inEdge = new Array(G.n).fill(-1);
+      const inQueue = new Array(G.n).fill(false);
+      dist[s] = 0;
+      const queue = [s];
+      inQueue[s] = true;
+      let qi = 0;
+      while (qi < queue.length) {
+        const u = queue[qi++];
+        inQueue[u] = false;
+        for (let e = G.head[u]; e !== -1; e = G.next[e]) {
+          if (G.cap[e] > 0 && dist[u] + G.cost[e] < dist[G.to[e]]) {
+            dist[G.to[e]] = dist[u] + G.cost[e];
+            inEdge[G.to[e]] = e;
+            if (!inQueue[G.to[e]]) { inQueue[G.to[e]] = true; queue.push(G.to[e]); }
+          }
+        }
+      }
+      if (dist[t] === Infinity || dist[t] >= 0) break; // no path that still improves the objective
+      let v = t;
+      const path = [];
+      while (v !== s) { const e = inEdge[v]; path.push(e); G.cap[e] -= 1; G.cap[e ^ 1] += 1; v = G.to[e ^ 1]; }
+      totalCost += dist[t];
+      flow += 1;
+      if (onAugment) onAugment(path.reverse(), dist[t]);
+    }
+    return { flow, totalCost };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Planning problem
+  // ---------------------------------------------------------------------------
+  function buildProblem(inp, est) {
+    const films = inp.films.filter((f) => f.active);
+    const rooms = inp.rooms;
+    const cellIdx = new Map(est.cells.map((c) => [c.film + '|' + c.slot + '|' + c.dayType, c]));
+    const planDays = DAYS.map((_, d) => addDays(PLAN_START, d));
+    const fits = films.map((f) => f.runtime + inp.changeover <= inp.slotLength);
+    // value[fi][d][s][r] (decision value, uses kappa) and neutral[fi][d][s][r] (posterior mean)
+    const cache = new Map();
+    const valueOf = (film, s, t, cap, kappa) => {
+      const key = film + '|' + s + '|' + t + '|' + cap + '|' + kappa;
+      if (cache.has(key)) return cache.get(key);
+      const c = cellIdx.get(film + '|' + s + '|' + t);
+      const m = Math.max(c.mean - kappa * c.sd, 0.01);
+      const v = expectedSales(predictiveShape(est.factors.rHat, m, c.sd * c.sd), m, cap);
+      cache.set(key, v);
+      return v;
+    };
+    return { films, rooms, planDays, fits, valueOf, cellIdx, kappa: inp.kappa, nDays: DAYS.length, nSlots: SLOTS.length, dayType: dayTypeOfWeekday };
+  }
+
+  function lockKey(d, s, r) { return d + '|' + s + '|' + r; }
+
+  function feasibilityCheck(P, inp) {
+    const problems = [];
+    const openRooms = P.rooms.filter((r) => r.capacity > 0).length;
+    const openCells = openRooms * DAYS.length * SLOTS.length;
+    const sumMin = P.films.reduce((a, f) => a + f.min, 0);
+    if (sumMin > openCells) problems.push({ constraint: 'one-film-per-hall', msg: 'Minimum shows add up to ' + sumMin + ' but only ' + openCells + ' screen-slots are open (' + openRooms + ' open room(s) x 7 days x 5 slots).', fix: 'Lower some minimums, or reopen a room.' });
+    P.films.forEach((f, i) => {
+      if (!P.fits[i] && f.min > 0) problems.push({ constraint: 'slot-fit', msg: f.id + ' needs ' + (f.runtime + inp.changeover) + ' min (' + f.runtime + ' runtime + ' + inp.changeover + ' changeover) but slots are ' + inp.slotLength + ' min, so its minimum of ' + f.min + ' shows cannot be met.', fix: 'Lengthen the slot grid, shorten changeover, or renegotiate the minimum to 0.' });
+      const maxPossible = openRooms > 0 ? DAYS.length * SLOTS.length : 0;
+      if (P.fits[i] && f.min > maxPossible) problems.push({ constraint: 'no-self-clash', msg: f.id + ' needs at least ' + f.min + ' shows but can play at most once per slot (' + maxPossible + ' slots in the week).', fix: 'Lower its minimum.' });
+    });
+    Object.entries(inp.locks || {}).forEach(([k, film]) => {
+      const [d, s, r] = k.split('|').map(Number);
+      const fi = P.films.findIndex((f) => f.id === film);
+      const where = DAYS[d] + ' ' + SLOTS[s] + ' ' + P.rooms[r].name;
+      if (fi < 0) problems.push({ constraint: 'lock', msg: 'Locked film ' + film + ' at ' + where + ' is not on the active slate.', fix: 'Remove the lock or activate the film.' });
+      else if (P.rooms[r].capacity <= 0) problems.push({ constraint: 'lock', msg: 'Locked cell ' + where + ' is in a closed room.', fix: 'Remove the lock or reopen the room.' });
+      else if (!P.fits[fi]) problems.push({ constraint: 'slot-fit', msg: 'Locked film ' + film + ' at ' + where + ' does not fit the slot length.', fix: 'Remove the lock or change the slot grid.' });
+    });
+    const perFilmLocks = {};
+    const perSlotLocks = {};
+    Object.entries(inp.locks || {}).forEach(([k, film]) => {
+      const [d, s] = k.split('|');
+      perFilmLocks[film] = (perFilmLocks[film] || 0) + 1;
+      const ks = film + '|' + d + '|' + s;
+      perSlotLocks[ks] = (perSlotLocks[ks] || 0) + 1;
+    });
+    P.films.forEach((f) => {
+      if ((perFilmLocks[f.id] || 0) > f.max) problems.push({ constraint: 'show-limits', msg: f.id + ' is locked into ' + perFilmLocks[f.id] + ' cells but its maximum is ' + f.max + ' shows.', fix: 'Remove locks or raise the maximum.' });
+    });
+    Object.entries(perSlotLocks).forEach(([ks, n]) => {
+      if (n > 1) { const [film, d, s] = ks.split('|'); problems.push({ constraint: 'no-self-clash', msg: film + ' is locked into ' + n + ' rooms at ' + DAYS[+d] + ' ' + SLOTS[+s] + '.', fix: 'Keep one of the locks.' }); }
+    });
+    return problems;
+  }
+
+  function solveProposed(P, inp, trace) {
+    const F = P.films.length, D = P.nDays, S = P.nSlots, R = P.rooms.length;
+    // node ids
+    let id = 2; // 0 = source, 1 = sink
+    const filmNode = P.films.map(() => id++);
+    const fsNode = {};
+    for (let f = 0; f < F; f++) if (P.fits[f]) for (let d = 0; d < D; d++) for (let s = 0; s < S; s++) fsNode[f + '|' + d + '|' + s] = id++;
+    const cellNode = {};
+    for (let d = 0; d < D; d++) for (let s = 0; s < S; s++) for (let r = 0; r < R; r++) if (P.rooms[r].capacity > 0) cellNode[lockKey(d, s, r)] = id++;
+    const G = makeGraph(id);
+    const minEdge = [];
+    for (let f = 0; f < F; f++) {
+      minEdge.push(P.films[f].min > 0 ? addEdge(G, 0, filmNode[f], P.films[f].min, -M_BIG) : -1);
+      if (P.films[f].max > P.films[f].min) addEdge(G, 0, filmNode[f], P.films[f].max - P.films[f].min, 0);
+    }
+    for (const key in fsNode) addEdge(G, filmNode[+key.split('|')[0]], fsNode[key], 1, 0);
+    const assignEdges = [];
+    const lockEdges = [];
+    for (let d = 0; d < D; d++) for (let s = 0; s < S; s++) for (let r = 0; r < R; r++) {
+      const ck = lockKey(d, s, r);
+      if (!(ck in cellNode)) continue;
+      const t = P.dayType(d);
+      const locked = inp.locks && inp.locks[ck];
+      for (let f = 0; f < F; f++) {
+        const fk = f + '|' + d + '|' + s;
+        if (!(fk in fsNode)) continue;
+        if (locked && locked !== P.films[f].id) continue;
+        const v = P.valueOf(P.films[f].id, s, t, P.rooms[r].capacity, P.kappa);
+        const cost = -Math.round(v * 1000) - (locked ? M_BIG : 0);
+        const e = addEdge(G, fsNode[fk], cellNode[ck], 1, cost);
+        assignEdges.push({ e, f, d, s, r });
+        if (locked) lockEdges.push({ e, key: ck, film: P.films[f].id });
+      }
+      addEdge(G, cellNode[ck], 1, 1, 0);
+    }
+    // node id -> description, used to narrate each augmenting path
+    const nodeInfo = { 0: { k: 'S' }, 1: { k: 'T' } };
+    P.films.forEach((f, i) => (nodeInfo[filmNode[i]] = { k: 'film', f: i }));
+    for (const key in cellNode) { const [d, s2, r] = key.split('|').map(Number); nodeInfo[cellNode[key]] = { k: 'cell', d, s: s2, h: r }; }
+    const snapshot = () => {
+      const pl = Array.from({ length: D }, () => Array.from({ length: S }, () => new Array(R).fill(null)));
+      assignEdges.forEach(({ e, f, d, s: s2, r }) => { if (G.cap[e] === 0) pl[d][s2][r] = P.films[f].id; });
+      return pl;
+    };
+    const onAug = trace ? (path, dist) => {
+      const nodes = [0].concat(path.map((e) => G.to[e])).map((n) => nodeInfo[n]).filter(Boolean);
+      const usesMin = minEdge.includes(path[0]);
+      trace.push({ nodes: nodes.map((x) => (x.k === 'film' ? { k: 'film', f: P.films[x.f].id } : x)), plan: snapshot(), minPhase: usesMin, pathValue: -(dist + (usesMin ? -M_BIG : 0)) / 1000 });
+    } : null;
+    minCostFlow(G, 0, 1, onAug);
+    const plan = Array.from({ length: D }, () => Array.from({ length: S }, () => new Array(R).fill(null)));
+    assignEdges.forEach(({ e, f, d, s, r }) => { if (G.cap[e] === 0) plan[d][s][r] = P.films[f].id; });
+    const unmet = [];
+    minEdge.forEach((e, f) => { if (e >= 0 && G.cap[e] > 0) unmet.push({ constraint: 'show-limits', msg: P.films[f].id + ' could only get ' + (P.films[f].min - G.cap[e]) + ' of its ' + P.films[f].min + ' minimum shows with the other constraints and locks.', fix: 'Lower its minimum, remove conflicting locks, or reopen capacity.' }); });
+    const lockHasEdge = new Set(lockEdges.map((l) => l.key));
+    Object.entries(inp.locks || {}).forEach(([key, film]) => {
+      if (lockHasEdge.has(key)) return;
+      const [d, s, r] = key.split('|').map(Number);
+      unmet.push({ constraint: 'lock', msg: 'Lock ' + film + ' at ' + DAYS[d] + ' ' + SLOTS[s] + ' ' + P.rooms[r].name + ' is impossible: the room is closed or the film does not fit the slot.', fix: 'Remove the lock.' });
+    });
+    lockEdges.forEach(({ e, key, film }) => { if (G.cap[e] > 0) { const [d, s, r] = key.split('|').map(Number); unmet.push({ constraint: 'lock', msg: 'Lock ' + film + ' at ' + DAYS[d] + ' ' + SLOTS[s] + ' ' + P.rooms[r].name + ' could not be honored together with the other constraints.', fix: 'Remove the lock or relax run bounds.' }); } });
+    return { plan, unmet };
+  }
+
+  function emptyPlan(R) {
+    return DAYS.map(() => SLOTS.map(() => new Array(R).fill(null)));
+  }
+
+  // Proposed reference baseline (not the operator's actual practice, which is unknown):
+  // rank films by last week's tickets in the purchase rows, allocate show quotas in
+  // proportion, then fill prime slots in the largest rooms first.
+  function solveBaseline(P, inp, rows, trace) {
+    const R = P.rooms.length;
+    const lastWeekStart = addDays(HISTORY_START, (HISTORY_WEEKS - 1) * 7);
+    const score = {};
+    P.films.forEach((f) => (score[f.id] = 0));
+    rows.forEach((r) => { if (r.play_day >= lastWeekStart && r.title_tag in score) score[r.title_tag] += r.passes_bought; });
+    const seen = P.films.map((f) => score[f.id]).filter((v) => v > 0).sort((a, b) => a - b);
+    const med = seen.length ? seen[Math.floor((seen.length - 1) / 2)] : 1;
+    P.films.forEach((f) => { if (!score[f.id]) score[f.id] = med; });
+    const openRooms = P.rooms.map((r, i) => i).filter((i) => P.rooms[i].capacity > 0);
+    const N = openRooms.length * DAYS.length * SLOTS.length;
+    const eligible = P.films.map((f, i) => P.fits[i]);
+    const total = P.films.reduce((a, f, i) => a + (eligible[i] ? score[f.id] : 0), 0) || 1;
+    const quota = P.films.map((f, i) => (eligible[i] ? Math.min(f.max, Math.max(f.min, Math.round((N * score[f.id]) / total))) : 0));
+    const order = P.films.map((f, i) => i).sort((x, y) => score[P.films[y].id] - score[P.films[x].id] || x - y);
+    let sum = quota.reduce((a, b) => a + b, 0);
+    while (sum > N) { const i = [...order].reverse().find((j) => quota[j] > P.films[j].min); if (i === undefined) break; quota[i]--; sum--; }
+    while (sum < N) { const i = order.find((j) => eligible[j] && quota[j] < P.films[j].max); if (i === undefined) break; quota[i]++; sum++; }
+    if (trace) { trace.quota0 = quota.slice(); trace.score = P.films.map((f) => score[f.id]); }
+    const plan = emptyPlan(R);
+    const used = new Set();
+    // honor locks first (same inputs as the proposed plan)
+    Object.entries(inp.locks || {}).forEach(([k, film]) => {
+      const [d, s, r] = k.split('|').map(Number);
+      const fi = P.films.findIndex((f) => f.id === film);
+      if (fi < 0 || P.rooms[r].capacity <= 0) return;
+      plan[d][s][r] = film; quota[fi]--; used.add(film + '|' + d + '|' + s);
+    });
+    const primeOrder = [3, 4, 2, 1, 0];
+    const roomOrder = openRooms.slice().sort((x, y) => P.rooms[y].capacity - P.rooms[x].capacity || x - y);
+    for (const s of primeOrder) for (const r of roomOrder) for (let d = 0; d < DAYS.length; d++) {
+      if (plan[d][s][r]) continue;
+      const fi = order.find((j) => quota[j] > 0 && eligible[j] && !used.has(P.films[j].id + '|' + d + '|' + s));
+      if (fi === undefined) continue;
+      plan[d][s][r] = P.films[fi].id; quota[fi]--; used.add(P.films[fi].id + '|' + d + '|' + s);
+      if (trace) trace.push({ d, s, r, film: P.films[fi].id, quota: quota.slice() });
+    }
+    return { plan, score, quota };
+  }
+
+  function checkPlan(P, inp, plan) {
+    const violations = [];
+    const counts = {};
+    P.films.forEach((f) => (counts[f.id] = 0));
+    for (let d = 0; d < DAYS.length; d++) for (let s = 0; s < SLOTS.length; s++) {
+      const inSlot = {};
+      for (let r = 0; r < P.rooms.length; r++) {
+        const film = plan[d][s][r];
+        if (!film) continue;
+        const fi = P.films.findIndex((f) => f.id === film);
+        counts[film]++;
+        inSlot[film] = (inSlot[film] || 0) + 1;
+        if (P.rooms[r].capacity <= 0) violations.push('closed room used at ' + DAYS[d] + ' ' + SLOTS[s]);
+        if (!P.fits[fi]) violations.push(film + ' does not fit the slot at ' + DAYS[d] + ' ' + SLOTS[s]);
+      }
+      Object.entries(inSlot).forEach(([film, n]) => { if (n > 1) violations.push(film + ' plays in ' + n + ' rooms at ' + DAYS[d] + ' ' + SLOTS[s]); });
+    }
+    P.films.forEach((f) => {
+      if (counts[f.id] < f.min) violations.push(f.id + ' has ' + counts[f.id] + ' shows, below its minimum of ' + f.min);
+      if (counts[f.id] > f.max) violations.push(f.id + ' has ' + counts[f.id] + ' shows, above its maximum of ' + f.max);
+    });
+    Object.entries(inp.locks || {}).forEach(([k, film]) => {
+      const [d, s, r] = k.split('|').map(Number);
+      if (plan[d][s][r] !== film) violations.push('lock ' + film + ' at ' + DAYS[d] + ' ' + SLOTS[s] + ' ' + P.rooms[r].name + ' not honored');
+    });
+    return { counts, violations };
+  }
+
+  function scorePlan(P, plan) {
+    let estimate = 0, pessimistic = 0, truth = 0;
+    const cells = [];
+    for (let d = 0; d < DAYS.length; d++) for (let s = 0; s < SLOTS.length; s++) for (let r = 0; r < P.rooms.length; r++) {
+      const film = plan[d][s][r];
+      if (!film) continue;
+      const t = dayTypeOfWeekday(d);
+      const cap = P.rooms[r].capacity;
+      const est = P.valueOf(film, s, t, cap, 0);
+      const pes = P.valueOf(film, s, t, cap, P.kappa);
+      const tf = TRUTH.films[film];
+      const tm = tf.base * tf.profile[s] * (t ? TRUTH.weekendMultiplier : 1);
+      const tru = expectedSales(TRUTH.dispersion, tm, cap);
+      estimate += est; pessimistic += pes; truth += tru;
+      cells.push({ d, s, r, film, est, pes, truth: tru });
+    }
+    return { estimate, pessimistic, truth, cells };
+  }
+
+  // Why did a cell get its film? Rank every film's value in the cell and flag blockers.
+  function explainCell(P, inp, plan, counts, d, s, r) {
+    const t = dayTypeOfWeekday(d);
+    const cap = P.rooms[r].capacity;
+    const chosen = plan[d][s][r];
+    const locked = inp.locks && inp.locks[lockKey(d, s, r)];
+    const options = P.films.map((f, i) => {
+      const c = P.cellIdx.get(f.id + '|' + s + '|' + t);
+      const blockers = [];
+      if (!P.fits[i]) blockers.push('does not fit the slot');
+      const elsewhere = plan[d][s].some((x, rr) => rr !== r && x === f.id);
+      if (elsewhere) blockers.push('already playing in another room this slot');
+      if (f.id !== chosen && counts[f.id] >= f.max) blockers.push('already at its maximum of ' + f.max + ' shows');
+      if (locked && f.id !== locked) blockers.push('cell locked to ' + locked);
+      return {
+        film: f.id, value: P.valueOf(f.id, s, t, cap, P.kappa), neutral: P.valueOf(f.id, s, t, cap, 0),
+        mean: c.mean, sd: c.sd, n: c.n, priorMean: c.priorMean, priorWeight: c.priorWeight, nCensored: c.nCensored,
+        clipped: c.mean > cap * 0.9, blockers, chosen: f.id === chosen,
+      };
+    }).sort((x, y) => y.value - x.value);
+    return { d, s, r, t, cap, chosen, locked: !!locked, options };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Audience analytics from account_tag
+  // ---------------------------------------------------------------------------
+  function audience(rows, filmIds) {
+    const accounts = new Map();
+    const perFilm = {};
+    filmIds.forEach((f) => (perFilm[f] = { tickets: 0, purchases: 0, groups3: 0, accounts: new Set() }));
+    rows.forEach((r) => {
+      if (!(r.title_tag in perFilm)) return;
+      const pf = perFilm[r.title_tag];
+      pf.tickets += r.passes_bought; pf.purchases++; if (r.passes_bought >= 3) pf.groups3++;
+      pf.accounts.add(r.account_tag);
+      if (!accounts.has(r.account_tag)) accounts.set(r.account_tag, new Set());
+      accounts.get(r.account_tag).add(r.title_tag + '|' + r.play_day + '|' + r.curtain_time);
+    });
+    const nAcc = accounts.size;
+    let repeat = 0;
+    accounts.forEach((v) => { if (v.size >= 2) repeat++; });
+    const films = filmIds.map((f) => ({ film: f, tickets: perFilm[f].tickets, purchases: perFilm[f].purchases, avgGroup: perFilm[f].purchases ? perFilm[f].tickets / perFilm[f].purchases : 0, groupShare3: perFilm[f].purchases ? perFilm[f].groups3 / perFilm[f].purchases : 0, accounts: perFilm[f].accounts.size }));
+    const overlap = filmIds.map((a) => filmIds.map((b) => {
+      const A = perFilm[a].accounts, B = perFilm[b].accounts;
+      if (!A.size || !B.size) return 0;
+      let inter = 0;
+      A.forEach((x) => { if (B.has(x)) inter++; });
+      return inter / (A.size + B.size - inter);
+    }));
+    return { accounts: nAcc, repeatShare: nAcc ? repeat / nAcc : 0, films, overlap };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Lagrangian relaxation (lecture 1: duality, shadow prices, duality gap).
+  // The show limits min_f <= n_f <= max_f are moved into the objective with prices
+  // p_f = mu_f - nu_f. The relaxed problem then splits into 35 tiny per-slot problems
+  // (which film in which hall), solved by enumeration. Its value is an upper bound on
+  // the best week (weak duality); a repaired valid schedule gives a lower bound.
+  // Subgradient ascent on the prices closes the gap. The exact min-cost flow value is
+  // the target both bounds converge to.
+  // ---------------------------------------------------------------------------
+  function lagrangian(res, opts) {
+    const P = res.problem;
+    const iters = (opts && opts.iters) || 120;
+    const F = P.films.length, R = P.rooms.length, D = P.nDays, S = P.nSlots;
+    const val = []; // val[d][s][h][f] or null when not allowed
+    for (let d = 0; d < D; d++) { val.push([]); for (let s = 0; s < S; s++) { val[d].push([]); for (let h = 0; h < R; h++) {
+      val[d][s].push(P.films.map((f, i) => (P.fits[i] && P.rooms[h].capacity > 0 ? P.valueOf(f.id, s, P.dayType(d), P.rooms[h].capacity, P.kappa) : null)));
+    } } }
+    const minF = P.films.map((f) => f.min), maxF = P.films.map((f) => f.max);
+    // best assignment of distinct films (or empty) to the halls of one slot, for adjusted values
+    function bestSlot(d, s, price) {
+      let best = 0, arg = new Array(R).fill(-1);
+      const cur = new Array(R).fill(-1), used = new Array(F).fill(false);
+      (function rec(h, acc) {
+        if (h === R) { if (acc > best + 1e-9) { best = acc; arg = cur.slice(); } return; }
+        cur[h] = -1; rec(h + 1, acc);
+        for (let f = 0; f < F; f++) {
+          const v = val[d][s][h][f];
+          if (v === null || used[f]) continue;
+          const a = v - price[f];
+          if (a <= 0) continue;
+          used[f] = true; cur[h] = f; rec(h + 1, acc + a); used[f] = false;
+        }
+        cur[h] = -1;
+      })(0, 0);
+      return { best, arg };
+    }
+    const total = (plan) => { let t = 0; plan.forEach((day, d) => day.forEach((sl, s) => sl.forEach((f, h) => { if (f >= 0) t += val[d][s][h][f]; }))); return t; };
+    const countsOf = (plan) => { const n = new Array(F).fill(0); plan.forEach((day) => day.forEach((sl) => sl.forEach((f) => { if (f >= 0) n[f]++; }))); return n; };
+    // turn a relaxed plan into a schedule that respects every rule (or null)
+    function repair(relaxed) {
+      const plan = relaxed.map((day) => day.map((sl) => sl.slice()));
+      const n = countsOf(plan);
+      const inSlot = (d, s, f) => plan[d][s].includes(f);
+      for (let f = 0; f < F; f++) {
+        if (n[f] <= maxF[f]) continue;
+        const cells = [];
+        plan.forEach((day, d) => day.forEach((sl, s) => sl.forEach((g, h) => { if (g === f) cells.push([val[d][s][h][f], d, s, h]); })));
+        cells.sort((a, b) => a[0] - b[0]);
+        for (let k = 0; n[f] > maxF[f]; k++) { const [, d, s, h] = cells[k]; plan[d][s][h] = -1; n[f]--; }
+      }
+      for (let f = 0; f < F; f++) {
+        while (n[f] < minF[f]) {
+          let bestLoss = Infinity, pick = null;
+          for (let d = 0; d < D; d++) for (let s = 0; s < S; s++) {
+            if (inSlot(d, s, f)) continue;
+            for (let h = 0; h < R; h++) {
+              const v = val[d][s][h][f];
+              if (v === null) continue;
+              const g = plan[d][s][h];
+              if (g >= 0 && n[g] <= minF[g]) continue;
+              const loss = (g >= 0 ? val[d][s][h][g] : 0) - v;
+              if (loss < bestLoss) { bestLoss = loss; pick = [d, s, h]; }
+            }
+          }
+          if (!pick) return null;
+          const [d, s, h] = pick;
+          if (plan[d][s][h] >= 0) n[plan[d][s][h]]--;
+          plan[d][s][h] = f; n[f]++;
+        }
+      }
+      const empties = [];
+      for (let d = 0; d < D; d++) for (let s = 0; s < S; s++) for (let h = 0; h < R; h++) if (plan[d][s][h] < 0) empties.push([d, s, h]);
+      empties.forEach(([d, s, h]) => {
+        let bf = -1, bv = 0;
+        for (let f = 0; f < F; f++) { const v = val[d][s][h][f]; if (v !== null && v > bv && n[f] < maxF[f] && !inSlot(d, s, f)) { bv = v; bf = f; } }
+        if (bf >= 0) { plan[d][s][h] = bf; n[bf]++; }
+      });
+      return improve(plan, n);
+    }
+    // local improvement: replace a film in one cell, or exchange two halls within a slot
+    function improve(plan, n) {
+      for (let pass = 0, changed = true; changed && pass < 20; pass++) {
+        changed = false;
+        for (let d = 0; d < D; d++) for (let s = 0; s < S; s++) {
+          for (let h = 0; h < R; h++) {
+            const g = plan[d][s][h];
+            const cur = g >= 0 ? val[d][s][h][g] : 0;
+            if (g >= 0 && n[g] <= minF[g]) continue;
+            for (let f = 0; f < F; f++) {
+              const v = val[d][s][h][f];
+              if (v === null || f === g || v <= cur + 1e-9 || n[f] >= maxF[f] || plan[d][s].includes(f)) continue;
+              if (g >= 0) n[g]--; plan[d][s][h] = f; n[f]++; changed = true; break;
+            }
+          }
+          for (let a = 0; a < R; a++) for (let c = a + 1; c < R; c++) {
+            const fa = plan[d][s][a], fc = plan[d][s][c];
+            const va = (x, h) => (x >= 0 ? val[d][s][h][x] : 0);
+            if ((fa >= 0 && val[d][s][c][fa] === null) || (fc >= 0 && val[d][s][a][fc] === null)) continue;
+            if (va(fc, a) + va(fa, c) > va(fa, a) + va(fc, c) + 1e-9) { plan[d][s][a] = fc; plan[d][s][c] = fa; changed = true; }
+          }
+        }
+      }
+      return plan;
+    }
+    const mu = new Array(F).fill(0), nu = new Array(F).fill(0);
+    let ub = Infinity, lb = -Infinity, bestPlan = null, theta = 2, stall = 0;
+    const history = [];
+    for (let it = 0; it < iters; it++) {
+      const price = mu.map((m, f) => m - nu[f]);
+      const relaxed = [];
+      let L = 0;
+      for (let d = 0; d < D; d++) { relaxed.push([]); for (let s = 0; s < S; s++) { const b = bestSlot(d, s, price); relaxed[d].push(b.arg); L += b.best; } }
+      for (let f = 0; f < F; f++) L += mu[f] * maxF[f] - nu[f] * minF[f];
+      if (L < ub - 1e-6) { ub = L; stall = 0; } else if (++stall >= 6) { theta /= 2; stall = 0; }
+      const n = countsOf(relaxed);
+      const fixed = repair(relaxed);
+      if (fixed) { const t = total(fixed); if (t > lb) { lb = t; bestPlan = fixed; } }
+      const gMu = n.map((x, f) => (mu[f] > 0 || x > maxF[f] ? x - maxF[f] : 0));
+      const gNu = n.map((x, f) => (nu[f] > 0 || x < minF[f] ? minF[f] - x : 0));
+      const norm = gMu.reduce((a, x) => a + x * x, 0) + gNu.reduce((a, x) => a + x * x, 0);
+      history.push({ it, dual: L, ub, lb, gap: lb > -Infinity ? (ub - lb) / ub : 1, price: price.slice(), counts: n, relaxed, best: bestPlan });
+      if (norm === 0 || (lb > -Infinity && ub - lb < 0.5)) break;
+      const target = lb > -Infinity ? lb : 0.95 * ub;
+      const step = (theta * Math.max(ub - target, 1)) / norm;
+      for (let f = 0; f < F; f++) { mu[f] = Math.max(0, mu[f] + step * gMu[f]); nu[f] = Math.max(0, nu[f] + step * gNu[f]); }
+    }
+    const idToIdx = P.films.map((f) => f.id);
+    const toIds = (plan) => plan && plan.map((day) => day.map((sl) => sl.map((f) => (f >= 0 ? idToIdx[f] : null))));
+    return {
+      films: idToIdx, min: minF, max: maxF, exact: res.proposed.score.pessimistic,
+      history: history.map((h) => ({ it: h.it, dual: h.dual, ub: h.ub, lb: h.lb, gap: h.gap, price: h.price, counts: h.counts, relaxed: toIds(h.relaxed), best: toIds(h.best) })),
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Test cases shared by the demo UI and the Node tests
+  // ---------------------------------------------------------------------------
+  const setFilm = (inp, id, patch) => { inp.films = inp.films.map((f) => (f.id === id ? { ...f, ...patch } : f)); return inp; };
+  const setRoom = (inp, i, cap) => { inp.rooms = inp.rooms.map((r, j) => (j === i ? { ...r, capacity: cap } : r)); return inp; };
+  const hasErr = (res, constraint) => (res.errors || []).some((e) => e.constraint === constraint || e.field === constraint);
+  const noPlan = (res) => 'No plan: ' + res.errors.map((e) => e.msg).join(' ');
+
+  const PRESETS = [
+    {
+      id: 'normal', kind: 'Normal', title: 'Default week',
+      steps: 'Reset all inputs to their defaults and run.',
+      expected: 'A feasible plan. Both plans satisfy every hard constraint, and the proposed plan scores at least as well as the baseline on the decision value (the pessimistic estimate the optimizer maximizes).',
+      apply: (inp) => inp,
+      check: (res) => {
+        if (!res.ok) return { pass: false, observed: noPlan(res) };
+        const v = res.proposed.check.violations.length + res.baseline.check.violations.length;
+        const gain = res.proposed.score.pessimistic - res.baseline.score.pessimistic;
+        return { pass: v === 0 && gain >= -1e-6, observed: 'Feasible; ' + v + ' constraint violations; decision value ' + res.proposed.score.pessimistic.toFixed(0) + ' vs baseline ' + res.baseline.score.pessimistic.toFixed(0) + ' (' + (gain >= 0 ? '+' : '') + gain.toFixed(0) + ').' };
+      },
+    },
+    {
+      id: 'new-release', kind: 'Boundary', title: 'New release with zero history',
+      steps: 'Add GLASS MERIDIAN (no purchase rows at all) to the slate with 5-21 shows and run.',
+      expected: 'A valid plan. GLASS MERIDIAN gets at least its 5 minimum shows, every one of its cells has 0 observed screenings, and the tool warns that its demand is prior-only.',
+      apply: (inp) => setFilm(inp, 'GLASS MERIDIAN', { active: true }),
+      check: (res) => {
+        if (!res.ok) return { pass: false, observed: noPlan(res) };
+        const shows = res.proposed.check.counts['GLASS MERIDIAN'] || 0;
+        const noEvidence = res.estimate.cells.filter((c) => c.film === 'GLASS MERIDIAN').every((c) => c.n === 0);
+        const warned = res.warnings.some((w) => w.startsWith('GLASS MERIDIAN has no purchase history'));
+        return { pass: shows >= 5 && noEvidence && warned && res.proposed.check.violations.length === 0, observed: 'GLASS MERIDIAN gets ' + shows + ' shows; cells with evidence: ' + (noEvidence ? 'none' : 'some') + '; prior-only warning shown: ' + (warned ? 'yes' : 'no') + '.' };
+      },
+    },
+    {
+      id: 'hall-closed', kind: 'Boundary', title: 'Hall 3 closed for maintenance',
+      steps: 'Set Hall 3 capacity to 0 and run.',
+      expected: 'A valid plan with no screening in Hall 3; the 42 minimum shows still fit in the remaining 70 screen-slots.',
+      apply: (inp) => setRoom(inp, 2, 0),
+      check: (res) => {
+        if (!res.ok) return { pass: false, observed: noPlan(res) };
+        const inHall3 = res.proposed.plan.flat().filter((cell) => cell[2]).length + res.baseline.plan.flat().filter((cell) => cell[2]).length;
+        return { pass: inHall3 === 0 && res.proposed.check.violations.length === 0, observed: inHall3 + ' screenings placed in Hall 3 across both plans; ' + res.proposed.check.violations.length + ' violations.' };
+      },
+    },
+    {
+      id: 'no-log', kind: 'Boundary', title: 'Schedule log not provided (fallback)',
+      steps: 'Switch off "Schedule log available" and run.',
+      expected: 'A plan is still produced, with a fallback warning: zero-sale screenings disappear from the data and sell-outs are no longer detected.',
+      apply: (inp) => { inp.useScheduleLog = false; return inp; },
+      check: (res) => {
+        if (!res.ok) return { pass: false, observed: noPlan(res) };
+        const warned = res.warnings.some((w) => w.startsWith('Fallback mode'));
+        const cens = res.screenings.filter((s) => s.censored).length;
+        return { pass: warned && cens === 0, observed: res.screenings.length + ' of 420 fictional screenings visible from purchases alone; sell-outs detected: ' + cens + '; fallback warning shown: ' + (warned ? 'yes' : 'no') + '.' };
+      },
+    },
+    {
+      id: 'impossible-minimums', kind: 'Failure', title: 'Minimum shows exceed open capacity',
+      steps: 'Close Hall 2 and Hall 3 (capacity 0) and run. Only 35 screen-slots remain, but minimum shows add up to 42.',
+      expected: 'No plan. The tool names the violated constraint (one-film-per-hall) and the gap (42 vs 35), suggests a fix, and marks any earlier result as stale.',
+      apply: (inp) => setRoom(setRoom(inp, 1, 0), 2, 0),
+      check: (res) => ({ pass: !res.ok && hasErr(res, 'one-film-per-hall') && res.errors.some((e) => /42/.test(e.msg) && /35/.test(e.msg)), observed: res.ok ? 'A plan was produced (unexpected).' : res.errors.map((e) => e.msg).join(' ') }),
+    },
+    {
+      id: 'too-long', kind: 'Failure', title: 'Film longer than the slot',
+      steps: 'Set ORBITFALL runtime to 175 min (175 + 20 changeover = 195 > 180-minute slots) and run.',
+      expected: 'No plan. The tool explains that ORBITFALL cannot fit any slot, so its 14-show minimum cannot be met, and lists fixes.',
+      apply: (inp) => setFilm(inp, 'ORBITFALL', { runtime: 175 }),
+      check: (res) => ({ pass: !res.ok && hasErr(res, 'slot-fit'), observed: res.ok ? 'A plan was produced (unexpected).' : res.errors.map((e) => e.msg).join(' ') }),
+    },
+    {
+      id: 'bad-row', kind: 'Failure', title: 'Malformed purchase row',
+      steps: 'Paste the row "QUIET HARBOR,RIVERSIDE,2026-10-03,19:00,AC-0042,0" into Extra purchase rows and run.',
+      expected: 'No plan. Validation rejects the row by line number because passes_bought must be a positive whole number; nothing is silently repaired.',
+      apply: (inp) => { inp.extraRows = 'QUIET HARBOR,RIVERSIDE,2026-10-03,19:00,AC-0042,0'; return inp; },
+      check: (res) => ({ pass: !res.ok && res.stage === 'validation' && res.errors.some((e) => /passes_bought/.test(e.msg)), observed: res.ok ? 'A plan was produced (unexpected).' : res.errors.map((e) => e.msg).join(' ') }),
+    },
+  ];
+
+  function presetInputs(id) {
+    const p = PRESETS.find((x) => x.id === id);
+    return p.apply(defaultInputs());
+  }
+
+
+  // ---------------------------------------------------------------------------
+  // Fingerprint for reproducibility checks
+  // ---------------------------------------------------------------------------
+  function fnv1a(str) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    return (h >>> 0).toString(16).padStart(8, '0');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Main entry point
+  // ---------------------------------------------------------------------------
+  function run(inp) {
+    const inputErrors = validateInputs(inp);
+    const parsed = parseExtraRows(inp.extraRows);
+    const errors = inputErrors.concat(parsed.errors.map((e) => ({ field: 'extraRows', msg: e.msg })));
+    if (errors.length) return { ok: false, stage: 'validation', errors, warnings: [] };
+
+    const world = generateWorld(inp.seed);
+    const warnings = [];
+    const venueRows = parsed.rows.filter((r) => r.venue_tag === VENUE);
+    if (venueRows.length < parsed.rows.length) warnings.push((parsed.rows.length - venueRows.length) + ' extra row(s) for another venue were ignored (single-venue scope).');
+    const rows = world.rows.concat(venueRows);
+    const filmIds = inp.films.filter((f) => f.active).map((f) => f.id);
+    const agg = aggregate(rows, world.scheduleLog, inp.useScheduleLog, filmIds);
+    warnings.push(...agg.warnings);
+    if (!inp.useScheduleLog) warnings.push('Fallback mode: without the schedule log, zero-sale screenings are invisible (estimates biased up) and sell-outs cannot be detected (popular films biased down).');
+    const est = estimateDemand(agg.screenings, filmIds, inp.priorStrength);
+    filmIds.forEach((f) => { if (!est.factors.filmHasData[f]) warnings.push(f + ' has no purchase history: its demand is the median film factor x slot and day-type indices (prior only, flagged "no evidence").'); });
+
+    const P = buildProblem(inp, est);
+    const problems = feasibilityCheck(P, inp);
+    const audienceStats = audience(rows, filmIds);
+    const base = { world: { rows, scheduleLog: world.scheduleLog, extraCount: venueRows.length }, screenings: agg.screenings, estimate: est, audience: audienceStats, problem: P, warnings };
+    if (problems.length) return { ok: false, stage: 'feasibility', errors: problems, ...base };
+
+    const prop = solveProposed(P, inp);
+    if (prop.unmet.length) return { ok: false, stage: 'feasibility', errors: prop.unmet, ...base };
+    const bl = solveBaseline(P, inp, rows);
+    const propCheck = checkPlan(P, inp, prop.plan);
+    const blCheck = checkPlan(P, inp, bl.plan);
+    const propScore = scorePlan(P, prop.plan);
+    const blScore = scorePlan(P, bl.plan);
+    const fingerprint = fnv1a(JSON.stringify({ inp, p: prop.plan, b: bl.plan }));
+    return {
+      ok: true, stage: 'done', errors: [], ...base,
+      proposed: { plan: prop.plan, check: propCheck, score: propScore },
+      baseline: { plan: bl.plan, check: blCheck, score: blScore, signal: bl.score },
+      fingerprint,
+      explain: (which, d, s, r) => explainCell(P, inp, which === 'baseline' ? bl.plan : prop.plan, which === 'baseline' ? blCheck.counts : propCheck.counts, d, s, r),
+    };
+  }
+
+  // Re-solve the proposed plan while recording every augmenting path (for the demo animation).
+  function traceBaseline(res, inp) { const t = []; solveBaseline(res.problem, inp || { locks: {} }, res.world.rows, t); return t; }
+  function traceEstimate(res, inp) { const t = []; estimateDemand(res.screenings, res.problem.films.map((f) => f.id), inp.priorStrength, t); return t; }
+  function traceFlow(res, inp) {
+    const trace = [];
+    solveProposed(res.problem, inp || { locks: {} }, trace);
+    return trace;
+  }
+
+  const Engine = {
+    VENUE, SLOTS, DAYS, DAY_TYPES, HISTORY_START, HISTORY_WEEKS, PLAN_START, FILMS, TRUTH, HISTORY_ROOMS, HEADER,
+    defaultInputs, run, generateWorld, parseExtraRows, validateInputs, expectedSales, negBinTailMean, predictiveShape,
+    makeGraph, addEdge, minCostFlow, dayTypeOfWeekday, addDays, fnv1a, mulberry32,
+    PRESETS, presetInputs, _solveProposed: solveProposed, traceFlow, traceBaseline, traceEstimate, lagrangian,
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = Engine;
+  else root.Engine = Engine;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* SLOTWISE demo UI. All calculations live in Engine (engine.js); this file only renders. */
+(function () {
+  'use strict';
+  const $ = (s, el) => (el || document).querySelector(s);
+  const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fmt = (x) => Math.round(x).toLocaleString('en-US');
+  const signed = (x) => (Math.round(x) >= 0 ? '+' : '') + fmt(x);
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  const { DAYS, SLOTS } = Engine;
+  const HUE = Object.fromEntries(Engine.FILMS.map((f) => [f.id, f.hue]));
+  const color = (id, l) => 'hsl(' + HUE[id] + ' 62% ' + (l || 42) + '%)';
+  const STEPS = DAYS.length * SLOTS.length;
+  const at = (i) => ({ d: Math.floor(i / SLOTS.length), s: i % SLOTS.length });
+  const PLANS = [['baseline', 'thBase', 'Rule of thumb'], ['proposed', 'thProp', 'Optimized']];
+
+  const state = { inputs: Engine.defaultInputs(), res: null, ok: null, step: 0, timer: null, view: 'proposed', perStep: null, caseResults: {} };
+
+  // ------------------------------------------------------------ per-screening numbers
+  function screeningNumbers(r, plan, d, s) {
+    const t = Engine.dayTypeOfWeekday(d);
+    return r.problem.rooms.map((room, h) => {
+      const film = plan[d][s][h];
+      if (!film || room.capacity <= 0) return { film, cap: room.capacity, tickets: 0, away: 0 };
+      const c = r.problem.cellIdx.get(film + '|' + s + '|' + t);
+      const tickets = r.problem.valueOf(film, s, t, room.capacity, 0);
+      return { film, cap: room.capacity, tickets, away: Math.max(0, c.mean - tickets), untried: c.n === 0 };
+    });
+  }
+  function precompute(r) {
+    const out = { baseline: [], proposed: [] };
+    ['baseline', 'proposed'].forEach((w) => {
+      let cum = 0;
+      for (let i = 0; i < STEPS; i++) {
+        const { d, s } = at(i);
+        const halls = screeningNumbers(r, r[w].plan, d, s);
+        const tickets = halls.reduce((a, h) => a + h.tickets, 0);
+        cum += tickets;
+        out[w].push({ halls, tickets, cum, away: halls.reduce((a, h) => a + h.away, 0), empty: halls.reduce((a, h) => a + (h.film ? h.cap - h.tickets : h.cap), 0) });
+      }
+    });
+    return out;
+  }
+
+  // ------------------------------------------------------------ seat maps
+  function hallSvg(cap, id) {
+    if (cap <= 0) return '<svg width="80" height="60" aria-hidden="true"><text x="40" y="34" text-anchor="middle" fill="#6f6f6f" font-size="11">closed</text></svg>';
+    const cols = cap >= 200 ? 20 : cap >= 100 ? 15 : Math.max(6, Math.round(Math.sqrt(cap * 1.7)));
+    const rows = Math.ceil(cap / cols);
+    const g = 9, W = cols * g + 4, H = rows * g + 14;
+    const rng = Engine.mulberry32(cap * 7 + 1);
+    const rank = Array.from({ length: cap }, (_, i) => i);
+    for (let i = cap - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [rank[i], rank[j]] = [rank[j], rank[i]]; }
+    let seats = '';
+    for (let i = 0; i < cap; i++) {
+      const x = 2 + (i % cols) * g + g / 2, y = 12 + Math.floor(i / cols) * g + g / 2;
+      seats += '<circle class="seat" cx="' + x + '" cy="' + y + '" r="3.3" data-rank="' + rank[i] + '" style="transition-delay:' + Math.round((rank[i] / cap) * 450) + 'ms"/>';
+    }
+    return '<svg id="' + id + '" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true"><rect class="screen" x="' + W * 0.12 + '" y="1" width="' + W * 0.76 + '" height="3" rx="1.5"/>' + seats + '</svg>';
+  }
+  function buildTheaters() {
+    const rooms = state.ok.problem.rooms;
+    PLANS.forEach(([w, el, title]) => {
+      $('#' + el).innerHTML = '<h3>' + title + (w === 'proposed' ? ' <span class="chip calc">SLOTWISE</span>' : ' <span>reference plan</span>') + '</h3><div class="halls">' +
+        rooms.map((room, h) => '<div class="hall"><div class="film" id="' + w + 'F' + h + '"></div>' + hallSvg(room.capacity, w + 'S' + h) + '<div class="cap"><span>' + esc(room.name) + '</span><span id="' + w + 'C' + h + '"></span></div><div class="away" id="' + w + 'A' + h + '"></div></div>').join('') +
+        '</div><div class="totals"><div><div class="muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700" id="' + w + 'TL">Tickets so far</div><div class="n" id="' + w + 'T"></div></div><div class="s" id="' + w + 'X"></div></div>';
+    });
+  }
+  function showStep(i) {
+    state.step = i;
+    $('#scrub').value = i;
+    const { d, s } = at(i);
+    $('#clock').innerHTML = '<small>' + Engine.addDays(Engine.PLAN_START, d).slice(5).replace('-', '/') + (d >= 4 ? ' · weekend' : '') + '</small>' + DAYS[d] + ' ' + SLOTS[s];
+    PLANS.forEach(([w]) => {
+      const st = state.perStep[w][i];
+      st.halls.forEach((h, k) => {
+        const svg = $('#' + w + 'S' + k);
+        const f = $('#' + w + 'F' + k);
+        f.textContent = h.film || (h.cap > 0 ? 'empty' : '');
+        f.style.color = h.film ? color(h.film, 62) : '#6f6f6f';
+        $('#' + w + 'C' + k).textContent = h.cap > 0 ? fmt(h.tickets) + ' / ' + h.cap : '';
+        $('#' + w + 'A' + k).textContent = h.away >= 1 ? '+' + fmt(h.away) + ' turned away' : '';
+        if (!svg) return;
+        const n = Math.round(h.tickets);
+        const fill = h.film ? color(h.film, 50) : '#303030';
+        svg.querySelectorAll('.seat').forEach((c) => { c.style.fill = +c.dataset.rank < n ? fill : ''; });
+      });
+      $('#' + w + 'T').textContent = fmt(st.cum);
+      $('#' + w + 'TL').textContent = i === STEPS - 1 ? 'Week total' : 'Tickets so far';
+      $('#' + w + 'X').innerHTML = 'this screening ' + fmt(st.tickets) + '<br>turned away ' + fmt(st.away);
+    });
+    const a = state.perStep.proposed[i], b = state.perStep.baseline[i];
+    const dNow = a.tickets - b.tickets, dCum = a.cum - b.cum;
+    $('#delta').innerHTML = 'This screening <b class="' + (dNow >= 0 ? 'up' : 'down') + '">' + signed(dNow) + '</b><span class="muted">·</span>So far <b class="' + (dCum >= 0 ? 'up' : 'down') + '">' + signed(dCum) + '</b> expected tickets for the optimized plan';
+    drawSpark(i);
+    $$('.tile.now').forEach((t) => t.classList.remove('now'));
+    $$('[data-cell^="' + d + '|' + s + '|"]').forEach((t) => t.classList.add('now'));
+  }
+  function drawSpark(i) {
+    const vals = state.perStep.proposed.map((p, k) => p.cum - state.perStep.baseline[k].cum);
+    const W = 900, H = 90, L = 40, R = 10, T = 10, B = 22;
+    const lo = Math.min(0, ...vals), hi = Math.max(1, ...vals);
+    const x = (k) => L + ((W - L - R) * k) / (STEPS - 1);
+    const y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+    let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Cumulative ticket gain over the week"><line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(0) + '" y2="' + y(0) + '" stroke="#333"/>';
+    DAYS.forEach((dn, d) => (svg += '<text x="' + x(d * 5 + 2) + '" y="' + (H - 6) + '" text-anchor="middle">' + dn + '</text>'));
+    svg += '<text x="' + (L - 6) + '" y="' + (y(hi) + 4) + '" text-anchor="end">' + signed(hi) + '</text><text x="' + (L - 6) + '" y="' + (y(0) + 4) + '" text-anchor="end">0</text>';
+    svg += '<polyline fill="none" stroke="#46d369" stroke-width="2.5" points="' + vals.map((v, k) => x(k) + ',' + y(v)).join(' ') + '"/>';
+    svg += '<circle cx="' + x(i) + '" cy="' + y(vals[i]) + '" r="5" fill="#fff"/></svg>';
+    $('#spark').innerHTML = svg;
+  }
+  function play() {
+    if (state.timer) return stop();
+    if (state.step >= STEPS - 1) showStep(0);
+    $('#playBtn span').textContent = 'Pause';
+    state.timer = setInterval(() => { if (state.step >= STEPS - 1) return stop(); showStep(state.step + 1); }, 1100);
+  }
+  function stop() {
+    clearInterval(state.timer);
+    state.timer = null;
+    $('#playBtn span').textContent = state.step >= STEPS - 1 ? 'Replay the week' : 'Play the week';
+  }
+
+  // ------------------------------------------------------------ why cards
+  function renderWhy() {
+    const r = state.ok, ps = state.perStep;
+    const slot = (i) => ({ i, gain: ps.proposed[i].tickets - ps.baseline[i].tickets });
+    const all = Array.from({ length: STEPS }, (_, i) => slot(i)).sort((a, b) => b.gain - a.gain);
+    const swaps = (i) => {
+      const { d, s } = at(i);
+      return r.problem.rooms.map((room, h) => {
+        const b = ps.baseline[i].halls[h], p = ps.proposed[i].halls[h];
+        if (room.capacity <= 0) return '';
+        return '<span class="h">' + esc(room.name) + '</span><span class="f" style="color:' + (b.film ? color(b.film, 62) : '#777') + '">' + esc(b.film || 'empty') + ' ' + fmt(b.tickets) + '</span><span class="ar">&rarr;</span><span class="f" style="color:' + (p.film ? color(p.film, 62) : '#777') + '">' + esc(p.film || 'empty') + ' ' + fmt(p.tickets) + '</span>';
+      }).join('');
+    };
+    const label = (i) => { const { d, s } = at(i); return DAYS[d] + ' ' + SLOTS[s]; };
+    const best = all[0];
+    const worst = all.reduce((m, x) => (x.gain < m.gain - 1e-9 || (Math.abs(x.gain - m.gain) <= 1e-9 && x.i < m.i) ? x : m));
+    const wb = ps.baseline[STEPS - 1], wp = ps.proposed[STEPS - 1];
+    const tot = (w, k) => ps[w].reduce((a, x) => a + x[k], 0);
+    let html = '<div class="card"><div class="k">Biggest win · ' + label(best.i) + '</div><div class="big up">' + signed(best.gain) + ' tickets</div><div class="swap">' + swaps(best.i) + '</div><p>Each film goes to the hall and time where its expected audience fits best.</p></div>';
+    html += worst.gain < -0.5
+      ? '<div class="card"><div class="k">Accepted loss · ' + label(worst.i) + '</div><div class="big down">' + signed(worst.gain) + ' tickets</div><div class="swap">' + swaps(worst.i) + '</div><p>Show limits and "one hall at a time" link all slots, so the optimizer gives up a little here to gain more elsewhere. A slot-by-slot rule cannot see that.</p></div>'
+      : '<div class="card"><div class="k">No slot loses</div><div class="big up">0</div><p>Every screening is at least as good as the rule of thumb.</p></div>';
+    html += '<div class="card"><div class="k">Whole week</div><div class="big up">' + signed(wp.cum - wb.cum) + ' tickets</div><p>Turned away: ' + fmt(tot('baseline', 'away')) + ' &rarr; <b>' + fmt(tot('proposed', 'away')) + '</b><br>Empty seats: ' + fmt(tot('baseline', 'empty')) + ' &rarr; <b>' + fmt(tot('proposed', 'empty')) + '</b><br>Rules broken: ' + r.baseline.check.violations.length + ' &rarr; <b>' + r.proposed.check.violations.length + '</b></p><p class="muted">Best possible for these estimates and rules (solved exactly, not by trial and error).</p></div>';
+    $('#whyCards').innerHTML = html;
+  }
+
+  // ------------------------------------------------------------ schedule
+  function renderSchedule() {
+    const r = state.ok, P = r.problem;
+    const plan = state.view === 'baseline' ? r.baseline.plan : r.proposed.plan;
+    const other = state.view === 'baseline' ? r.proposed.plan : r.baseline.plan;
+    $('#legend').innerHTML = P.films.map((f) => '<span><i style="background:' + color(f.id, 45) + '"></i>' + esc(f.id) + ' ' + r[state.view === 'baseline' ? 'baseline' : 'proposed'].check.counts[f.id] + '</span>').join('');
+    let h = '<thead><tr><th></th>' + DAYS.map((d) => '<th>' + d + '</th>').join('') + '</tr></thead><tbody>';
+    SLOTS.forEach((slot, s) => {
+      P.rooms.forEach((room, k) => {
+        h += '<tr><td class="l">' + (k === 0 ? '<b>' + slot + '</b> ' : '') + esc(room.name) + '</td>';
+        DAYS.forEach((_, d) => {
+          const f = plan[d][s][k];
+          const key = d + '|' + s + '|' + k;
+          if (room.capacity <= 0) { h += '<td><span class="tile closed"></span></td>'; return; }
+          const dim = state.view === 'diff' && f === other[d][s][k] ? ' dim' : '';
+          h += '<td><button type="button" class="tile' + (f ? '' : ' empty') + dim + '" data-cell="' + key + '"' + (f ? ' style="background:' + color(f, 38) + '"' : '') + ' title="' + esc(DAYS[d] + ' ' + slot + ' ' + room.name + ': ' + (f || 'empty')) + '">' + esc(f || '') + '</button></td>';
+        });
+        h += '</tr>';
+      });
+      if (s < SLOTS.length - 1) h += '<tr class="gap"><td></td></tr>';
+    });
+    $('#planTable').innerHTML = h + '</tbody>';
+    const { d, s } = at(state.step);
+    $$('[data-cell^="' + d + '|' + s + '|"]').forEach((t) => t.classList.add('now'));
+  }
+  function explainCell(key) {
+    const [d, s, k] = key.split('|').map(Number);
+    const which = state.view === 'baseline' ? 'baseline' : 'proposed';
+    const ex = state.ok.explain(which, d, s, k);
+    const room = state.ok.problem.rooms[k];
+    const chosen = ex.options.find((o) => o.chosen);
+    const rows = ex.options.slice(0, 5).map((o) => '<tr><td style="color:' + color(o.film, 62) + ';font-weight:800">' + esc(o.film) + (o.chosen ? ' &#10003;' : '') + '</td><td>' + fmt(o.neutral) + ' expected</td><td class="muted">' + (o.n ? o.n + ' past screenings' : 'never screened here') + '</td><td class="muted">' + esc(o.blockers[0] || '') + '</td></tr>').join('');
+    let why;
+    if (!chosen) why = 'Left empty: every film is at its show limit or already playing elsewhere at this time.';
+    else if (which === 'baseline') why = 'The rule of thumb fills evening slots in the biggest hall first with last week\'s best seller, without looking at this slot\'s demand.';
+    else if (ex.options[0].film === chosen.film) why = chosen.film + ' has the highest value here among the films allowed.';
+    else why = 'A film with a higher number here is blocked or earns even more in another slot; the week is optimized as a whole.';
+    const el = $('#explain');
+    el.innerHTML = '<b>' + DAYS[d] + ' ' + SLOTS[s] + ' · ' + esc(room.name) + ' (' + room.capacity + ' seats)</b><br>' + esc(why) + '<table>' + rows + '</table>';
+    el.classList.add('show');
+  }
+
+  // ------------------------------------------------------------ inputs
+  function syncForm() {
+    const i = state.inputs;
+    i.rooms.forEach((r, k) => ($('#cap' + k).value = r.capacity));
+    ['seed', 'slotLength', 'changeover', 'kappa'].forEach((f) => ($('#' + f).value = i[f]));
+    $('#kappaV').textContent = i.kappa;
+    $('#filmsTable').innerHTML = '<thead><tr><th>Show</th><th>Film</th><th>Runtime</th><th>Min shows</th><th>Max shows</th></tr></thead><tbody>' + i.films.map((f, k) => '<tr><td><input type="checkbox" data-f="' + k + '" data-k="active"' + (f.active ? ' checked' : '') + ' aria-label="' + esc(f.id) + ' on the slate"></td><td class="nm" style="color:' + color(f.id, 62) + '">' + esc(f.id) + (Engine.FILMS[k].inHistory ? '' : ' <span class="chip fict">new</span>') + '</td>' + ['runtime', 'min', 'max'].map((key) => '<td><input type="number" data-f="' + k + '" data-k="' + key + '" value="' + f[key] + '" aria-label="' + esc(f.id) + ' ' + key + '"></td>').join('') + '</tr>').join('') + '</tbody>';
+  }
+  function markStale() {
+    document.body.classList.add('stale');
+    $('#runline').innerHTML = '<span style="color:#f5b301;font-weight:700">Inputs changed, press Run.</span>';
+  }
+  function bindForm() {
+    [0, 1, 2].forEach((k) => $('#cap' + k).addEventListener('input', (e) => { state.inputs.rooms[k].capacity = e.target.value === '' ? NaN : +e.target.value; markStale(); }));
+    ['seed', 'slotLength', 'changeover'].forEach((f) => $('#' + f).addEventListener('input', (e) => { state.inputs[f] = e.target.value === '' ? NaN : +e.target.value; markStale(); }));
+    $('#kappa').addEventListener('input', (e) => { state.inputs.kappa = +e.target.value; $('#kappaV').textContent = e.target.value; markStale(); });
+    $('#filmsTable').addEventListener('input', (e) => {
+      const t = e.target;
+      if (!t.dataset.k) return;
+      state.inputs.films[+t.dataset.f][t.dataset.k] = t.type === 'checkbox' ? t.checked : t.value === '' ? NaN : +t.value;
+      markStale();
+    });
+  }
+
+  // ------------------------------------------------------------ run
+  function run(note) {
+    stop();
+    const t0 = performance.now();
+    const res = Engine.run(clone(state.inputs));
+    state.res = res;
+    const ms = Math.round(performance.now() - t0);
+    if (!res.ok) {
+      document.body.classList.add('stale');
+      $('#alerts').innerHTML = '<div class="alert" role="alert"><b>No plan: ' + (res.stage === 'validation' ? 'invalid input' : 'the rules cannot all be met') + '</b>' + res.errors.map((e) => esc(e.msg) + (e.fix ? '<div class="fix">Fix: ' + esc(e.fix) + '</div>' : '')).join('<br>') + '<div class="fix" style="margin-top:.4rem">Results below are from the last valid run and are faded.</div></div>';
+      $('#runline').innerHTML = '<span style="color:#ff6b72;font-weight:700">Blocked.</span> See the red box at the top.';
+      return;
+    }
+    state.ok = res;
+    document.body.classList.remove('stale');
+    const warn = res.warnings.filter((w) => !w.startsWith('Rows for titles'));
+    $('#alerts').innerHTML = warn.length ? '<div class="alert warn">' + warn.map(esc).join('<br>') + '</div>' : '';
+    state.perStep = precompute(res);
+    const p = res.proposed.score.estimate, b = res.baseline.score.estimate;
+    $('#heroGain').innerHTML = '<div class="v">' + signed(p - b) + '</div><div class="l">expected tickets per week vs the rule of thumb (' + (p >= b ? '+' : '') + (((p - b) / b) * 100).toFixed(1) + '%) <span class="chip calc">calculated</span></div>';
+    buildTheaters();
+    renderWhy();
+    renderSchedule();
+    renderBaseTable();
+    renderDetails();
+    $('#explain').classList.remove('show');
+    showStep(state.step);
+    $('#runline').innerHTML = 'Run fingerprint <span style="font-family:var(--mono);color:#fff">' + res.fingerprint + '</span> · ' + ms + ' ms';
+    if (note) toast(note);
+    setTimeout(() => { sweep(); buildAlgos(); }, 50);
+  }
+
+  // ------------------------------------------------------------ algorithm player (every algorithm the tool runs)
+  const FORMULAS = {
+    estimate: {
+      title: '1 · Demand estimate: EM with a pattern prior',
+      what: 'Turns past screenings into expected tickets for every film, time slot and day type. Sold-out screenings hide demand, so their true demand is re-estimated each round until nothing moves.',
+      math: 'repeat until estimates stop changing:<br>' +
+        '&nbsp;E-step &nbsp;y*<sub>i</sub> = y<sub>i</sub> if not sold out, else E[D | D &ge; seats<sub>i</sub>]<br>' +
+        '&nbsp;pattern a<sub>f</sub> = &Sigma;y* / &Sigma;b<sub>s</sub>g<sub>t</sub> &nbsp;(same for b<sub>s</sub>, g<sub>t</sub>)<br>' +
+        '&nbsp;blend &nbsp;&nbsp;&lambda; = (k&middot;a<sub>f</sub>b<sub>s</sub>g<sub>t</sub> + &Sigma;y*) / (k + n)<br>' +
+        '&nbsp;noise &nbsp;&nbsp;r = &Sigma;(n&minus;1)y&#772;&sup2; / &Sigma;(n&minus;1)(s&sup2; &minus; y&#772;)',
+    },
+    greedy: {
+      title: '2 · Rule of thumb: greedy fill (baseline)',
+      what: 'Gives each film a quota of shows by last week\'s sales, then fills the week slot by slot with the best-selling film that still has quota. It never revisits a choice.',
+      math: 'quota<sub>f</sub> = clip(round(N &middot; score<sub>f</sub> / &Sigma;score), min<sub>f</sub>, max<sub>f</sub>)<br>' +
+        'for slot in 19, 22, 16, 13, 10:<br>&nbsp;for hall largest &rarr; smallest, day Mon &rarr; Sun:<br>' +
+        '&nbsp;&nbsp;pick argmax score<sub>f</sub> with quota<sub>f</sub> &gt; 0,<br>&nbsp;&nbsp;fits the slot, not on elsewhere now',
+    },
+    flow: {
+      title: '3 · Optimal plan: min-cost flow, successive shortest paths',
+      what: 'The schedule is a flow network. Each step finds the most valuable path from S to T through the remaining network and pushes one screening along it. A path may reroute: a film leaves one hall so a better film can take it. It stops when no path adds tickets.',
+      math: 'cost c = &minus;v(f, hall, time) on film&rarr;hall edges,<br>&nbsp;&minus;M on minimum-show edges, 0 elsewhere<br>' +
+        'residual: free capacity forward (c), used flow backward (&minus;c)<br>repeat:<br>' +
+        '&nbsp;d(v) = min<sub>u</sub> [ d(u) + c(u,v) ] &nbsp;(Bellman-Ford from S)<br>' +
+        '&nbsp;if d(T) &ge; 0: stop, optimal<br>&nbsp;push 1 unit along the path; value += &minus;d(T)',
+    },
+    lagrange: {
+      title: '4 · Proof and prices: Lagrangian relaxation',
+      what: 'Checks the optimum independently. Show limits become prices per show; then each slot is planned alone, giving an upper bound. Repairing that plan gives a real schedule. Prices move until both meet.',
+      math: 'L(p) = max<sub>x</sub> &Sigma;(v &minus; p<sub>f</sub>)x + &Sigma;&mu;<sub>f</sub>max<sub>f</sub> &minus; &Sigma;&nu;<sub>f</sub>min<sub>f</sub> &ge; OPT<br>' +
+        'p<sub>f</sub> = &mu;<sub>f</sub> &minus; &nu;<sub>f</sub><br>&mu;<sub>f</sub> &larr; max(0, &mu;<sub>f</sub> + &alpha;(n<sub>f</sub> &minus; max<sub>f</sub>))<br>' +
+        '&nu;<sub>f</sub> &larr; max(0, &nu;<sub>f</sub> + &alpha;(min<sub>f</sub> &minus; n<sub>f</sub>))<br>&alpha; = &theta;(UB &minus; LB) / &Vert;g&Vert;&sup2;, stop when UB = LB',
+    },
+  };
+  const algo = { tab: 'flow', i: 0, timer: null, data: {} };
+  const SPEED = { estimate: 700, greedy: 90, flow: 150, lagrange: 140 };
+  const frames = (t) => ({ estimate: algo.data.es, greedy: algo.data.bl, flow: algo.data.fl, lagrange: algo.data.L && algo.data.L.history }[t] || []).length + (t === 'greedy' ? 1 : 0);
+
+  function buildAlgos() {
+    algoStop();
+    const inp = state.inputs, r = state.ok;
+    algo.data = { es: Engine.traceEstimate(r, inp), bl: Engine.traceBaseline(r, inp), fl: Engine.traceFlow(r, inp), L: Engine.lagrangian(r) };
+    const P = r.problem;
+    let acc = 0;
+    algo.data.flValue = algo.data.fl.map((st) => { let v = 0; st.plan.forEach((day, d) => day.forEach((sl, s) => sl.forEach((f, h) => { if (f) v += P.valueOf(f, s, Engine.dayTypeOfWeekday(d), P.rooms[h].capacity, P.kappa); }))); return v; });
+    void acc;
+    mountAlgo(algo.tab);
+  }
+  function mountAlgo(tab) {
+    algoStop();
+    algo.tab = tab;
+    $$('#algoTabs button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
+    const F = FORMULAS[tab];
+    $('#algoTitle').textContent = F.title;
+    $('#algoWhat').textContent = F.what;
+    $('#algoMath').innerHTML = F.math;
+    const n = frames(tab);
+    $('#algoScrub').max = Math.max(0, n - 1);
+    if (tab === 'lagrange') $('#algoStage').innerHTML = '<div class="conv-grid"><div class="chart" id="convChart"></div><div><div class="conv-read" id="convRead"></div><div class="k" style="margin-top:.8rem">Price per show (shadow price)</div><div id="convPrices"></div></div></div><div class="conv-grid2"><div><div class="k">Shows per film at the current prices vs allowed range</div><div id="convCounts"></div></div><div><div class="k">Current slot-by-slot plan (days &rarr;, 5 slots &times; 3 halls &darr;)</div><div id="convMini"></div></div></div>';
+    else $('#algoStage').innerHTML = '<div id="algoVis"></div><div id="algoRead" class="algo-read"></div>';
+    showAlgo(tab === 'greedy' ? 0 : 0);
+  }
+  function showAlgo(i) {
+    algo.i = i;
+    $('#algoScrub').value = i;
+    ({ estimate: frameEstimate, greedy: frameGreedy, flow: frameFlow, lagrange: showConverge }[algo.tab])(i);
+    $('#algoStep').textContent = 'step ' + (i + (algo.tab === 'greedy' ? 0 : 1)) + ' / ' + (frames(algo.tab) - (algo.tab === 'greedy' ? 1 : 0));
+  }
+  function algoPlay() {
+    if (algo.timer) return algoStop();
+    const n = frames(algo.tab);
+    if (algo.i >= n - 1) showAlgo(0);
+    $('#algoPlay span').textContent = 'Pause';
+    algo.timer = setInterval(() => { if (algo.i >= frames(algo.tab) - 1) return algoStop(); showAlgo(algo.i + 1); }, SPEED[algo.tab]);
+  }
+  function algoStop() {
+    clearInterval(algo.timer); algo.timer = null;
+    const done = algo.data.es && algo.i >= frames(algo.tab) - 1;
+    const b = $('#algoPlay span'); if (b) b.textContent = done ? 'Run again' : 'Run the algorithm';
+  }
+  const readout = (items) => items.map(([k, v, c]) => '<div><span>' + k + '</span><b' + (c ? ' style="color:' + c + '"' : '') + '>' + v + '</b></div>').join('');
+
+  function frameEstimate(i) {
+    const r = state.ok, es = algo.data.es, st = es[i];
+    const films = r.problem.films.map((f) => f.id), S = SLOTS.length, T = 2;
+    const mx = Math.max(...es[es.length - 1].mu, 1);
+    const prev = i > 0 ? es[i - 1].mu : null;
+    let h = '<table class="heat"><tr><th></th>' + ['Mon-Thu', 'Fri-Sun'].map((d) => SLOTS.map((s) => '<th>' + d + '<br>' + s + '</th>').join('')).join('') + '</tr>';
+    films.forEach((f, fi) => {
+      h += '<tr><td class="f" style="color:' + color(f, 62) + '">' + esc(f) + '</td>';
+      [0, 1].forEach((t) => SLOTS.forEach((_, s) => {
+        const c = (fi * S + s) * T + t, v = st.mu[c], moved = prev && Math.abs(v - prev[c]) > 0.5;
+        h += '<td style="background:rgba(229,9,20,' + (0.1 + 0.8 * Math.min(v / mx, 1)).toFixed(2) + ');' + (moved ? 'outline:2px solid #fff;outline-offset:-2px' : '') + '">' + fmt(v) + '</td>';
+      }));
+      h += '</tr>';
+    });
+    h += '</table>';
+    const W = 560, H = 150, L = 50, R = 10, Tp = 12, B = 26;
+    const ds = es.map((x) => Math.max(x.delta || 0, 0.01));
+    const lg = (v) => Math.log10(v), lo = -2, hi = Math.ceil(lg(Math.max(...ds)));
+    const x = (k) => L + ((W - L - R) * k) / (es.length - 1), y = (v) => Tp + (H - Tp - B) * (1 - (lg(v) - lo) / (hi - lo));
+    let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" style="max-width:100%;width:' + W + 'px" role="img" aria-label="Largest change per EM iteration">';
+    for (let e = lo; e <= hi; e++) svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(Math.pow(10, e)) + '" y2="' + y(Math.pow(10, e)) + '" stroke="#262626"/><text x="' + (L - 6) + '" y="' + (y(Math.pow(10, e)) + 4) + '" text-anchor="end">' + Math.pow(10, e) + '</text>';
+    svg += '<polyline fill="none" stroke="#46d369" stroke-width="2.5" points="' + ds.slice(1, i + 1).map((v, k) => x(k + 1) + ',' + y(v)).join(' ') + '"/>';
+    ds.slice(1, i + 1).forEach((v, k) => (svg += '<circle cx="' + x(k + 1) + '" cy="' + y(v) + '" r="3.5" fill="#46d369"/>'));
+    svg += '<text x="' + (L + (W - L - R) / 2) + '" y="' + (H - 4) + '" text-anchor="middle">iteration (largest change in any estimate, tickets, log scale)</text></svg>';
+    $('#algoVis').innerHTML = '<div class="chart">' + svg + '</div><div style="overflow-x:auto">' + h + '</div>';
+    $('#algoRead').innerHTML = readout([['Iteration', (st.iter + 1) + ' / ' + es.length], ['Largest change', st.delta == null ? 'start' : st.delta.toFixed(2) + ' tix', st.delta != null && st.delta < 0.1 ? '#46d369' : null], ['Hidden demand behind sell-outs', '+' + fmt(st.imputed) + ' tix'], ['Screening noise r', st.rHat.toFixed(1)]]);
+  }
+
+  function gridSvg(plan, highlight, opts) {
+    const P = state.ok.problem, R = P.rooms.length;
+    const x0 = opts.x0, y0 = opts.y0, cw = opts.cw, ch = opts.ch;
+    let s = '';
+    DAYS.forEach((d, di) => (s += '<text x="' + (x0 + di * cw + (cw - 6) / 2) + '" y="' + (y0 - 8) + '" text-anchor="middle">' + d + '</text>'));
+    SLOTS.forEach((sl, si) => P.rooms.forEach((room, h) => {
+      const row = si * R + h, yy = y0 + row * ch + si * 4;
+      if (opts.labels) s += '<text x="' + (x0 - 6) + '" y="' + (yy + ch / 2 + 2) + '" text-anchor="end" style="font-size:9px">' + (h === 0 ? sl + ' ' : '') + 'H' + (h + 1) + '</text>';
+      DAYS.forEach((_, di) => {
+        const f = plan[di][si][h];
+        const hl = highlight && highlight[di + '|' + si + '|' + h];
+        s += '<rect x="' + (x0 + di * cw) + '" y="' + yy + '" width="' + (cw - 6) + '" height="' + (ch - 3) + '" rx="2" fill="' + (room.capacity <= 0 ? '#161616' : f ? color(f, 42) : '#101010') + '"' + (hl ? ' stroke="' + hl + '" stroke-width="2.5"' : '') + '/>';
+      });
+    }));
+    return s;
+  }
+
+  function frameGreedy(i) {
+    const r = state.ok, P = r.problem, bl = algo.data.bl;
+    const plan = r.baseline.plan.map((d) => d.map((s) => s.slice().fill(null)));
+    Object.entries(state.inputs.locks || {}).forEach(([k, f]) => { const [d, s, h] = k.split('|').map(Number); plan[d][s][h] = f; });
+    for (let k = 0; k < i; k++) plan[bl[k].d][bl[k].s][bl[k].r] = bl[k].film;
+    const cur = i > 0 ? bl[i - 1] : null;
+    const quota = cur ? cur.quota : bl.quota0;
+    const W = 620, H = 470;
+    let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Greedy fill of the week">' + gridSvg(plan, cur ? { [cur.d + '|' + cur.s + '|' + cur.r]: '#fff' } : null, { x0: 70, y0: 30, cw: 78, ch: 27, labels: true }) + '</svg>';
+    const qmax = Math.max(...bl.quota0, 1);
+    const bars = P.films.map((f, k) => '<div class="crow"><span style="color:' + color(f.id, 62) + ';font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(f.id) + '</span><span class="track"><span class="ok" style="left:0;width:' + (bl.quota0[k] / qmax * 100) + '%"></span><span class="bar2" style="width:' + (quota[k] / qmax * 100) + '%;background:' + color(f.id, 45) + '"></span></span><span class="num">' + quota[k] + ' / ' + bl.quota0[k] + ' left</span></div>').join('');
+    $('#algoVis').innerHTML = '<div class="algo-2"><div class="chart">' + svg + '</div><div><div class="k">Quota left per film (score = last week\'s tickets: ' + P.films.map((f, k) => esc(f.id) + ' ' + fmt(bl.score[k])).join(', ') + ')</div>' + bars + '</div></div>';
+    $('#algoRead').innerHTML = readout([['Filled', i + ' / ' + bl.length], ['Just filled', cur ? DAYS[cur.d] + ' ' + SLOTS[cur.s] + ' Hall ' + (cur.r + 1) : 'quotas set'], ['Chosen', cur ? esc(cur.film) : '-', cur ? color(cur.film, 62) : null], ['Rule', cur ? 'highest score with quota left' : 'N &times; share, clipped']]);
+  }
+
+  function frameFlow(i) {
+    const r = state.ok, P = r.problem, fl = algo.data.fl, st = fl[i];
+    const W = 940, H = 500, x0 = 330, y0 = 34, cw = 78, ch = 27;
+    const filmY = {}, nF = P.films.length;
+    P.films.forEach((f, k) => (filmY[f.id] = 60 + (k * 380) / Math.max(nF - 1, 1)));
+    const counts = {};
+    P.films.forEach((f) => (counts[f.id] = 0));
+    st.plan.forEach((day) => day.forEach((sl) => sl.forEach((f) => { if (f) counts[f]++; })));
+    const cellXY = (n) => [x0 + n.d * cw + (cw - 6) / 2, y0 + (n.s * P.rooms.length + n.h) * ch + n.s * 4 + (ch - 3) / 2];
+    const hl = {};
+    st.nodes.forEach((n) => { if (n.k === 'cell') hl[n.d + '|' + n.s + '|' + n.h] = '#fff'; });
+    let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Augmenting path in the flow network">';
+    svg += gridSvg(st.plan, hl, { x0, y0, cw, ch, labels: false });
+    // path segments
+    let pts = [], seg = '';
+    st.nodes.forEach((n) => pts.push(n.k === 'S' ? [36, 250] : n.k === 'T' ? [918, 250] : n.k === 'film' ? [210, filmY[n.f]] : cellXY(n)));
+    for (let k = 0; k + 1 < st.nodes.length; k++) {
+      const a = st.nodes[k], b = st.nodes[k + 1];
+      let col = '#46d369', dash = '';
+      if (a.k === 'S') col = st.minPhase ? '#f5b301' : '#46d369';
+      else if (a.k === 'cell' && b.k === 'film') { col = '#ff6b72'; dash = ' stroke-dasharray="6 4"'; }
+      else if (b.k === 'T') col = '#888';
+      const p1 = a.k === 'film' ? [210, filmY[a.f]] : pts[k], p2 = b.k === 'film' ? [90, filmY[b.f]] : pts[k + 1];
+      seg += '<line x1="' + p1[0] + '" y1="' + p1[1] + '" x2="' + p2[0] + '" y2="' + p2[1] + '" stroke="' + col + '" stroke-width="3"' + dash + '/>';
+    }
+    svg += seg;
+    svg += '<circle cx="30" cy="250" r="16" fill="#2a2a2a" stroke="#888"/><text x="30" y="255" text-anchor="middle" style="fill:#fff;font-weight:800;font-size:13px">S</text>';
+    svg += '<circle cx="922" cy="250" r="14" fill="#2a2a2a" stroke="#888"/><text x="922" y="255" text-anchor="middle" style="fill:#fff;font-weight:800;font-size:13px">T</text>';
+    P.films.forEach((f) => {
+      const y = filmY[f.id], ok = counts[f.id] >= f.min && counts[f.id] <= f.max;
+      svg += '<rect x="90" y="' + (y - 20) + '" width="120" height="40" rx="5" fill="' + color(f.id, 30) + '"/><text x="150" y="' + (y - 4) + '" text-anchor="middle" style="fill:#fff;font-weight:800;font-size:10px">' + esc(f.id) + '</text><text x="150" y="' + (y + 12) + '" text-anchor="middle" style="fill:' + (ok ? '#e0e0e0' : '#f5b301') + ';font-size:10px">' + counts[f.id] + ' shows (' + f.min + '-' + f.max + ')</text>';
+    });
+    svg += '<text x="' + (x0 + 3.5 * cw) + '" y="' + (H - 6) + '" text-anchor="middle">hall-at-a-time nodes (the schedule) · white outline = on the current path</text></svg>';
+    // value chart
+    const vals = algo.data.flValue, CW = 940, CH = 120, L = 60, Rr = 10, Tp = 10, B = 22;
+    const lo = 0, hi = Math.max(...vals);
+    const xx = (k) => L + ((CW - L - Rr) * k) / (vals.length - 1), yy = (v) => Tp + (CH - Tp - B) * (1 - (v - lo) / (hi - lo));
+    const firstFree = fl.findIndex((x) => !x.minPhase);
+    let c = '<svg viewBox="0 0 ' + CW + ' ' + CH + '" role="img" aria-label="Plan value per step">';
+    c += '<line x1="' + xx(firstFree) + '" x2="' + xx(firstFree) + '" y1="' + Tp + '" y2="' + (CH - B) + '" stroke="#f5b301" stroke-dasharray="4 4"/><text x="' + (xx(firstFree) - 6) + '" y="' + (Tp + 12) + '" text-anchor="end" style="fill:#f5b301">minimum shows placed first</text>';
+    c += '<text x="' + (L - 6) + '" y="' + (yy(hi) + 4) + '" text-anchor="end">' + fmt(hi) + '</text><text x="' + (L - 6) + '" y="' + (yy(0) + 4) + '" text-anchor="end">0</text>';
+    c += '<polyline fill="none" stroke="#46d369" stroke-width="2.5" points="' + vals.slice(0, i + 1).map((v, k) => xx(k) + ',' + yy(v)).join(' ') + '"/>';
+    c += '<text x="' + (L + (CW - L - Rr) / 2) + '" y="' + (CH - 4) + '" text-anchor="middle">plan value (expected tickets) after each augmenting path</text></svg>';
+    $('#algoVis').innerHTML = '<div class="chart">' + svg + '</div><div class="chart">' + c + '</div>';
+    // narrate the path
+    const moves = [];
+    for (let k = 0; k + 1 < st.nodes.length; k++) {
+      const a = st.nodes[k], b = st.nodes[k + 1];
+      if (a.k === 'film' && b.k === 'cell') moves.push(esc(a.f) + ' into ' + DAYS[b.d] + ' ' + SLOTS[b.s] + ' H' + (b.h + 1));
+      if (a.k === 'cell' && b.k === 'film') moves.push(esc(b.f) + ' leaves ' + DAYS[a.d] + ' ' + SLOTS[a.s] + ' H' + (a.h + 1));
+    }
+    const last = i === fl.length - 1;
+    $('#algoRead').innerHTML = readout([['Path', (i + 1) + ' / ' + fl.length], ['Phase', st.minPhase ? 'meeting minimums' : 'adding value', st.minPhase ? '#f5b301' : '#46d369'], ['Tickets this path adds', (st.pathValue >= 0 ? '+' : '') + st.pathValue.toFixed(1)], ['Plan value', fmt(vals[i])]]) + '<div class="algo-move">' + moves.join(' &rarr; ') + (last ? '<br><b style="color:#46d369">No path with positive value is left: d(T) &ge; 0, the plan is optimal (' + fmt(vals[i]) + ').</b>' : '') + '</div>';
+  }
+
+  function showConverge(i) {
+    const L = algo.data.L, H = L.history, h = H[i];
+    // chart
+    const W = 620, Ht = 300, Lm = 58, R = 12, T = 14, B = 34;
+    const last = H.length - 1;
+    const lo = Math.min(L.exact, ...H.filter((x) => x.lb > -Infinity).map((x) => x.lb)) - 40;
+    const hi = H[0].ub + 0.35 * (H[0].ub - lo); // early dual spikes above this are clipped
+    const x = (k) => Lm + ((W - Lm - R) * k) / Math.max(last, 1);
+    const y = (v) => T + (Ht - T - B) * (1 - (Math.min(Math.max(v, lo), hi) - lo) / (hi - lo));
+    let svg = '<svg viewBox="0 0 ' + W + ' ' + Ht + '" role="img" aria-label="Upper and lower bounds converging to the optimum">';
+    const tick = Math.pow(10, Math.floor(Math.log10((hi - lo) / 3)));
+    for (let v = Math.ceil(lo / tick) * tick; v <= hi; v += tick) svg += '<line x1="' + Lm + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="#262626"/><text x="' + (Lm - 6) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + fmt(v) + '</text>';
+    svg += '<text x="' + (Lm + (W - Lm - R) / 2) + '" y="' + (Ht - 6) + '" text-anchor="middle">iteration</text>';
+    const step = last > 60 ? 20 : 10;
+    for (let k = 0; k <= last; k += step) svg += '<text x="' + x(k) + '" y="' + (Ht - B + 16) + '" text-anchor="middle">' + k + '</text>';
+    svg += '<line x1="' + Lm + '" x2="' + (W - R) + '" y1="' + y(L.exact) + '" y2="' + y(L.exact) + '" stroke="#fff" stroke-dasharray="5 4" stroke-opacity=".6"/><text x="' + (W - R) + '" y="' + (y(L.exact) - 6) + '" text-anchor="end" style="fill:#fff">exact optimum ' + fmt(L.exact) + ' (network flow)</text>';
+    const seen = H.slice(0, i + 1);
+    svg += seen.map((p) => '<circle cx="' + x(p.it) + '" cy="' + y(p.dual) + '" r="2" fill="#ff6b72" fill-opacity=".35"/>').join('');
+    svg += '<polyline fill="none" stroke="#ff6b72" stroke-width="2.5" points="' + seen.map((p) => x(p.it) + ',' + y(p.ub)).join(' ') + '"/>';
+    const lbs = seen.filter((p) => p.lb > -Infinity);
+    if (lbs.length) svg += '<polyline fill="none" stroke="#46d369" stroke-width="2.5" points="' + lbs.map((p) => x(p.it) + ',' + y(p.lb)).join(' ') + '"/>';
+    svg += '<line x1="' + x(i) + '" x2="' + x(i) + '" y1="' + T + '" y2="' + (Ht - B) + '" stroke="#fff" stroke-opacity=".25"/></svg>';
+    $('#convChart').innerHTML = svg;
+    // readout
+    const gapT = h.lb > -Infinity ? h.ub - h.lb : NaN;
+    $('#convRead').innerHTML = '<div><span>Iteration</span><b>' + h.it + ' / ' + last + '</b></div><div><span>Gap</span><b style="color:' + (gapT < 1 ? '#46d369' : '#fff') + '">' + (isNaN(gapT) ? '-' : fmt(gapT) + ' tix') + '</b></div><div><span style="color:#ff6b72">Upper bound</span><b>' + fmt(h.ub) + '</b></div><div><span style="color:#46d369">Best real schedule</span><b>' + (h.lb > -Infinity ? fmt(h.lb) : '-') + '</b></div>';
+    // prices
+    const pm = Math.max(5, ...H.flatMap((p) => p.price.map(Math.abs)));
+    $('#convPrices').innerHTML = L.films.map((f, k) => {
+      const p = h.price[k], w = (Math.abs(p) / pm) * 50;
+      return '<div class="prow"><span class="nm" style="color:' + color(f, 62) + '">' + esc(f) + '</span><span class="track"><span class="bar" style="left:' + (p >= 0 ? 50 : 50 - w) + '%;width:' + w + '%;background:' + (p >= 0 ? '#ff6b72' : '#54b9ff') + '"></span></span><span class="num">' + (p >= 0 ? '+' : '') + p.toFixed(1) + '</span></div>';
+    }).join('') + '<p class="muted" style="font-size:.72rem;margin:.4rem 0 0">Red: charged, it wants more shows than allowed. Blue: subsidised to reach its minimum.</p>';
+    // counts vs limits
+    const cmax = STEPS;
+    $('#convCounts').innerHTML = L.films.map((f, k) => {
+      const n = h.counts[k], inside = n >= L.min[k] && n <= L.max[k];
+      return '<div class="crow"><span class="nm" style="color:' + color(f, 62) + ';font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(f) + '</span><span class="track"><span class="ok" style="left:' + (L.min[k] / cmax * 100) + '%;width:' + ((L.max[k] - L.min[k]) / cmax * 100) + '%"></span><span class="dot" style="left:' + (n / cmax * 100) + '%;background:' + color(f, 50) + ';border-color:' + (inside ? '#fff' : '#ff6b72') + '"></span></span><span class="num" style="color:' + (inside ? '#e5e5e5' : '#ff6b72') + '">' + n + ' (' + L.min[k] + '-' + L.max[k] + ')</span></div>';
+    }).join('');
+    // mini plan (relaxed)
+    const plan = h.relaxed;
+    $('#convMini').innerHTML = '<div class="mini">' + plan.map((day) => '<div class="col">' + day.map((sl) => sl.map((f) => '<i style="background:' + (f ? color(f, 45) : '#101010') + '"></i>').join('')).join('') + '</div>').join('') + '</div>';
+  }
+  // ------------------------------------------------------------ baseline arithmetic
+  function renderBaseTable() {
+    const r = state.ok;
+    const films = r.problem.films;
+    const open = r.problem.rooms.filter((x) => x.capacity > 0).length * STEPS;
+    const total = films.reduce((a, f) => a + r.baseline.signal[f.id], 0);
+    $('#baseTable').innerHTML = '<tr><th>Film</th><th>Last-week tickets</th><th>Share</th><th>' + open + ' &times; share</th><th>Limits</th><th>Shows</th></tr>' + films.map((f) => {
+      const sc = r.baseline.signal[f.id];
+      return '<tr><td style="color:' + color(f.id, 62) + '">' + esc(f.id) + '</td><td>' + fmt(sc) + '</td><td>' + (sc / total * 100).toFixed(0) + '%</td><td>' + (open * sc / total).toFixed(1) + '</td><td>' + f.min + '-' + f.max + '</td><td><b>' + r.baseline.check.counts[f.id] + '</b></td></tr>';
+    }).join('');
+  }
+
+  // ------------------------------------------------------------ details, cases, dial
+  function renderDetails() {
+    const r = state.ok;
+    const films = r.problem.films.map((f) => f.id);
+    const mx = Math.max(...r.estimate.cells.map((c) => c.mean), 1);
+    let h = '<tr><th></th>' + ['Weekday', 'Weekend'].map((d) => SLOTS.map((s) => '<th>' + d.slice(0, 3) + ' ' + s + '</th>').join('')).join('') + '</tr>';
+    films.forEach((f) => {
+      h += '<tr><td class="f" style="color:' + color(f, 62) + '">' + esc(f) + '</td>';
+      [0, 1].forEach((t) => SLOTS.forEach((_, s) => { const c = r.problem.cellIdx.get(f + '|' + s + '|' + t); h += '<td class="' + (c.n ? '' : 'un') + '" style="background:rgba(229,9,20,' + (0.1 + 0.8 * c.mean / mx).toFixed(2) + ')">' + fmt(c.mean) + '</td>'; }));
+      h += '</tr>';
+    });
+    $('#heat').innerHTML = h;
+    const sc = r.screenings;
+    $('#dataStats').textContent = fmt(r.world.rows.length) + ' purchase rows · ' + sc.length + ' past screenings · ' + sc.filter((x) => x.censored).length + ' sold out · ' + sc.filter((x) => x.zero).length + ' with zero sales · ' + fmt(r.audience.accounts) + ' buying accounts, ' + Math.round(r.audience.repeatShare * 100) + '% came back more than once.';
+  }
+  function renderCases() {
+    $('#caseRow').innerHTML = Engine.PRESETS.map((p) => { const c = state.caseResults[p.id]; return '<button type="button" class="case" data-case="' + p.id + '"><span class="kind ' + p.kind + '">' + p.kind + '</span>' + esc(p.title) + (c ? ' <span class="' + (c.pass ? 'ok">PASS' : 'no">FAIL') + '</span>' : '') + '</button>'; }).join('');
+  }
+  function runCase(id) {
+    const p = Engine.PRESETS.find((x) => x.id === id);
+    state.inputs = Engine.presetInputs(id);
+    syncForm();
+    run();
+    const c = p.check(state.res);
+    state.caseResults[id] = c;
+    renderCases();
+    $('#caseOut').innerHTML = '<b>' + esc(p.title) + ':</b> ' + esc(p.expected) + '<br><b class="' + (c.pass ? 'up' : 'down') + '">' + (c.pass ? 'PASS' : 'FAIL') + '</b> ' + esc(c.observed) + ' <button class="btn ghost" type="button" id="backBtn" style="margin-left:.4rem">Back to defaults</button>';
+    $('#backBtn').onclick = () => { state.inputs = Engine.defaultInputs(); syncForm(); run('Defaults restored'); };
+  }
+  function sweep() {
+    const ks = [0, 0.5, 1, 1.5, 2, 2.5, 3];
+    const pts = [];
+    for (const k of ks) { const inp = clone(state.inputs); inp.kappa = k; const r = Engine.run(inp); if (!r.ok) return; pts.push({ k, est: r.proposed.score.estimate, truth: r.proposed.score.truth, base: r.baseline.score.truth }); }
+    const W = 560, H = 290, L = 56, R = 14, T = 46, B = 38;
+    const vals = pts.flatMap((p) => [p.est, p.truth, p.base]);
+    const lo = Math.floor(Math.min(...vals) / 500) * 500, hi = Math.ceil(Math.max(...vals) / 500) * 500;
+    const x = (k) => L + ((W - L - R) * k) / 3, y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo || 1));
+    let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Expected versus true tickets by caution level">';
+    for (let v = lo; v <= hi; v += 500) svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="#2a2a2a"/><text x="' + (L - 6) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + fmt(v) + '</text>';
+    ks.forEach((k) => (svg += '<text x="' + x(k) + '" y="' + (H - B + 16) + '" text-anchor="middle">' + k + '</text>'));
+    svg += '<text x="' + (L + (W - L - R) / 2) + '" y="' + (H - 4) + '" text-anchor="middle">caution level</text>';
+    svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(pts[0].base) + '" y2="' + y(pts[0].base) + '" stroke="#a3a3a3" stroke-dasharray="5 4"/><text x="' + (W - R) + '" y="' + (y(pts[0].base) + 14) + '" text-anchor="end">rule of thumb, true tickets</text>';
+    const line = (key, c) => '<polyline fill="none" stroke="' + c + '" stroke-width="2.5" points="' + pts.map((p) => x(p.k) + ',' + y(p[key])).join(' ') + '"/>' + pts.map((p) => '<circle cx="' + x(p.k) + '" cy="' + y(p[key]) + '" r="3.5" fill="' + c + '"><title>' + fmt(p[key]) + '</title></circle>').join('');
+    svg += line('est', '#46d369') + line('truth', '#f5b301');
+    svg += '<g transform="translate(' + L + ',8)"><rect width="10" height="10" fill="#46d369"/><text x="15" y="9">what the model promises</text><rect y="17" width="10" height="10" fill="#f5b301"/><text x="15" y="26">what the simulated cinema really sells (mock)</text></g></svg>';
+    $('#sweep').innerHTML = svg;
+  }
+
+  // ------------------------------------------------------------ misc
+  let tt = null;
+  function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 2600); }
+  function csv(rows, cols) { return cols.join(',') + '\n' + rows.map((r) => cols.map((c) => r[c]).join(',')).join('\n') + '\n'; }
+  function download(name, text) { const u = URL.createObjectURL(new Blob([text], { type: 'text/csv' })); const a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 1000); }
+
+  function init() {
+    syncForm();
+    bindForm();
+    renderCases();
+    $('#playBtn').onclick = () => { $('#watch').scrollIntoView({ behavior: 'smooth' }); play(); };
+    $('#scrub').addEventListener('input', (e) => { stop(); showStep(+e.target.value); });
+    $('#endBtn').onclick = () => { stop(); showStep(STEPS - 1); };
+    $('#algoPlay').onclick = algoPlay;
+    $('#algoScrub').addEventListener('input', (e) => { algoStop(); showAlgo(+e.target.value); });
+    $('#algoTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) mountAlgo(b.dataset.tab); });
+    $('#runBtn').onclick = () => run('Plan updated');
+    $('#resetBtn').onclick = () => { state.inputs = Engine.defaultInputs(); syncForm(); run('Defaults restored'); };
+    $('#caseRow').addEventListener('click', (e) => { const b = e.target.closest('[data-case]'); if (b) runCase(b.dataset.case); });
+    $('#planTable').addEventListener('click', (e) => { const b = e.target.closest('[data-cell]'); if (b) explainCell(b.dataset.cell); });
+    $$('.seg button').forEach((b) => b.addEventListener('click', () => { state.view = b.dataset.view; $$('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); renderSchedule(); $('#explain').classList.remove('show'); }));
+    $('#dlRows').onclick = () => download('purchases_seed' + state.inputs.seed + '.csv', csv(state.ok.world.rows, Engine.HEADER));
+    $('#dlPlan').onclick = () => { const out = []; ['proposed', 'baseline'].forEach((w) => state.ok[w].plan.forEach((day, d) => day.forEach((sl, s) => sl.forEach((f, h) => out.push({ plan: w === 'proposed' ? 'optimized' : 'rule_of_thumb', play_day: Engine.addDays(Engine.PLAN_START, d), curtain_time: SLOTS[s], hall: state.ok.problem.rooms[h].name, title_tag: f || '' }))))); download('plans_' + state.ok.fingerprint + '.csv', csv(out, ['plan', 'play_day', 'curtain_time', 'hall', 'title_tag'])); };
+    window.addEventListener('scroll', () => $('#nav').classList.toggle('solid', window.scrollY > 30), { passive: true });
+    state.step = 25; // open on Sat 10:00, the clearest win
+    run();
+    setTimeout(() => { Engine.PRESETS.forEach((p) => (state.caseResults[p.id] = p.check(Engine.run(Engine.presetInputs(p.id))))); renderCases(); }, 400);
+  }
+  init();
+})();
+
+</script>
+</body>
+</html>
