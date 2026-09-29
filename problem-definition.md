@@ -55,7 +55,7 @@ Editing inputs and re-running in the demo before approval is interface behavior 
 
 ## 2. Computable Problem
 
-**Controllable variables:** `x[f,d,s,h] ∈ {0,1}`, film `f` in hall `h` on day `d` at slot `s`.
+**Controllable variables:** $x_{fhds} \in \lbrace 0,1 \rbrace$, film $f$ in hall $h$ on day $d$ at slot $s$.
 Slots: 10:00, 13:00, 16:00, 19:00, 22:00; day types: weekday (Mon-Thu), weekend (Fri-Sun) `[ASSUMPTION]`.
 
 **Inputs and settings:** hall capacities (220 / 120 / 60 seats, fictional), slot length (180 min), cleaning time (20 min), film runtimes, per-film min/max shows per week, caution level κ (default 2), prior strength k (default 3).
@@ -63,18 +63,18 @@ Slots: 10:00, 13:00, 16:00, 19:00, 22:00; day types: weekday (Mon-Thu), weekend 
 **Objective:** maximize expected tickets sold in the week.
 The computed metric is expected admissions under our demand estimates; the business outcome it is meant to support is actual admissions, which only a trial can measure.
 
-**Supporting analysis (not a component):** a demand estimate per film × slot × day type, `λ̂ = (k·m + Σy) / (k + n)`.
+**Supporting analysis (not a component):** a demand estimate per film × slot × day type, $\hat\lambda = \dfrac{k\,m + \sum y}{k + n}$.
 Here `m` is a multiplicative pattern (film × slot × day type) fitted to all screenings, `y` are tickets per past screening and `n` their count.
 Sold-out screenings enter as their expected demand given it reached capacity.
 Uncertainty `sd` accounts for screening-to-screening noise (overdispersion estimated from the data, r̂ = 6.4).
 
 | Component ID | Decision ID | Role: Cost / Constraint / State-transition | Model: Formulation / Simulation / Data-driven | Definition, units, and evidence / assumption / unknown |
 |---|---|---|---|---|
-| `expected-tickets` | `weekly-plan` | Cost (maximize) | Formulation | `Σ x[f,d,s,h] · E[min(D, cap_h)]`, tickets; D negative binomial with mean `max(λ̂ − κ·sd, 0)`. The learned λ̂ supplies a parameter only, so the component stays Formulation [classification reference §3]. |
-| `one-film-per-hall` | `weekly-plan` | Constraint | Formulation | `Σ_f x[f,d,s,h] ≤ 1`. Hard. |
-| `show-limits` | `weekly-plan` | Constraint | Formulation | `min_f ≤ Σ_{d,s,h} x[f,d,s,h] ≤ max_f`. Hard. `[ASSUMPTION]` stands in for distributor commitments (TBD). |
-| `no-self-clash` | `weekly-plan` | Constraint | Formulation | `Σ_h x[f,d,s,h] ≤ 1`: a film never plays in two halls at once. Hard; keeps demand separable. |
-| `slot-fit` | `weekly-plan` | Constraint | Formulation | `x = 0` if runtime + cleaning > slot length. Hard. |
+| `expected-tickets` | `weekly-plan` | Cost (maximize) | Formulation | $\sum x_{fhds}\, \mathbb{E}[\min(D, \text{seats}_h)]$, tickets; $D$ negative binomial with mean $\max(\hat\lambda - \kappa\sigma, 0)$. The learned λ̂ supplies a parameter only, so the component stays Formulation [classification reference §3]. |
+| `one-film-per-hall` | `weekly-plan` | Constraint | Formulation | $\sum_f x_{fhds} \le 1$. Hard. |
+| `show-limits` | `weekly-plan` | Constraint | Formulation | $\min_f \le \sum_{h,d,s} x_{fhds} \le \max_f$. Hard. `[ASSUMPTION]` stands in for distributor commitments (TBD). |
+| `no-self-clash` | `weekly-plan` | Constraint | Formulation | $\sum_h x_{fhds} \le 1$: a film never plays in two halls at once. Hard; keeps demand separable. |
+| `slot-fit` | `weekly-plan` | Constraint | Formulation | $x_{fhds} = 0$ if runtime + cleaning > slot length. Hard. |
 
 No State-transition component exists (Section 1).
 
@@ -127,18 +127,27 @@ The recommendation should not be trusted where most of the plan relies on untrie
 | C: Local search with audience overlap | Adds a substitution term between films sharing buyers | Addresses the separability assumption; no optimality guarantee; weakly identified | Later stage, once overlap evidence exists |
 | D: Self-learning policy (bandit / RL) | Adjusts the schedule from observed sales | Changes the problem to Feedback and Stateful; needs purchase timestamps and live testing | Rejected for the first step |
 | E: Multi-agent coordination (venues as agents) | Venue plans coordinated by price signals | Relevant only for multi-venue scope; one operator is still one decision maker | Roadmap, triggered by the venue-overlap request |
-| F: Social-media and review sentiment | Classify comments about a film as positive/negative and weight by comment count, e.g. `score = Σ sentiment × count`, as a prior for films without sales | Could help new releases; needs external data collection, platform terms, and a validated link to local admissions | Later add-on, after the trial |
+| F: Social-media and review sentiment | Classify comments about a film as positive/negative and weight by comment count, e.g. $\text{score} = \sum \text{sentiment} \times \text{count}$, as a prior for films without sales | Could help new releases; needs external data collection, platform terms, and a validated link to local admissions | Later add-on, after the trial |
 
-**Graph:** each unit of flow is one screening and travels source → film (edge limits min_f..max_f) → film-at-a-time node (capacity 1, `no-self-clash`) → hall-at-a-time node (capacity 1, `one-film-per-hall`; edge value = expected tickets) → sink.
+**Graph:** each unit of flow is one screening and travels source → film (edge limits $\min_f..\max_f$) → film-at-a-time node (capacity 1, `no-self-clash`) → hall-at-a-time node (capacity 1, `one-film-per-hall`; edge value = expected tickets) → sink.
 Because these capacity limits are nested, the flow polytope has integral vertices, so the best flow is a valid 0/1 schedule.
-Enumeration is infeasible (about 7^105 ≈ 10^88 weeks), and a greedy fill cannot move a film out of a slot once placed.
+Enumeration is infeasible (about $7^{105} \approx 10^{88}$ weeks), and a greedy fill cannot move a film out of a slot once placed.
 
-**Convergence view (Lagrangian relaxation, as per lecture on duality):** the show limits are moved into the objective with a price per film, `p_f = μ_f − ν_f`, so each of the 35 time slots can be planned separately by enumeration.
+**Convergence view (Lagrangian relaxation, as per lecture on duality):** the show limits are moved into the objective with a price per film, $p_f = \mu_f - \nu_f$, so each of the 35 time slots can be planned separately by enumeration.
 The relaxed value is an upper bound on the best week (weak duality); repairing the relaxed plan into a valid schedule gives a lower bound.
-Subgradient steps update the prices (`μ_f += step·(n_f − max_f)`, `ν_f += step·(min_f − n_f)`, projected to ≥ 0) until the bounds meet.
+Subgradient steps update the prices, $\mu_f \leftarrow \max(0, \mu_f + \alpha(n_f - \max_f))$ and $\nu_f \leftarrow \max(0, \nu_f + \alpha(\min_f - n_f))$ with $\alpha = \theta\,(\text{UB} - \text{LB})/\lVert g \rVert^2$, until the bounds meet.
 With default inputs the gap closes in 74 iterations at the exact flow value, 6,836 (strong duality holds because the flow formulation is integral).
 The final prices are shadow prices: e.g. one more allowed PAPER LANTERNS show would add about 25 expected tickets.
 The demo plays this sequence step by step.
+
+**Algorithm that builds the plan (successive shortest paths):** edge costs are $c(e) = -v_{fhds}$ on film-to-hall edges, $-M$ on the minimum-show edges and $0$ elsewhere.
+In the residual network each edge keeps its free capacity forward with cost $c(e)$ and its used flow backward with cost $-c(e)$.
+Each step computes $d(v) = \min_u \left[ d(u) + c(u,v) \right]$ from $S$ (Bellman-Ford); if $d(T) \ge 0$ it stops, otherwise it pushes one unit along the path and the plan gains $-d(T)$ expected tickets.
+With default inputs it takes 105 paths (the first 42 place minimum shows); the final residual network has no negative-cost cycle, which is the optimality condition.
+
+**Demand estimate (EM):** sold-out screenings are replaced by $y^{*} = \mathbb{E}[D \mid D \ge \text{seats}]$, the pattern $a_f b_s g_t$ is refitted, and $\hat\lambda$ is recomputed until the largest change is below 0.03 tickets (12 rounds with default inputs).
+
+All four algorithms (estimate, rule of thumb, min-cost flow, Lagrangian bounds) can be replayed step by step in `demo.html`.
 
 **Selected flow:** validate inputs → sum purchases per screening → estimate demand per film × slot × day type → value each (film, hall, slot) as expected tickets → solve the min-cost flow → verify constraints → compare with approach A on the same inputs and the same value function.
 The flow gives the true optimum of the stated formulation; this was checked against brute-force enumeration on 200 random small instances.
