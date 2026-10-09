@@ -25,27 +25,27 @@ with sync_playwright() as p:
         if width == 1440:
             note = page.inner_text('#runAllNote')
             check('7 of 7 cases pass' in note, 'demo: all 7 test cases pass in the page (' + note + ')')
-            fp0 = page.evaluate('SLOTWISE.result.fingerprint')
-            check(fp0 == page.inner_text('#fpDefault'), 'demo: default fingerprint shown in "What is real" matches the run')
+            KEY = 'JSON.stringify([APP.result.proposed.plan, APP.result.baseline.plan, APP.result.rowCount])'
+            fp0 = page.evaluate(KEY)
             # input -> run -> inspect -> modify -> run again
             page.fill('#seed', '438'); page.click('#run'); page.wait_for_timeout(600)
-            fp1 = page.evaluate('SLOTWISE.result.fingerprint')
+            fp1 = page.evaluate(KEY)
             check(fp1 != fp0, 'demo: changing the seed and pressing Run changes the result')
             check('438' in page.url, 'demo: settings are kept in the page address')
             page.reload(); page.wait_for_timeout(1000)
-            check(page.evaluate('SLOTWISE.result.fingerprint') == fp1, 'demo: reload with the same address reproduces the same fingerprint')
+            check(page.evaluate(KEY) == fp1, 'demo: reload with the same address reproduces the same plans')
             page.click('#reset'); page.wait_for_timeout(800)
-            check(page.evaluate('SLOTWISE.result.fingerprint') == fp0, 'demo: Reset restores the default fingerprint')
-            rows0 = page.evaluate('SLOTWISE.result.rowCount')
+            check(page.evaluate(KEY) == fp0, 'demo: Reset restores the default plans')
+            rows0 = page.evaluate('APP.result.rowCount')
             page.fill('#slots', '4'); page.click('#run'); page.wait_for_timeout(600)
-            check(page.evaluate('SLOTWISE.result.rowCount') != rows0 and page.evaluate('SLOTWISE.result.times.length') == 4, 'demo: fewer show-times regenerate the history and the grid')
+            check(page.evaluate('APP.result.rowCount') != rows0 and page.evaluate('APP.result.times.length') == 4, 'demo: fewer show-times regenerate the history and the grid')
             page.click('#reset'); page.wait_for_timeout(600)
             # failure: close halls 2 and 3 -> no plan, explanation, stale
             page.uncheck('[data-open="1"]'); page.uncheck('[data-open="2"]'); page.click('#run'); page.wait_for_timeout(500)
             txt = page.inner_text('#heroAlert')
             check('42 but only 35' in txt and 'stale' in page.evaluate('document.body.className'), 'demo: infeasible settings show the explanation and mark results stale')
             desc = page.inner_text('#heroDesc')
-            check('No plan is shown' in desc and 'No other week scores higher' not in desc, 'demo: on failure the headline no longer shows the previous success claim')
+            check('No plan for these settings' in desc and 'duality check' not in desc, 'demo: on failure the headline no longer shows the previous success claim')
             page.click('#reset'); page.wait_for_timeout(600)
             check('stale' not in page.evaluate('document.body.className'), 'demo: a valid run clears the stale state')
             # inspect a plan cell, pin a film, re-run
@@ -54,7 +54,7 @@ with sync_playwright() as p:
             pin = page.locator('#modalBody [data-pin]').first
             if pin.count():
                 pin.click(); page.wait_for_timeout(700)
-                check(len(page.evaluate('Object.keys(SLOTWISE.settings.pins)')) == 1 and page.evaluate('SLOTWISE.result.proposed.certificateOk'), 'demo: pinning a film re-runs and keeps a certified plan')
+                check(len(page.evaluate('Object.keys(APP.settings.pins)')) == 1 and page.evaluate('APP.result.proposed.certificateOk'), 'demo: pinning a film re-runs and keeps a certified plan')
             page.click('#clearPins'); page.wait_for_timeout(500)
             # demand cell explanation
             page.click('#heat [data-cell]'); page.wait_for_timeout(300)
@@ -66,6 +66,13 @@ with sync_playwright() as p:
             path = dl.value.path()
             head = open(path).readline().strip()
             check(head == 'title_tag,venue_tag,play_day,curtain_time,account_tag,passes_bought', 'demo: CSV download has exactly the six teaching fields')
+            # one title row, per-film gain vs baseline, figures drawn, cinema step control
+            check(page.locator('#slateRow .card').count() == page.evaluate('APP.result.slate.length') and page.locator('#top10').count() == 0, 'demo: a single title row with one card per film')
+            check(page.locator('#slateRow .card .delta').first.inner_text().endswith('tickets vs baseline'), 'demo: film cards show tickets vs baseline')
+            blank = page.evaluate("""() => ['heroArt','figAgg','figMle','figBayes','figPred','figCaution','figLp','figDual','simCanvas','simChart'].filter(id => { const c = document.getElementById(id); if (!c || !c.width) return true; const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; for (let i = 3; i < d.length; i += 16) if (d[i]) return false; return true; })""")
+            check(not blank, 'demo: every animated figure draws something ' + str(blank))
+            page.fill('#simStep', '20'); page.press('#simStep', 'Enter'); page.wait_for_timeout(400)
+            check('step 20 of 35' in page.inner_text('#simWhen') and page.input_value('#simSlider') == '20', 'demo: typing step 20 moves the cinema animation and the slider')
             # mock comparison button
             page.click('#scoreAlt'); page.wait_for_timeout(1500)
             check('Rule of thumb' in page.inner_text('#altTable'), 'demo: alternatives can be re-scored in the browser')
@@ -94,18 +101,19 @@ with sync_playwright() as p:
               s.querySelectorAll('.card,.stage-card,.kpi,.box').forEach(c => { worst = Math.max(worst, c.scrollHeight - c.clientHeight - 2); });
               const stage = document.getElementById('stage').getBoundingClientRect();
               return [worst, stage.left >= -1 && stage.top >= -1 && stage.right <= innerWidth + 1 && stage.bottom <= innerHeight + 1]; }""")
-            if ov[0] > 0 or not ov[1]: overflow.append(i + 1)
+            if ov[0] > 0.5 or not ov[1]: overflow.append(i + 1)  # sub-pixel rounding tolerated
             page.keyboard.press('ArrowRight'); page.wait_for_timeout(80)
         check(8 <= n <= 13, f'[{w}x{h}] deck has {n} slides')
         check(not overflow, f'[{w}x{h}] every slide fits the window without clipped content {overflow}')
         check(not errs and not reqs, f'[{w}x{h}] deck: no console errors or network requests {errs[:2]} {reqs[:2]}')
         if w == 1600:
-            page.keyboard.press('Home'); page.wait_for_timeout(200)
-            href = page.get_attribute('.slide.on a.btn.play', 'href')
-            check(href == 'demo.html', 'deck: first slide links to demo.html relatively')
-            page.click('.slide.on a.btn.play'); page.wait_for_timeout(1200)
-            check(page.url.endswith('/demo.html') or 'demo.html' in page.url, 'deck: the demo link opens demo.html offline')
-            check(page.locator('#heroMeta .match').count() == 1, 'deck: the linked demo runs')
+            page.keyboard.press('Home'); page.wait_for_timeout(300)
+            check(not page.evaluate("document.body.classList.contains('chrome-on')"), 'deck: player controls hidden until the mouse moves')
+            page.mouse.move(800, 450); page.mouse.move(810, 460); page.wait_for_timeout(300)
+            check(page.evaluate("document.body.classList.contains('chrome-on')") and 'Slide 1:' in page.inner_text('#ttl'), 'deck: controls appear on mouse movement with the slide title')
+            page.wait_for_timeout(2900)
+            check(not page.evaluate("document.body.classList.contains('chrome-on')"), 'deck: controls fade out when the mouse is still')
+            check(page.evaluate("document.querySelectorAll('.slide .sn').length") == n and page.inner_text('.slide.on .sn') == 'Slide 1', 'deck: slides are numbered "Slide n"')
         ctx.close()
     b.close()
 
@@ -116,9 +124,14 @@ for h in ['## 1. Decision, Scope & Problem Structure', '## 2. Computable Problem
 for f in ('problem-definition.md', 'demo.html', 'proposal.html'):
     t = (root / f).read_text()
     check('—' not in t, f + ': no em dash')
+    for bad in ('SLOTWISE', 'RIVERSIDE', 'fingerprint', 'programming manager', 'Your six') + (('Episode',) if f != 'problem-definition.md' else ()):
+        check(bad.lower() not in t.lower(), f + ': no "' + bad + '"')
+for f in ('demo.html', 'proposal.html'):
+    t = (root / f).read_text()
+    check('[ASSUMPTION]' not in t and 'href="demo.html"' not in t if f == 'proposal.html' else '[ASSUMPTION]' not in t, f + ': no bare [ASSUMPTION] labels' + (' and no demo link' if f == 'proposal.html' else ''))
 import json
 N = json.loads((root / 'src' / 'numbers.json').read_text())
-for k in ('propTickets', 'baseTickets', 'gainTickets', 'gainPct', 'truthProp', 'truthBase', 'oracle', 'fingerprint', 'objective', 'baseUntriedEst', 'baseUntriedTrue', 'progTruth', 'stSel', 'stProg', 'exPost', 'exAlpha', 'exBeta', 'lpPivots', 'oraclePct', 'truthPct'):
-    check(N[k] in md, f'definition quotes {k} = {N[k]} as computed by the engine')
+for k in ('propTickets', 'baseTickets', 'gainTickets', 'gainPct', 'truthProp', 'truthBase', 'oracle', 'objective', 'swTruthWins', 'swMeanGain', 'swWorst', 'baseUntriedEst', 'baseUntriedTrue', 'progTruth', 'stSel', 'stProg', 'exPost', 'exAlpha', 'exBeta', 'lpPivots', 'oraclePct', 'truthPct'):
+    check(N[k] in md.replace('\u2212', '-'), f'definition quotes {k} = {N[k]} as computed by the engine')
 print('\n' + ('ALL CHECKS PASSED' if not fails else f'{len(fails)} CHECK(S) FAILED'))
 sys.exit(1 if fails else 0)

@@ -19,7 +19,7 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     function frame(now) {
-      if (!t0) t0 = now;
+      if (!t0) t0 = now - FILL; // open on the full plan, then clear and replay
       draw(reduce ? FILL + 1 : (now - t0) % LOOP);
       if (!reduce && visible) raf = requestAnimationFrame(frame);
     }
@@ -65,7 +65,7 @@
     if (typeof IntersectionObserver === 'function') {
       io = new IntersectionObserver((es) => {
         const v = es.some((e) => e.isIntersecting);
-        if (v && !visible) { visible = true; t0 = 0; raf = requestAnimationFrame(frame); }
+        if (v && !visible) { visible = true; cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); }
         visible = v;
       });
       io.observe(canvas);

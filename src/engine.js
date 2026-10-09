@@ -45,7 +45,7 @@
   const ACCOUNT_POOL = 5000;
 
   const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const HISTORY_END = '2026-10-04'; // Sunday; the week of 5 Oct is already published [ASSUMPTION]
+  const HISTORY_END = '2026-10-04'; // Sunday; the week of 5 Oct is already published (assumption)
   const PLAN_START = '2026-10-12'; // Monday of the planning week
   const MAX_ROWS_SHOWN = 200;
 
@@ -144,7 +144,7 @@
   }
   function toMinutes(hhmm) { return +hhmm.slice(0, 2) * 60 + +hhmm.slice(3, 5); }
   function toHHMM(min) { return String(Math.floor(min / 60)).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0'); }
-  const dayType = (d) => (d <= 3 ? 0 : 1); // 0 = Mon-Thu, 1 = Fri-Sun [ASSUMPTION]
+  const dayType = (d) => (d <= 3 ? 0 : 1); // 0 = Mon-Thu, 1 = Fri-Sun (assumption)
   const DAY_TYPE_NAMES = ['Mon-Thu', 'Fri-Sun'];
   function interp(points, h) {
     if (h <= points[0][0]) return points[0][1];
@@ -334,7 +334,7 @@
     const maxSeats = Math.max(0, ...seats);
     const screenings = [...map.values()].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.s - b.s || a.f - b.f));
     screenings.forEach((sc) => {
-      // Records carry no hall. A total that equals one of the venue's hall sizes is read as a sell-out [ASSUMPTION].
+      // Records carry no hall. A total that equals one of the venue's hall sizes is read as a sell-out (assumption).
       sc.soldOut = seats.includes(sc.tickets);
       if (sc.tickets > maxSeats) errors.push('Screening ' + sc.tag + ' on ' + sc.date + ' at ' + times[sc.s] + ' has ' + sc.tickets + ' tickets, more than the largest hall (' + maxSeats + ' seats). Check for duplicated rows or the hall settings.');
     });
@@ -357,7 +357,7 @@
   //                     -> posterior Gamma(k*P + sum y, k + sum w)   (Example 2.1 / conjugate pair)
   //                     posterior mean = weighted average of the pattern and the cell's own average
   //   prediction        posterior predictive = negative binomial  (Lecture 2, "integrate, don't plug in")
-  //   sold-out screenings (total = a hall size) are flagged; their totals are lower bounds [ASSUMPTION]
+  //   sold-out screenings (total = a hall size) are flagged; their totals are lower bounds (assumption)
   // w is the weekday's exposure inside its day type (Fri vs Sat vs Sun), so one cell covers 3-4 days.
   // ---------------------------------------------------------------------------
   function estimateDemand(screenings, slate, st, opts) {
@@ -365,7 +365,7 @@
     const k = o.credibility === undefined ? st.credibility : o.credibility;
     const nF = slate.length, nS = st.slots;
     // Time-of-day index per audience group (family films vs all others): the manager marks a film as
-    // a family film on the slate [ASSUMPTION], so a family film is not assumed to share the evening peak.
+    // a family film on the slate (assumption), so a family film is not assumed to share the evening peak.
     const NG = 2;
     const grp = slate.map((f) => (f.audience === 'family' ? 1 : 0));
     const F = new Float64Array(nF).fill(0), D = new Float64Array(7).fill(1);
