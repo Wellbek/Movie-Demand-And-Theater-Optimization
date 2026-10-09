@@ -77,7 +77,7 @@ test('simplex optimum equals brute force on 150 random tiny instances', () => {
     const dem = Array.from({ length: nF }, () => Array.from({ length: nS }, () => Array.from({ length: 7 }, () => rng() * 150)));
     const est = {
       demand: (f, s, d) => dem[f][s][d],
-      cells: Array.from({ length: nF * nS * 2 }, () => ({ tested: rng() < 0.7 })),
+      cells: Array.from({ length: nF * nS * 2 }, () => { const tested = rng() < 0.7; return { tested, priorShare: tested ? rng() * 0.6 : 1 }; }),
       cellIdx: (f, s, t) => (f * nS + s) * 2 + t,
       hasRows: slate.map(() => true),
       shape: () => 1e4,
@@ -126,17 +126,29 @@ test('sold-out screenings are detected from totals equal to a hall size and corr
   if (cell) assert.ok(cell.estimate >= Math.min(...r.screenings.filter((s) => s.f === cell.f && s.s === cell.s && s.t === cell.t).map((s) => s.tickets)) - 1e-9);
 });
 
-test('caution: untried combinations of known films lose value; new releases do not', () => {
+test('caution: only the pattern part of an estimate is discounted, new releases included', () => {
   const r = E.run({ ...def(), newRelease: true });
   const P = r.problem;
   let checked = 0;
   for (let f = 0; f < P.slate.length; f++) for (let s = 0; s < P.nS; s++) for (let d = 0; d < 7; d++) {
-    const h = 0;
-    if (P.untried(f, s, d)) { assert.ok(P.value(f, h, d, s) < P.expected(f, h, d, s)); checked++; }
-    else assert.equal(P.value(f, h, d, s), P.expected(f, h, d, s));
-    if (!P.est.hasRows[f]) assert.ok(!P.untried(f, s, d));
+    const c = P.est.cellOf(f, s, d);
+    assert.ok(Math.abs(P.factor(f, s, d) - (1 - r.settings.caution * c.priorShare)) < 1e-12);
+    assert.ok(P.value(f, 0, d, s) <= P.expected(f, 0, d, s) + 1e-9);
+    if (!c.tested) { assert.equal(c.priorShare, 1); checked++; }
+    if (!P.est.hasRows[f]) assert.ok(P.value(f, 0, d, s) < P.expected(f, 0, d, s));
   }
   assert.ok(checked > 0);
+  // more own screenings -> smaller discount
+  const tried = P.est.cells.filter((c) => c.n > 0).sort((a, b) => a.sumW - b.sumW);
+  assert.ok(tried[0].priorShare > tried[tried.length - 1].priorShare);
+});
+
+test('dispersion: the negative-binomial shape estimated from the records is near the generator value', () => {
+  for (const nbShape of [3, 6, 20]) {
+    const r = E.run({ ...def(), nbShape }, { skipOracle: true });
+    const rr = r.estimate.dispersion;
+    assert.ok(rr >= nbShape / 2 && rr <= nbShape * 2.5, 'shape ' + nbShape + ' estimated as ' + rr);
+  }
 });
 
 test('backtest: selected estimate beats the film average used by the rule of thumb', () => {
@@ -154,7 +166,7 @@ test('extra rows: wrong venue and unknown titles are set aside with a note; off-
   assert.match(bad.errors[0], /not on the show-time grid/);
   const late = E.run({ ...def(), slots: 6 });
   assert.equal(late.status, 'invalid');
-  assert.match(late.errors[0], /after midnight/);
+  assert.match(late.errors[0], /on the next day/);
 });
 
 test('pins: a pinned film stays, and an impossible pin is reported', () => {
@@ -172,4 +184,10 @@ test('baseline never breaks a rule across seeds, slate sizes and a new release',
     assert.equal(r.status, 'ok');
     assert.deepEqual(r.checks.baseline.violations, [], 'seed ' + seed + ' films ' + filmCount + ' new ' + newRelease);
   }
+});
+
+test('brute-force check exported for the demo agrees on every comparable instance', () => {
+  const r = E.bruteForceCheck(60, 11);
+  assert.ok(r.compared > 30);
+  assert.equal(r.agree, r.compared);
 });

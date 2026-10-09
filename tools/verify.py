@@ -44,6 +44,8 @@ with sync_playwright() as p:
             page.uncheck('[data-open="1"]'); page.uncheck('[data-open="2"]'); page.click('#run'); page.wait_for_timeout(500)
             txt = page.inner_text('#heroAlert')
             check('42 but only 35' in txt and 'stale' in page.evaluate('document.body.className'), 'demo: infeasible settings show the explanation and mark results stale')
+            desc = page.inner_text('#heroDesc')
+            check('No plan is shown' in desc and 'No other week scores higher' not in desc, 'demo: on failure the headline no longer shows the previous success claim')
             page.click('#reset'); page.wait_for_timeout(600)
             check('stale' not in page.evaluate('document.body.className'), 'demo: a valid run clears the stale state')
             # inspect a plan cell, pin a film, re-run
@@ -67,6 +69,10 @@ with sync_playwright() as p:
             # mock comparison button
             page.click('#scoreAlt'); page.wait_for_timeout(1500)
             check('Rule of thumb' in page.inner_text('#altTable'), 'demo: alternatives can be re-scored in the browser')
+            page.click('#bruteBtn'); page.wait_for_timeout(1500)
+            note = page.inner_text('#studyNote')
+            m = re.search(r'Brute force: (\d+) of (\d+)', note)
+            check(bool(m) and m.group(1) == m.group(2) and int(m.group(2)) > 30, 'demo: brute-force check agrees with the simplex in the browser (' + note[:70] + ')')
         check(not errs, f'[{width}] demo: no console errors {errs[:2]}')
         check(not reqs, f'[{width}] demo: no network requests {reqs[:2]}')
         ctx.close()
@@ -112,7 +118,7 @@ for f in ('problem-definition.md', 'demo.html', 'proposal.html'):
     check('—' not in t, f + ': no em dash')
 import json
 N = json.loads((root / 'src' / 'numbers.json').read_text())
-for k in ('propTickets', 'baseTickets', 'gainTickets', 'gainPct', 'truthProp', 'truthBase', 'oracle', 'fingerprint', 'objective'):
+for k in ('propTickets', 'baseTickets', 'gainTickets', 'gainPct', 'truthProp', 'truthBase', 'oracle', 'fingerprint', 'objective', 'baseUntriedEst', 'baseUntriedTrue', 'progTruth', 'stSel', 'stProg', 'exPost', 'exAlpha', 'exBeta', 'lpPivots', 'oraclePct', 'truthPct'):
     check(N[k] in md, f'definition quotes {k} = {N[k]} as computed by the engine')
 print('\n' + ('ALL CHECKS PASSED' if not fails else f'{len(fails)} CHECK(S) FAILED'))
 sys.exit(1 if fails else 0)

@@ -8,10 +8,15 @@ module.exports = function numbers(E, study) {
   const r = E.run(st);
   if (r.status !== 'ok') throw new Error('default run failed: ' + r.errors.join(' | '));
   const b = r.scores.baseline, p = r.scores.proposed;
-  const S = study.results.sensible, R = study.results.random;
+  const S = study.results.sensible, R = study.results.random, Q = study.results.sparse;
   const cases = E.TEST_CASES.map((tc) => tc.check(E.run(tc.apply(E.defaultSettings()))));
   const prices = Object.fromEntries(r.proposed.prices.min.map((x) => [x.tag, x.price]));
   const perDay = (sc) => E.DAY_NAMES.map((n, d) => sc.perSlot.filter((x) => x.d === d).reduce((a, x) => a + x.tickets, 0));
+  // differences are taken between the rounded figures that are shown, so displayed numbers add up
+  const R0 = (x) => Math.round(x);
+  const dR = (a, c) => R0(a) - R0(c);
+  const pctR = (a, c) => pct(dR(a, c) / R0(c));
+  const st1 = (k, W) => { const x = (W || S)[k]; return { d: sgn(x.diff), ci: fmt(x.ci95) }; };
   const N = {
     seed: String(st.seed),
     fingerprint: r.fingerprint,
@@ -24,10 +29,11 @@ module.exports = function numbers(E, study) {
     accounts: fmt(r.diagnostics.accounts),
     historyFirst: r.history.first,
     historyLast: r.history.last,
+    dispersion: String(r.estimate.dispersion),
     baseTickets: fmt(b.tickets),
     propTickets: fmt(p.tickets),
-    gainTickets: sgn(p.tickets - b.tickets),
-    gainPct: pct((p.tickets - b.tickets) / b.tickets),
+    gainTickets: sgn(dR(p.tickets, b.tickets)),
+    gainPct: pctR(p.tickets, b.tickets),
     baseUntried: String(b.untested),
     propUntried: String(p.untested),
     baseAway: fmt(b.away),
@@ -39,54 +45,71 @@ module.exports = function numbers(E, study) {
     lpVars: String(r.proposed.lp.vars),
     lpRows: String(r.proposed.lp.rows),
     lpPivots: String(r.proposed.lp.pivots),
-    objective: (Math.round(r.proposed.lp.objective * 10) / 10).toLocaleString('en-US'),
-    dualBound: (Math.round(r.proposed.lp.dualBound * 10) / 10).toLocaleString('en-US'),
+    objective: (Math.round(r.proposed.lp.objective * 10) / 10).toLocaleString('en-US', { minimumFractionDigits: 1 }),
+    dualBound: (Math.round(r.proposed.lp.dualBound * 10) / 10).toLocaleString('en-US', { minimumFractionDigits: 1 }),
     priceOpp: prices.oppenhammer ? prices.oppenhammer.toFixed(1) : '0',
     priceGig: prices.gigantic ? prices.gigantic.toFixed(1) : '0',
     truthBase: fmt(b.truth),
     truthProp: fmt(p.truth),
-    truthGain: sgn(p.truth - b.truth),
-    truthPct: pct((p.truth - b.truth) / b.truth),
+    truthGain: sgn(dR(p.truth, b.truth)),
+    truthPct: pctR(p.truth, b.truth),
     oracle: fmt(r.oracle.truth),
-    oraclePct: ((100 * p.truth) / r.oracle.truth).toFixed(1) + '%',
+    oraclePct: ((100 * R0(p.truth)) / R0(r.oracle.truth)).toFixed(1) + '%',
     casesPass: String(cases.filter(Boolean).length),
     casesTotal: String(cases.length),
     wapeBlend: (S['backtest WAPE blend'].mean * 100).toFixed(1) + '%',
     wapePattern: (S['backtest WAPE pattern'].mean * 100).toFixed(1) + '%',
     wapeCell: (S['backtest WAPE cellAverage'].mean * 100).toFixed(1) + '%',
     wapeFilm: (S['backtest WAPE filmAverage'].mean * 100).toFixed(1) + '%',
-    stSel: fmt(S['selected (blend, k=1, caution 0.5)'].mean),
+    stSel: fmt(S.selected.mean),
     stBase: fmt(S['rule of thumb (baseline)'].mean),
+    stProg: fmt(S['simulated past programmer'].mean),
     stOracle: fmt(S['oracle (knows true demand)'].mean),
-    stSelPctOracle: ((100 * S['selected (blend, k=1, caution 0.5)'].mean) / S['oracle (knows true demand)'].mean).toFixed(1) + '%',
-    stGainBase: sgn(-S['rule of thumb (baseline)'].diff),
-    stGainBaseCi: fmt(S['rule of thumb (baseline)'].ci95),
-    stGainBasePct: pct(-S['rule of thumb (baseline)'].diff / S['rule of thumb (baseline)'].mean),
-    stFilmAvg: sgn(S['film average'].diff), stFilmAvgCi: fmt(S['film average'].ci95),
-    stCellAvg: sgn(S['own cell average'].diff), stCellAvgCi: fmt(S['own cell average'].ci95),
-    stPattern: sgn(S['pattern only'].diff), stPatternCi: fmt(S['pattern only'].ci95),
-    stNoCaution: sgn(S['blend, caution 0'].diff), stNoCautionCi: fmt(S['blend, caution 0'].ci95),
-    stCaution03: sgn(S['blend, caution 0.3'].diff), stCaution03Ci: fmt(S['blend, caution 0.3'].ci95),
-    stK2: sgn(S['blend, k=2'].diff), stK2Ci: fmt(S['blend, k=2'].ci95),
-    stK4: sgn(S['blend, k=4'].diff), stK4Ci: fmt(S['blend, k=4'].ci95),
-    stK0: sgn(S['blend, k=0'].diff), stK0Ci: fmt(S['blend, k=0'].ci95),
-    rnNoCaution: sgn(R['blend, caution 0'].diff), rnNoCautionCi: fmt(R['blend, caution 0'].ci95),
-    rnSel: fmt(R['selected (blend, k=1, caution 0.5)'].mean),
-    rnBase: fmt(R['rule of thumb (baseline)'].mean),
-    rnOracle: fmt(R['oracle (knows true demand)'].mean),
+    stSelPctOracle: ((100 * R0(S.selected.mean)) / R0(S['oracle (knows true demand)'].mean)).toFixed(1) + '%',
+    stGainBase: sgn(-S['rule of thumb (baseline)'].diff), stGainBaseCi: fmt(S['rule of thumb (baseline)'].ci95),
+    stGainProg: sgn(-S['simulated past programmer'].diff), stGainProgCi: fmt(S['simulated past programmer'].ci95),
     studySeeds: String(study.seeds),
+    rnSel: fmt(R.selected.mean), rnBase: fmt(R['rule of thumb (baseline)'].mean), rnOracle: fmt(R['oracle (knows true demand)'].mean),
+    spSel: fmt(Q.selected.mean), spBase: fmt(Q['rule of thumb (baseline)'].mean), spOracle: fmt(Q['oracle (knows true demand)'].mean),
+    spCovered: Math.round(100 * Q['tested combinations share'].mean) + '%',
   };
+  const add = (prefix, key, W) => { const x = st1(key, W); N[prefix] = x.d; N[prefix + 'Ci'] = x.ci; };
+  add('stFilmAvg', 'film average'); add('stCellAvg', 'own cell average'); add('stPattern', 'pattern only');
+  add('stNoCaution', 'caution 0'); add('stCaution025', 'caution 0.25'); add('stCaution075', 'caution 0.75'); add('stCaution1', 'caution 1');
+  add('stK05', 'k 0.5'); add('stK2', 'k 2'); add('stK4', 'k 4'); add('stSoldOutFix', 'with sold-out correction');
+  add('rnNoCaution', 'caution 0', R); add('rnCaution1', 'caution 1', R); add('rnSoldOutFix', 'with sold-out correction', R); add('rnCellAvg', 'own cell average', R);
+  add('spNoCaution', 'caution 0', Q); add('spCaution1', 'caution 1', Q); add('spCaution075', 'caution 0.75', Q); add('spSoldOutFix', 'with sold-out correction', Q); add('spCellAvg', 'own cell average', Q);
+  N.stNoCautionAbs = fmt(Math.abs(S['caution 0'].diff));
+  // where the rule of thumb's optimism comes from (mock): its untried screenings, estimated vs true
+  (function untriedSplit() {
+    const P = r.problem, T = E.truthFnFor(P);
+    let est = 0, tru = 0;
+    for (let d = 0; d < 7; d++) for (let s = 0; s < P.nS; s++) r.baseline.plan[d][s].forEach((f, h) => { if (f !== null && P.untried(f, s, d)) { est += P.expected(f, h, d, s); tru += T(f, h, d, s); } });
+    N.baseUntriedEst = fmt(est);
+    N.baseUntriedTrue = fmt(tru);
+  })();
+  // simulated past programmer on the default week (mock)
+  N.progTruth = fmt(E.scorePlan(r.problem, E.pastProgrammerPlan(r.problem), E.truthFnFor(r.problem)).truth);
   N.seatRows = seatRows();
-  N.satGrid = satGrid(5);
+  // exhibit day: the day where the two plans differ most (weekend days differ by a few percent)
+  const pb = perDay(b), pp = perDay(p);
+  let ex = 0;
+  pb.forEach((v, d) => { if (pp[d] / v > pp[ex] / pb[ex]) ex = d; });
+  N.exDayName = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][ex] + ' ' + E.addDays(E.PLAN_START, ex).slice(8).replace(/^0/, '') + ' Oct';
+  N.exDayBase = fmt(pb[ex]); N.exDayProp = fmt(pp[ex]); N.exDayPct = pctR(pp[ex], pb[ex]);
+  const wk = [4, 5, 6].map((d) => pctR(pp[d], pb[d]));
+  N.weekendPcts = wk.join(', ');
+  N.satGrid = satGrid(ex);
   Object.assign(N, workedExample());
   N.chartDay = dayChart(E.DAY_NAMES, perDay(b), perDay(p));
   N.chartStudy = studyChart([
     ['Rule of thumb', S['rule of thumb (baseline)'].mean, '#808080'],
-    ['Film average + LP', S['film average'].mean, '#5a5a5a'],
     ['Pattern only + LP', S['pattern only'].mean, '#5a5a5a'],
-    ['No caution + LP', S['blend, caution 0'].mean, '#5a5a5a'],
+    ['Film average + LP', S['film average'].mean, '#5a5a5a'],
+    ['No caution + LP', S['caution 0'].mean, '#5a5a5a'],
+    ['Simulated programmer', S['simulated past programmer'].mean, '#5a5a5a'],
     ['Own average + LP', S['own cell average'].mean, '#5a5a5a'],
-    ['Selected', S['selected (blend, k=1, caution 0.5)'].mean, '#e50914'],
+    ['Selected', S.selected.mean, '#e50914'],
     ['Oracle', S['oracle (knows true demand)'].mean, '#46d369'],
   ]);
   return N;
@@ -95,13 +118,13 @@ module.exports = function numbers(E, study) {
   function satGrid(d) {
     const P = r.problem;
     const grid = (plan, label, total) => {
-      let h = '<div><div class="sg-h">' + label + ' <span>' + fmt(total) + ' exp. tickets on Saturday</span></div><table class="sg"><thead><tr><th></th>' + P.halls.map((x) => '<th>' + x.name + ' (' + x.seats + ')</th>').join('') + '</tr></thead><tbody>';
+      let h = '<div><div class="sg-h">' + label + ' <span>' + fmt(total) + ' expected tickets that day</span></div><table class="sg"><thead><tr><th></th>' + P.halls.map((x) => '<th>' + x.name + ' (' + x.seats + ')</th>').join('') + '</tr></thead><tbody>';
       P.times.forEach((t, s) => {
         h += '<tr><th>' + E.toHHMM(t % 1440) + '</th>' + P.halls.map((x, hi) => {
           const f = plan[d][s][hi];
           if (f === null) return '<td class="e">empty</td>';
           const film = P.slate[f];
-          return '<td style="background:hsl(' + film.hue + ',55%,34%)">' + film.title.split(/[ :]/)[0] + (P.untried(f, s, d) ? ' <b class="amber">?</b>' : '') + '<span>' + fmt(P.expected(f, hi, d, s)) + '</span></td>';
+          return '<td style="background:hsl(' + film.hue + ',55%,34%)">' + film.title + (P.untried(f, s, d) ? ' <b class="amber">?</b>' : '') + '<span>' + fmt(P.expected(f, hi, d, s)) + '</span></td>';
         }).join('') + '</tr>';
       });
       return h + '</tbody></table></div>';
@@ -114,11 +137,14 @@ module.exports = function numbers(E, study) {
     const est = r.estimate;
     const c = est.cells.filter((x) => x.n >= 2 && x.n <= 4).sort((a, b) => Math.abs(b.own - b.pattern) / b.pattern - Math.abs(a.own - a.pattern) / a.pattern)[0];
     const film = r.slate[c.f];
-    const one = (x) => (Math.round(x * 10) / 10).toFixed(1);
+    const two = (x) => (Math.round(x * 100) / 100).toFixed(2);
+    // the posterior mean is recomputed from the two-decimal figures shown, so it can be checked by hand
+    const P2 = +two(c.pattern), W2 = +two(c.sumW), Y = c.sumY, k = est.credibility;
     return {
       exFilm: film.title, exTime: E.toHHMM(r.problem.times[c.s] % 1440), exType: E.DAY_TYPE_NAMES[c.t],
-      exPattern: one(c.pattern), exOwn: one(c.own), exN: String(c.n), exW: one(c.sumW), exK: String(est.credibility),
-      exPost: one(c.estimate), exWeight: Math.round(c.weight * 100) + '%', exSold: String(c.soldOut),
+      exPattern: two(P2), exSumY: String(Math.round(Y)), exN: String(c.n), exW: two(W2), exK: String(k),
+      exOwn: two(Y / W2), exAlpha: two(k * P2 + Y), exBeta: two(k + W2), exPost: two((k * P2 + Y) / (k + W2)),
+      exWeight: Math.round((100 * W2) / (k + W2)) + '%',
     };
   }
   function seatRows() {
@@ -132,11 +158,13 @@ module.exports = function numbers(E, study) {
   }
   function dayChart(labels, a, c) {
     const W = 620, H = 230, L = 46, B = 30, T = 10;
-    const max = Math.max(...a, ...c) * 1.12;
+    const top = Math.max(...a, ...c);
+    const raw = top / 4, mag = Math.pow(10, Math.floor(Math.log10(raw))), step = [1, 2, 5, 10].map((m) => m * mag).find((x) => x >= raw);
+    const max = Math.ceil((top * 1.05) / step) * step;
     const gw = (W - L - 8) / labels.length, bw = 22;
     const y = (v) => T + (H - T - B) * (1 - v / max);
     let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Expected tickets per day, rule of thumb vs SLOTWISE">';
-    for (let g = 0; g <= 4; g++) { const v = (max / 1.12) * g / 4; s += '<line x1="' + L + '" x2="' + (W - 8) + '" y1="' + y(v).toFixed(1) + '" y2="' + y(v).toFixed(1) + '" stroke="#2a2a2a"/><text x="' + (L - 6) + '" y="' + (y(v) + 4).toFixed(1) + '" text-anchor="end">' + fmt(v) + '</text>'; }
+    for (let v = 0; v <= max + 1e-9; v += step) { s += '<line x1="' + L + '" x2="' + (W - 8) + '" y1="' + y(v).toFixed(1) + '" y2="' + y(v).toFixed(1) + '" stroke="#2a2a2a"/><text x="' + (L - 6) + '" y="' + (y(v) + 4).toFixed(1) + '" text-anchor="end">' + fmt(v) + '</text>'; }
     labels.forEach((lab, i) => {
       const x0 = L + i * gw + (gw - 2 * bw) / 2;
       s += '<rect x="' + x0.toFixed(1) + '" y="' + y(a[i]).toFixed(1) + '" width="' + (bw - 2) + '" height="' + (H - B - y(a[i])).toFixed(1) + '" fill="#808080" rx="2"/>';

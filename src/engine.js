@@ -18,17 +18,17 @@
   // generator. The planner never reads them; it sees only the purchase records.
   // ---------------------------------------------------------------------------
   const CATALOG = [
-    { tag: 'caterpillar-man', title: 'Caterpillar-Man', tagline: 'No Way Down', genre: 'Superhero', profile: 'action', runtime: 148, rating: '12', base: 104, hue: 350 },
-    { tag: 'avocado-2', title: 'Avocado', tagline: 'The Way of Guac', genre: 'Sci-fi epic', profile: 'general', runtime: 162, rating: '12', base: 90, hue: 160 },
-    { tag: 'defrosted-2', title: 'Defrosted II', tagline: 'Let It Drip', genre: 'Family animation', profile: 'family', runtime: 103, rating: 'ALL', base: 78, hue: 200 },
-    { tag: 'gigantic', title: 'Gigantic', tagline: 'Never Let Go of the Door', genre: 'Romance epic', profile: 'drama', runtime: 165, rating: '12', base: 58, hue: 215 },
-    { tag: 'outside-in-2', title: 'Outside In 2', tagline: 'New Feelings', genre: 'Family animation', profile: 'family', runtime: 96, rating: 'ALL', base: 66, hue: 45 },
-    { tag: 'oppenhammer', title: 'Oppenhammer', tagline: 'The Loudest Workshop', genre: 'Historical drama', profile: 'drama', runtime: 158, rating: '15', base: 45, hue: 25 },
+    { tag: 'caterpillar-man', title: 'Caterpillar-Man', tagline: 'No Way Down', genre: 'Superhero', profile: 'action', runtime: 148, rating: '12', base: 104, hue: 355 },
+    { tag: 'avocado-2', title: 'Avocado', tagline: 'The Way of Guac', genre: 'Sci-fi epic', profile: 'general', runtime: 162, rating: '12', base: 90, hue: 145 },
+    { tag: 'defrosted-2', title: 'Defrosted II', tagline: 'Let It Drip', genre: 'Family animation', profile: 'family', runtime: 103, rating: 'ALL', base: 78, hue: 190 },
+    { tag: 'gigantic', title: 'Gigantic', tagline: 'Never Let Go of the Door', genre: 'Romance epic', profile: 'drama', runtime: 165, rating: '12', base: 58, hue: 235 },
+    { tag: 'outside-in-2', title: 'Outside In 2', tagline: 'New Feelings', genre: 'Family animation', profile: 'family', runtime: 96, rating: 'ALL', base: 66, hue: 48 },
+    { tag: 'oppenhammer', title: 'Oppenhammer', tagline: 'The Loudest Workshop', genre: 'Historical drama', profile: 'drama', runtime: 158, rating: '15', base: 45, hue: 18 },
     { tag: 'triassic-world', title: 'Triassic World', tagline: 'Life Finds a Way Earlier', genre: 'Adventure', profile: 'action', runtime: 124, rating: '12', base: 60, hue: 95 },
-    { tag: 'top-bun', title: 'Top Bun', tagline: 'Maverick Bakery', genre: 'Action comedy', profile: 'general', runtime: 131, rating: '12', base: 50, hue: 30 },
+    { tag: 'top-bun', title: 'Top Bun', tagline: 'Maverick Bakery', genre: 'Action comedy', profile: 'general', runtime: 131, rating: '12', base: 50, hue: 320 },
   ];
   // Boundary case: a release that opens in the planning week, so it has no purchase records.
-  const NEW_RELEASE = { tag: 'scavengers-endgame', title: 'The Scavengers', tagline: 'Endgame Sale', genre: 'Superhero', profile: 'action', runtime: 155, rating: '12', base: 120, hue: 270, isNew: true };
+  const NEW_RELEASE = { tag: 'scavengers-endgame', title: 'The Scavengers', tagline: 'Endgame Sale', genre: 'Superhero', profile: 'action', runtime: 155, rating: '12', base: 120, hue: 285, isNew: true };
 
   // Hidden time-of-day shape per profile: multiplier at each clock hour, linearly interpolated.
   const PROFILES = {
@@ -183,8 +183,9 @@
   }
   function validateSettings(st) {
     const errors = [];
+    const shown = (v) => (v === null || v === undefined || Number.isNaN(v) || v === '' ? 'empty' : '"' + v + '"');
     const int = (v, lo, hi, label) => {
-      if (!Number.isInteger(v) || v < lo || v > hi) errors.push(label + ' must be a whole number from ' + lo + ' to ' + hi + ' (got "' + v + '").');
+      if (!Number.isInteger(v) || v < lo || v > hi) errors.push(label + ' must be a whole number from ' + lo + ' to ' + hi + ' (got ' + shown(v) + ').');
     };
     int(st.seed, 0, 2 ** 31 - 1, 'Seed');
     int(st.historyWeeks, 1, 12, 'Weeks of history');
@@ -197,10 +198,10 @@
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(st.firstStart)) errors.push('First show time must be HH:mm on a 24-hour clock (got "' + st.firstStart + '").');
     else if (!errors.length) {
       const last = toMinutes(st.firstStart) + (st.slots - 1) * st.slotMinutes;
-      if (last > 23 * 60 + 59) errors.push('The last show would start at ' + toHHMM(last % 1440) + ' after midnight. This first step keeps every show on its calendar day [ASSUMPTION]; use fewer shows, shorter slots or an earlier first show.');
+      if (last > 23 * 60 + 59) errors.push('The last show would start at ' + toHHMM(last % 1440) + ' on the next day. This first step keeps every show on its calendar day [ASSUMPTION]; use fewer shows, shorter slots or an earlier first show.');
     }
     if (!(st.caution >= 0 && st.caution <= 1)) errors.push('Caution must be between 0 and 1.');
-    if (!(st.credibility >= 0 && st.credibility <= 20)) errors.push('Pattern weight k must be between 0 and 20.');
+    if (!(st.credibility >= 0.5 && st.credibility <= 20)) errors.push('Pattern weight k must be between 0.5 and 20 (at 0 an untried combination would have no prior at all).');
     if (!(st.newReleaseStrength > 0 && st.newReleaseStrength <= 5)) errors.push('New-release strength must be above 0 and at most 5.');
     if (!(st.nbShape >= 1 && st.nbShape <= 100)) errors.push('Demand dispersion (shape) must be between 1 and 100.');
     if (!(st.pastNoise >= 0 && st.pastNoise <= 5)) errors.push('Past programmer noise must be between 0 and 5.');
@@ -342,6 +343,11 @@
       sc.soldOut = seats.includes(sc.tickets);
       if (sc.tickets > maxSeats) errors.push('Screening ' + sc.tag + ' on ' + sc.date + ' at ' + times[sc.s] + ' has ' + sc.tickets + ' tickets, more than the largest hall (' + maxSeats + ' seats). Check for duplicated rows or the hall settings.');
     });
+    // one venue cannot run more screenings at the same time than it has halls
+    const halls = seats.length;
+    const concurrent = new Map();
+    screenings.forEach((sc) => { const k2 = sc.date + ' ' + times[sc.s]; concurrent.set(k2, (concurrent.get(k2) || 0) + 1); });
+    concurrent.forEach((n, when) => { if (n > halls) errors.push(n + ' different films have purchases for ' + when + ', but the venue has only ' + halls + ' hall(s) with seats. Check the pasted rows or the hall settings.'); });
     if (ignored.otherVenue) notes.push(ignored.otherVenue + ' row(s) for another venue_tag were set aside (single-venue scope).');
     if (ignored.unknownTitle.size) notes.push('Rows for titles not on next week\'s slate were set aside: ' + [...ignored.unknownTitle].join(', ') + '.');
     if (ignored.outsideWindow) notes.push(ignored.outsideWindow + ' row(s) outside the history window (' + history.first + ' to ' + history.last + ') were set aside.');
@@ -356,7 +362,7 @@
   //                     -> posterior Gamma(k*P + sum y, k + sum w)   (Example 2.1 / conjugate pair)
   //                     posterior mean = weighted average of the pattern and the cell's own average
   //   prediction        posterior predictive = negative binomial  (Lecture 2, "integrate, don't plug in")
-  //   sold-out screening counts as "at least the seats": max(observed, pattern) [ASSUMPTION]
+  //   sold-out screenings (total = a hall size) are flagged; their totals are lower bounds [ASSUMPTION]
   // w is the weekday's exposure inside its day type (Fri vs Sat vs Sun), so one cell covers 3-4 days.
   // ---------------------------------------------------------------------------
   function estimateDemand(screenings, slate, st, opts) {
@@ -370,7 +376,11 @@
     const s0 = new Float64Array(nF), c0 = new Float64Array(nF);
     screenings.forEach((x) => { s0[x.f] += x.tickets; c0[x.f]++; });
     for (let f = 0; f < nF; f++) F[f] = c0[f] ? s0[f] / c0[f] : 0;
-    const adj = (x) => (x.soldOut ? Math.max(x.tickets, F[x.f] * S[x.s] * D[x.d]) : x.tickets);
+    // Sold-out totals are used as recorded by default. The alternative "at least the seats" correction
+    // (max(total, pattern), applied inside the fit) was tested in the mock study and did not improve
+    // plans, so it is kept only as a comparison option; the screening log is the real fix.
+    const correct = o.soldOutCorrection === true;
+    const adj = (x) => (correct && x.soldOut ? Math.max(x.tickets, F[x.f] * S[x.s] * D[x.d]) : x.tickets);
     // Maximum likelihood for Poisson counts with mean F*S*D: each factor = observed / expected over its rows.
     let iterations = 0;
     for (let it = 0; it < 200; it++) {
@@ -421,22 +431,60 @@
       c.own = c.n ? c.sumY / c.sumW : null; // the cell's own average (sold-outs corrected)
       c.rawMean = c.n ? c.raw / c.n : null;
       c.weight = c.beta > 0 ? c.sumW / c.beta : 0; // share of the estimate that comes from the cell's own screenings
+      c.priorShare = 1 - c.weight; // share that comes from the pattern (1 = no own evidence at all)
       c.tested = c.n > 0;
       c.noRows = !hasRows[c.f];
     });
     const cellOf = (f, s, d) => cells[cellIdx(f, s, dayType(d))];
-    // mean demand of one screening on day d, and the predictive's shape (negative binomial)
+    // Screening-to-screening spread: negative-binomial shape r by maximum likelihood (Lec 2) over the
+    // screenings not read as sold out, each compared with its cell's estimate without itself (leave-one-out).
+    const R_GRID = [1, 1.5, 2, 3, 4, 5, 6, 7, 8, 10, 12, 15, 20, 30, 50, 100, 300, 1000];
+    const obs = [];
+    screenings.forEach((x) => {
+      if (x.soldOut) return;
+      const c = cells[cellIdx(x.f, x.s, x.t)];
+      const a = c.alpha - adj(x), b = c.beta - w(x.d);
+      if (b > 0 && a > 0) obs.push([x.tickets, (a / b) * w(x.d)]);
+    });
+    let r = 1000, best = -Infinity;
+    if (obs.length >= 10) {
+      R_GRID.forEach((rr) => {
+        let ll = 0;
+        obs.forEach(([y, mu]) => { ll += logNegBin(y, Math.max(mu, 1e-6), rr); });
+        if (ll > best) { best = ll; r = rr; }
+      });
+    }
+    // mean demand of one screening on day d, and the shape of its predictive distribution:
+    // variance = mean (Poisson) + mean^2 / r (screening spread) + w^2 Var(theta) (estimation uncertainty),
+    // matched by a negative binomial with the same mean and variance (Lec 2: integrate, don't plug in).
     const demand = (f, s, d) => cellOf(f, s, d).estimate * w(d);
-    const shape = (f, s, d) => Math.max(cellOf(f, s, d).alpha, 1e-6);
-    return { F, S, D, typeMean, w, cells, cellIdx, cellOf, demand, shape, hasRows, iterations, credibility: k };
+    const shape = (f, s, d) => {
+      const c = cellOf(f, s, d), mu = c.estimate * w(d);
+      const extra = (mu * mu) / r + (w(d) * w(d) * c.alpha) / (c.beta * c.beta);
+      return extra > 0 ? Math.max((mu * mu) / extra, 1e-3) : 1e6;
+    };
+    return { F, S, D, typeMean, w, cells, cellIdx, cellOf, demand, shape, hasRows, iterations, credibility: k, dispersion: r, dispersionN: obs.length };
+  }
+  function logGamma(x) {
+    // Lanczos approximation, accurate to about 1e-10 for x > 0
+    const g = 7, c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+    if (x < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x);
+    x -= 1;
+    let a = c[0];
+    const t = x + g + 0.5;
+    for (let i = 1; i < g + 2; i++) a += c[i] / (x + i);
+    return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+  }
+  function logNegBin(y, mu, r) {
+    return logGamma(y + r) - logGamma(r) - logGamma(y + 1) + r * Math.log(r / (r + mu)) + y * Math.log(mu / (r + mu));
   }
 
   // Simple alternatives used by the comparison (Section 4): same interface as the selected estimate.
-  // They are point estimates, so their prediction is a plain Poisson around the point (very large shape).
+  // They are point estimates, so their prediction is the negative binomial around the point with the fitted r.
   function estimateAlternative(kind, screenings, slate, st) {
     const est = estimateDemand(screenings, slate, st);
     if (kind === 'blend') return est;
-    const poisson = () => 1e4;
+    const poisson = () => est.dispersion; // point estimates: only the screening spread, no estimation uncertainty
     if (kind === 'pattern') return { ...est, demand: (f, s, d) => est.F[f] * est.S[s] * est.D[d], shape: poisson };
     // film average: what the rule of thumb looks at (tickets per screening, any time, any day)
     const sum = new Float64Array(slate.length), cnt = new Float64Array(slate.length);
@@ -564,11 +612,13 @@
     };
     // expected tickets of one screening: E[min(demand, seats)] under the posterior predictive
     const expected = (f, h, d, s) => sold(f, h, d, s, 1);
-    // planning value (robust LP, worst case of a box): an untried combination is valued with its
-    // demand lowered by the `caution` share. A film without any records (new release) is planned
-    // on the manager's own estimate and flagged instead.
-    const value = (f, h, d, s) => sold(f, h, d, s, untried(f, s, d) ? 1 - st.caution : 1);
-    return { st, slate, est, times, halls, fits, tested, untried, expected, value, nD: 7, nS: times.length };
+    // planning value (robust LP, worst case of a box): the part of each estimate that comes from the
+    // pattern rather than from the film's own screenings at that time is lowered by the `caution` share.
+    // Untried combinations and films without records (all pattern or manager estimate) lose c; a cell
+    // with many own screenings loses almost nothing.
+    const factor = (f, s, d) => 1 - st.caution * est.cells[est.cellIdx(f, s, dayType(d))].priorShare;
+    const value = (f, h, d, s) => sold(f, h, d, s, factor(f, s, d));
+    return { st, slate, est, times, halls, fits, tested, untried, factor, expected, value, nD: 7, nS: times.length };
   }
 
   function pinList(P) {
@@ -669,6 +719,7 @@
       pins: pinned.pins,
       lp: { vars: vars.length, rows: rows.length, pivots: lp.pivots, objective: lp.z, dualBound: bound, maxReducedCost: worst },
       certificateOk: Math.abs(lp.z - bound) < 1e-6 * Math.max(1, Math.abs(lp.z)) && worst < 1e-7,
+      planValue: lp.z + pinned.pins.reduce((a, p) => a + val(p.f, p.h, p.d, p.s), 0),
       prices: summarizePrices(rows, lp.y, P),
       pinnedValue,
     };
@@ -744,9 +795,15 @@
       const pick = order.find((i) => quota[i] > 0 && P.fits[i] && !busy.has(i));
       if (pick !== undefined) { plan[d][s][h] = pick; quota[pick]--; }
     });
-    // 4 repair: the fill can strand a film below its minimum when its remaining shows only fit
-    // times it already plays. Such a film takes the least attractive show of a film above its
-    // minimum (or an empty slot); leftover empty slots go to the best film free at that time.
+    repairMinimums(P, plan, order, open, pinned);
+    return { plan, score, pins: pinned.pins };
+  }
+
+  // 4 repair: a greedy fill can strand a film below its minimum when its remaining shows only fit
+  // times it already plays. Such a film takes the least attractive show of a film above its
+  // minimum (or an empty slot); leftover empty slots go to the best film free at that time.
+  // `open` lists the fillable cells from most to least attractive; `order` ranks films best first.
+  function repairMinimums(P, plan, order, open, pinned) {
     const shows = P.slate.map(() => 0);
     plan.forEach((day) => day.forEach((slot) => slot.forEach((f) => { if (f !== null) shows[f]++; })));
     const isPinned = (d, s, h) => pinned.pins.some((p) => p.d === d && p.s === s && p.h === h);
@@ -770,7 +827,36 @@
       const pick = order.find((i) => P.fits[i] && !plan[d][s].includes(i) && shows[i] < capOf(i));
       if (pick !== undefined) { plan[d][s][h] = pick; shows[pick]++; }
     });
-    return { plan, score, pins: pinned.pins };
+  }
+
+  // Mock benchmark: the fictional past programmer plans next week the way it planned the history
+  // (true demand with judgement noise, best film to the largest hall), then meets the minimums.
+  // It is a stand-in for an experienced human, available only because the generator knows the truth.
+  function pastProgrammerPlan(P) {
+    const rng = mulberry32((P.st.seed ^ 0x5bd1e995) >>> 0);
+    const plan = emptyPlan(P);
+    const pinned = pinList(P);
+    pinned.pins.forEach((p) => { plan[p.d][p.s][p.h] = p.f; });
+    const halls = P.halls.filter((h) => h.usable).sort((a, b) => b.seats - a.seats || a.i - b.i);
+    const open = [];
+    for (let d = 0; d < 7; d++) for (let s = 0; s < P.nS; s++) {
+      const cands = P.slate.map((film, f) => ({ f, score: trueMean(film, d, P.times[s]) * Math.exp(P.st.pastNoise * normalSample(rng)) }))
+        .filter((c) => P.fits[c.f] && !plan[d][s].includes(c.f)).sort((a, b) => b.score - a.score);
+      let k = 0;
+      halls.forEach((h) => {
+        if (plan[d][s][h.i] !== null || pinned.blocked.has(d + '|' + s + '|' + h.i)) return;
+        open.push({ d, s, h: h.i, v: trueMean(P.slate[0], d, P.times[s]) });
+        if (k < cands.length) plan[d][s][h.i] = cands[k++].f;
+      });
+    }
+    open.sort((a, b) => b.v - a.v);
+    const order = P.slate.map((f, i) => i).sort((a, b) => P.slate[b].base - P.slate[a].base);
+    // respect maximums first (drop the least attractive shows of a film above its cap), then minimums
+    const shows = P.slate.map(() => 0);
+    plan.forEach((day) => day.forEach((slot) => slot.forEach((f) => { if (f !== null) shows[f]++; })));
+    [...open].reverse().forEach(({ d, s, h }) => { const f = plan[d][s][h]; if (f !== null && P.slate[f].max !== null && shows[f] > P.slate[f].max) { plan[d][s][h] = null; shows[f]--; } });
+    repairMinimums(P, plan, order, open, pinned);
+    return plan;
   }
 
   // ---------------------------------------------------------------------------
@@ -955,7 +1041,7 @@
       { id: 'pattern', caution: 0, label: 'Pattern only + LP' },
       { id: 'blend', caution: 0, label: 'Blend + LP, no caution' },
       { id: 'blend', caution: st.caution, label: 'Blend + LP, caution ' + Math.round(st.caution * 100) + '% (selected)' },
-      { id: 'blend', caution: 1, label: 'Blend + LP, never-screened excluded' },
+      { id: 'blend', caution: 1, label: 'Blend + LP, caution 100% (pattern part ignored)' },
     ];
     variants.forEach((v) => {
       const st2 = { ...st, caution: v.caution };
@@ -966,8 +1052,132 @@
       const sc = scorePlan(P, sol.plan, truth);
       rows.push({ label: v.label, id: v.id, caution: v.caution, truth: sc.truth, promised: sc.tickets, untested: sc.untested });
     });
+    {
+      const est = estimateDemand(base.screenings, base.slate, st, { soldOutCorrection: true });
+      const P = buildProblem(st, base.slate, est);
+      const sol = solveProposed(P);
+      if (sol.status === 'optimal') { const sc = scorePlan(P, sol.plan, truth); rows.push({ label: 'Blend + LP with an "at least the seats" sold-out correction', id: 'soldOutFix', truth: sc.truth, promised: sc.tickets, untested: sc.untested }); }
+    }
     rows.push({ label: 'Rule of thumb (baseline)', id: 'baseline', truth: base.scores.baseline.truth, promised: base.scores.baseline.tickets, untested: base.scores.baseline.untested });
+    const pp = pastProgrammerPlan(P0);
+    const ppScore = scorePlan(P0, pp, truth);
+    rows.push({ label: 'Simulated past programmer (knows true demand up to judgement noise)', id: 'programmer', truth: ppScore.truth, promised: ppScore.tickets, untested: ppScore.untested, violations: checkPlan(P0, pp).violations.length });
     return { rows, oracle: base.oracle ? base.oracle.truth : null };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mock study core (shared by src/study.cjs and the demo's in-browser re-run):
+  // one fictional history, every variant re-planned and scored against the hidden demand.
+  // ---------------------------------------------------------------------------
+  const STUDY_WORLDS = [
+    { id: 'sensible', label: 'Sensible past', pastNoise: 0.5, historyWeeks: 4 },
+    { id: 'random', label: 'Random past', pastNoise: 3, historyWeeks: 4 },
+    { id: 'sparse', label: 'Random past, 1 week', pastNoise: 3, historyWeeks: 1 },
+  ];
+  const STUDY_VARIANTS = [
+    { key: 'selected', label: 'Selected: Bayes estimate, k = 1, caution 0.5', est: 'blend' },
+    { key: 'film average', label: 'Film average + LP', est: 'filmAverage', caution: 0 },
+    { key: 'own cell average', label: 'Own cell average + LP', est: 'cellAverage', caution: 0 },
+    { key: 'pattern only', label: 'Pattern only + LP', est: 'pattern', caution: 0 },
+    { key: 'with sold-out correction', label: 'With "at least the seats" correction', est: 'blend', soldOut: true },
+    { key: 'caution 0', label: 'Caution 0', est: 'blend', caution: 0 },
+    { key: 'caution 0.25', label: 'Caution 0.25', est: 'blend', caution: 0.25 },
+    { key: 'caution 0.75', label: 'Caution 0.75', est: 'blend', caution: 0.75 },
+    { key: 'caution 1', label: 'Caution 1', est: 'blend', caution: 1 },
+    { key: 'k 0.5', label: 'k = 0.5', est: 'blend', credibility: 0.5 },
+    { key: 'k 2', label: 'k = 2', est: 'blend', credibility: 2 },
+    { key: 'k 4', label: 'k = 4', est: 'blend', credibility: 4 },
+  ];
+  function studyOne(seed, world) {
+    const st = { ...defaultSettings(), seed, pastNoise: world.pastNoise, historyWeeks: world.historyWeeks };
+    const base = run(st);
+    if (base.status !== 'ok') return null;
+    const truth = truthFnFor(base.problem);
+    const out = {
+      'rule of thumb (baseline)': base.scores.baseline.truth,
+      'simulated past programmer': scorePlan(base.problem, pastProgrammerPlan(base.problem), truth).truth,
+      'oracle (knows true demand)': base.oracle.truth,
+      'fitted dispersion r': base.estimate.dispersion,
+      'sold-out share': base.diagnostics.soldOutTrue / base.diagnostics.screenings,
+      'tested combinations share': base.diagnostics.cellsTested / base.diagnostics.cellsTotal,
+    };
+    if (base.backtest.available) base.backtest.methods.forEach((m) => { out['backtest WAPE ' + m.id] = m.wape; });
+    STUDY_VARIANTS.forEach((v) => {
+      const st2 = { ...st };
+      if (v.caution !== undefined) st2.caution = v.caution;
+      if (v.credibility !== undefined) st2.credibility = v.credibility;
+      const est = v.soldOut ? estimateDemand(base.screenings, base.slate, st2, { soldOutCorrection: true }) : estimateAlternative(v.est, base.screenings, base.slate, st2);
+      const P = buildProblem(st2, base.slate, est);
+      const sol = solveProposed(P);
+      if (sol.status === 'optimal') out[v.key] = scorePlan(P, sol.plan, truthFnFor(P)).truth;
+    });
+    return out;
+  }
+  // mean per key, and for plan scores the paired difference to the selected method with a 95% interval
+  function summarizeStudy(perSeed) {
+    const res = {};
+    const ok = perSeed.filter(Boolean);
+    const keys = Object.keys(ok[0] || {});
+    const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+    keys.forEach((k) => {
+      const a = ok.map((o) => o[k]).filter((x) => x !== undefined);
+      const row = { mean: mean(a), n: a.length };
+      if (!/WAPE|share|dispersion/.test(k) && k !== 'selected') {
+        const d = ok.filter((o) => o[k] !== undefined).map((o) => o[k] - o.selected);
+        const m = mean(d), sd = Math.sqrt(d.reduce((x, y) => x + (y - m) ** 2, 0) / Math.max(1, d.length - 1));
+        row.diff = m;
+        row.ci95 = (1.96 * sd) / Math.sqrt(d.length);
+      }
+      res[k] = row;
+    });
+    return res;
+  }
+
+  // Brute-force check of the LP: random tiny instances (one day, up to 2 slots, 2 halls, 3 films),
+  // every whole-numbered schedule enumerated and compared with the simplex result.
+  function bruteForceCheck(count, seed) {
+    const rng = mulberry32(seed || 7);
+    let compared = 0, agree = 0, infeasibleBoth = 0;
+    for (let n = 0; n < count; n++) {
+      const nF = 2 + Math.floor(rng() * 2), nS = 1 + Math.floor(rng() * 2), nH = 1 + Math.floor(rng() * 2);
+      const slate = CATALOG.slice(0, nF).map((f) => ({ ...f, min: Math.floor(rng() * 2), max: rng() < 0.5 ? null : 1 + Math.floor(rng() * 3) }));
+      const st = { ...defaultSettings(), slots: nS, halls: Array.from({ length: nH }, (_, i) => ({ name: 'H' + i, seats: 20 + Math.floor(rng() * 100), open: true })), caution: rng() };
+      const dem = Array.from({ length: nF }, () => Array.from({ length: nS }, () => Array.from({ length: 7 }, () => rng() * 150)));
+      const est = {
+        demand: (f, s, d) => dem[f][s][d],
+        cells: Array.from({ length: nF * nS * 2 }, () => { const tested = rng() < 0.7; return { tested, priorShare: tested ? rng() * 0.6 : 1 }; }),
+        cellIdx: (f, s, t) => (f * nS + s) * 2 + t,
+        hasRows: slate.map(() => true),
+        shape: () => 8,
+      };
+      const P = buildProblem(st, slate, est);
+      const blockRest = {};
+      for (let d = 1; d < 7; d++) for (let s = 0; s < nS; s++) for (let h = 0; h < nH; h++) blockRest[d + '|' + s + '|' + h] = '';
+      const sol = solveProposed({ ...P, st: { ...st, pins: blockRest } });
+      let best = -Infinity;
+      const plan = Array.from({ length: nS }, () => Array(nH).fill(null));
+      const shows = slate.map(() => 0);
+      const cells = [];
+      for (let s = 0; s < nS; s++) for (let h = 0; h < nH; h++) cells.push({ s, h });
+      (function rec(i, val) {
+        if (i === cells.length) { if (slate.every((f, k) => shows[k] >= f.min && (f.max === null || shows[k] <= f.max))) best = Math.max(best, val); return; }
+        const { s, h } = cells[i];
+        rec(i + 1, val);
+        for (let f = 0; f < nF; f++) {
+          if (!P.fits[f] || plan[s].includes(f)) continue;
+          plan[s][h] = f; shows[f]++;
+          rec(i + 1, val + P.value(f, h, 0, s));
+          plan[s][h] = null; shows[f]--;
+        }
+      })(0, 0);
+      if (best === -Infinity) { if (sol.status !== 'optimal') infeasibleBoth++; continue; }
+      compared++;
+      if (sol.status !== 'optimal') continue;
+      let got = 0;
+      for (let s = 0; s < nS; s++) for (let h = 0; h < nH; h++) { const f = sol.plan[0][s][h]; if (f !== null) got += P.value(f, h, 0, s); }
+      if (Math.abs(got - best) < 1e-6) agree++;
+    }
+    return { count, compared, agree, infeasibleBoth };
   }
 
   // ---------------------------------------------------------------------------
@@ -984,7 +1194,7 @@
     {
       id: 'new-release', kind: 'Boundary', title: 'New release with no records',
       how: 'Add The Scavengers (opens in the planning week, so zero purchase rows), minimum 7 shows.',
-      expect: 'Plan found; the new film gets at least 7 shows; its demand is flagged as pattern-only (no records).',
+      expect: 'Plan found; the new film gets at least 7 shows; its demand is flagged as a manager estimate (no records) and discounted by the caution.',
       apply: (st) => ({ ...st, newRelease: true }),
       check: (r) => r.status === 'ok' && r.checks.proposed.shows[r.slate.length - 1] >= 7 && r.checks.proposed.violations.length === 0 && r.estimate.hasRows[r.slate.length - 1] === false,
     },
@@ -1030,6 +1240,7 @@
     defaultSettings, validateSettings, slateOf, gridOf, toHHMM, toMinutes, addDays, weekdayIndex, dayType,
     mulberry32, negBinSample, expectedSoldNB, trueMean, generateHistory, parseExtraRows, aggregate,
     estimateDemand, estimateAlternative, simplex, buildProblem, solveProposed, solveBaseline, checkPlan, scorePlan,
-    truthFnFor, explainCell, backtest, run, compareMethods, TEST_CASES, fnv1a,
+    truthFnFor, explainCell, backtest, run, compareMethods, pastProgrammerPlan, TEST_CASES, fnv1a,
+    STUDY_WORLDS, STUDY_VARIANTS, studyOne, summarizeStudy, bruteForceCheck,
   };
 });

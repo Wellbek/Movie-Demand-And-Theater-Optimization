@@ -8,6 +8,9 @@
   const fmt1 = (x) => (Math.round(x * 10) / 10).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const sgn = (x) => { const v = Math.round(x); return v === 0 ? '0' : (v > 0 ? '+' : '-') + fmt(Math.abs(v)); };
   const pct = (x) => (x >= 0 ? '+' : '') + (x * 100).toFixed(1) + '%';
+  // differences between rounded figures, so that the numbers shown add up
+  const dR = (a, b) => Math.round(a) - Math.round(b);
+  const pctR = (a, b) => pct(dR(a, b) / Math.round(b));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const STUDY = /*__STUDY__*/;
 
@@ -190,7 +193,10 @@
       const html = '<div class="alert"><b>No plan. ' + kind + '</b><ul>' + r.errors.map((e) => '<li>' + esc(e) + '</li>').join('') + '</ul><div class="small" style="margin-top:.4rem">' + (result ? 'Results further down are from the last successful run and are marked STALE.' : 'Change the settings and press Run.') + '</div></div>';
       $('heroAlert').innerHTML = html;
       $('settingsAlert').innerHTML = html;
-      $('heroMeta').innerHTML = '<span class="chip" style="border-color:var(--red);color:#ff6b72">NO PLAN</span>';
+      $('heroMeta').innerHTML = '<span class="chip" style="border-color:var(--red);color:#ff6b72">NO PLAN</span><span class="muted">for the current settings</span>';
+      $('heroDesc').textContent = 'No plan is shown for these settings; the reasons and fixes are listed below. ' + (result ? 'Everything further down belongs to the last successful run and is marked STALE.' : '');
+      $('heroFp').textContent = result ? 'last successful run (stale): seed ' + result.settings.seed + ' · fingerprint ' + result.fingerprint : '';
+      $('heroFp').style.opacity = '.5';
     }
   }
 
@@ -209,11 +215,13 @@
     const b = r.scores.baseline, p = r.scores.proposed;
     const top = r.slate.map((f, i) => ({ f, t: filmStats(r, i).tickets })).sort((x, y) => y.t - x.t)[0];
     $('heroArt').innerHTML = heroArt(top.f);
-    const gain = p.tickets - b.tickets;
+    const gain = dR(p.tickets, b.tickets);
     const open = r.problem.halls.filter((h) => h.usable).length;
     $('heroTitle').textContent = 'Next week at ' + r.settings.venue;
-    $('heroMeta').innerHTML = '<span class="match">' + pct(gain / b.tickets) + ' expected tickets vs rule of thumb</span><span class="chip">12-18 OCT 2026</span><span>' + open + ' hall' + (open === 1 ? '' : 's') + '</span><span>' + r.times.length * 7 + ' show-times</span><span class="chip">' + r.slate.length + ' FILMS</span><span class="chip">FICTIONAL</span>';
-    $('heroDesc').innerHTML = 'SLOTWISE plans ' + fmt(p.tickets) + ' expected tickets against ' + fmt(b.tickets) + ' for the rule of thumb (' + sgn(gain) + '), under the same inputs and rules, and uses ' + p.untested + ' untried film-time combination' + (p.untested === 1 ? '' : 's') + ' against ' + b.untested + '. The plan is proven best for the stated formulation (duality certificate ' + (r.proposed.certificateOk ? 'holds' : 'FAILED') + '). Fictional data; real effects are untested.';
+    $('heroDesc').style.opacity = '';
+    $('heroFp').style.opacity = '';
+    $('heroMeta').innerHTML = '<span class="match">' + pctR(p.tickets, b.tickets) + ' expected tickets vs rule of thumb</span><span class="chip">12-18 OCT 2026</span><span>' + open + ' hall' + (open === 1 ? '' : 's') + '</span><span>' + r.times.length * 7 + ' show-times</span><span class="chip">' + r.slate.length + ' FILMS</span><span class="chip">FICTIONAL</span>';
+    $('heroDesc').innerHTML = 'SLOTWISE plans ' + fmt(p.tickets) + ' expected tickets against ' + fmt(b.tickets) + ' for the rule of thumb (' + sgn(gain) + '), under the same inputs and rules, and uses ' + p.untested + ' untried film-time combination' + (p.untested === 1 ? '' : 's') + ' against ' + b.untested + '. No other week scores higher on the planning value (expected tickets with the caution applied): the duality certificate ' + (r.proposed.certificateOk ? 'holds' : 'FAILED') + '. Fictional data; real effects are untested.';
     $('heroFp').textContent = 'seed ' + r.settings.seed + ' · fingerprint ' + r.fingerprint + ' · ' + fmt(r.rowCount) + ' purchase rows · computed in ' + Math.round(r.ms) + ' ms';
   }
 
@@ -259,9 +267,9 @@
     }).join(' · ');
     openModal('<div class="mhead">' + poster(film, true) + '<div class="mtitle" id="modalTitle">' + esc(film.title) + '<div style="font-size:1rem;font-weight:400;color:var(--text2);margin-top:.3rem">' + esc(film.tagline) + '</div></div></div><div class="mbody">' +
       '<div class="meta"><span class="match">' + st.shows + ' shows planned (rule of thumb: ' + st.baseShows + ')</span><span class="chip">' + film.rating + (film.rating === 'ALL' ? '' : '+') + '</span><span>' + film.runtime + ' min</span><span>' + esc(film.genre) + '</span><span class="chip">' + esc(film.tag) + '</span></div>' +
-      '<p>' + (st.n ? st.n + ' screenings of this film are in the records.' : 'This film has no purchase records' + (film.isNew ? ' (it opens in the planning week). Its demand is the manager\'s strength (' + r.settings.newReleaseStrength + ' x the average film) times the time and weekday indices, and it is flagged as such.' : '.')) + ' Planned expected tickets: <b>' + fmt(st.tickets) + '</b>. Shows per hall: ' + esc(hallShows) + '. Minimum ' + film.min + ', maximum ' + (film.max === null ? 'none' : film.max) + '.</p>' +
+      '<p>' + (st.n ? st.n + ' screenings of this film are in the records.' : 'This film has no purchase records' + (film.isNew ? ' (it opens in the planning week). Its demand is the manager\'s strength (' + r.settings.newReleaseStrength + ' x the average film) times the time and weekday indices; it is flagged as a manager estimate and, like any estimate without own screenings, discounted by the caution.' : '.')) + ' Planned expected tickets: <b>' + fmt(st.tickets) + '</b>. Shows per hall: ' + esc(hallShows) + '. Minimum ' + film.min + ', maximum ' + (film.max === null ? 'none' : film.max) + '.</p>' +
       '<h3 style="margin-top:1rem">Expected tickets per screening (posterior mean)</h3><div class="tablewrap"><table><thead><tr><th>Day type</th>' + P.times.map((t) => '<th class="n">' + E.toHHMM(t % 1440) + '</th>').join('') + '</tr></thead><tbody><tr><td>Mon-Thu</td>' + cells(0) + '</tr><tr><td>Fri-Sun</td>' + cells(1) + '</tr></tbody></table></div>' +
-      '<p class="small muted">Untried = the film never played at that time and day type in the records; the number is the pattern and is valued with caution in the plan. Fit: runtime ' + film.runtime + ' + changeover ' + r.settings.cleaning + ' = ' + (film.runtime + r.settings.cleaning) + ' min vs slot ' + r.settings.slotMinutes + ' min (' + (P.fits[f] ? 'fits' : 'does NOT fit') + ').</p></div>');
+      '<p class="small muted">Untried = the film never played at that time and day type in the records; the number is the pattern. In the plan the pattern part of every estimate is lowered by the caution (fully for untried times and films without records). Fit: runtime ' + film.runtime + ' + changeover ' + r.settings.cleaning + ' = ' + (film.runtime + r.settings.cleaning) + ' min vs slot ' + r.settings.slotMinutes + ' min (' + (P.fits[f] ? 'fits' : 'does NOT fit') + ').</p></div>');
   }
 
   function renderRecords(r) {
@@ -327,12 +335,21 @@
     const c = P.est.cells[P.est.cellIdx(f, s, t)];
     const scr = r.screenings.filter((x) => x.f === f && x.s === s && x.t === t);
     const k = P.est.credibility;
-    const rows = scr.map((x) => '<tr><td>' + x.date + '</td><td>' + E.DAY_NAMES[x.d] + '</td><td class="n">' + x.tickets + '</td><td class="n">' + fmt1(P.est.w(x.d)) + '</td><td>' + (x.soldOut ? '<span class="pill mock">SOLD OUT</span> counted as ' + fmt(Math.max(x.tickets, P.est.F[f] * P.est.S[s] * P.est.D[x.d])) : '') + '</td></tr>').join('');
+    const f2 = (x) => (Math.round(x * 100) / 100).toFixed(2);
+    // every figure is shown with two decimals and the mean is recomputed from them, so it checks by hand
+    const P2 = +f2(c.pattern), W2 = +f2(c.sumW), Y = c.sumY;
+    const a2 = k * P2 + Y, b2 = k + W2;
+    const sold = scr.filter((x) => x.soldOut).length;
+    const rows = scr.map((x) => '<tr><td>' + x.date + '</td><td>' + E.DAY_NAMES[x.d] + '</td><td class="n">' + x.tickets + '</td><td class="n">' + f2(P.est.w(x.d)) + '</td><td>' + (x.soldOut ? '<span class="pill mock">SOLD OUT</span> demand was at least this' : '') + '</td></tr>').join('');
+    const share = c.priorShare;
+    const caution = r.settings.caution;
     openModal('<div class="mbody" style="padding-top:2rem"><h2 id="modalTitle">' + esc(film.title) + ' · ' + E.toHHMM(P.times[s] % 1440) + ' · ' + E.DAY_TYPE_NAMES[t] + '</h2>' +
-      '<div class="kpis" style="margin:.8rem 0"><div class="kpi"><div class="l">Pattern (prior mean)</div><div class="v">' + fmt1(c.pattern) + '</div><div class="s">F ' + fmt1(P.est.F[f]) + ' x S ' + P.est.S[s].toFixed(2) + ' x D ' + P.est.typeMean[t].toFixed(2) + '</div></div>' +
-      '<div class="kpi"><div class="l">Own average</div><div class="v">' + (c.own === null ? 'none' : fmt1(c.own)) + '</div><div class="s">' + c.n + ' screening' + (c.n === 1 ? '' : 's') + ', exposure ' + fmt1(c.sumW) + '</div></div>' +
-      '<div class="kpi"><div class="l">Posterior mean</div><div class="v">' + fmt1(c.estimate) + '</div><div class="s">' + Math.round(c.weight * 100) + '% own evidence, ' + Math.round((1 - c.weight) * 100) + '% pattern</div></div></div>' +
-      '<p class="small">Prior Gamma(' + fmt1(k * c.pattern) + ', ' + k + ') with mean = pattern, worth k = ' + k + ' screening(s). Posterior Gamma(' + fmt1(c.alpha) + ', ' + fmt1(c.beta) + '): mean = ' + fmt1(c.alpha) + ' / ' + fmt1(c.beta) + ' = ' + fmt1(c.estimate) + ' tickets per screening at an average ' + E.DAY_TYPE_NAMES[t] + ' day. ' + (c.tested ? '' : (film.isNew ? 'This film has no records; the number is the manager\'s estimate times the indices.' : '<b>Untried:</b> in the plan this demand is lowered by the caution share (' + Math.round(r.settings.caution * 100) + '%) before it is valued.')) + '</p>' +
+      '<div class="kpis" style="margin:.8rem 0"><div class="kpi"><div class="l">Pattern (prior mean)</div><div class="v">' + f2(P2) + '</div><div class="s">F ' + f2(P.est.F[f]) + ' x S ' + P.est.S[s].toFixed(3) + ' x D ' + P.est.typeMean[t].toFixed(3) + '</div></div>' +
+      '<div class="kpi"><div class="l">Own screenings</div><div class="v">' + (c.n ? Math.round(Y) + ' / ' + f2(W2) : 'none') + '</div><div class="s">' + (c.n ? 'tickets / exposure = ' + f2(Y / W2) + ' per screening (' + c.n + ' screening' + (c.n === 1 ? '' : 's') + ')' : 'never screened at this time and day type') + '</div></div>' +
+      '<div class="kpi"><div class="l">Posterior mean</div><div class="v">' + f2(a2 / b2) + '</div><div class="s">' + Math.round((100 * W2) / b2) + '% own evidence, ' + Math.round((100 * k) / b2) + '% pattern</div></div></div>' +
+      '<p class="small">Prior Gamma(k x pattern, k) = Gamma(' + f2(k * P2) + ', ' + k + '): mean = pattern, worth k = ' + k + ' screening(s). Posterior Gamma(' + f2(k * P2) + ' + ' + Math.round(Y) + ', ' + k + ' + ' + f2(W2) + ') = Gamma(' + f2(a2) + ', ' + f2(b2) + '): mean = ' + f2(a2) + ' / ' + f2(b2) + ' = <b>' + f2(a2 / b2) + '</b> tickets per screening on an average ' + E.DAY_TYPE_NAMES[t] + ' day.' +
+      (sold ? ' ' + sold + ' of ' + c.n + ' screenings were read as sold out (total = a hall size): their totals are lower bounds and enter as recorded, so this estimate is cautious.' : '') +
+      ' <b>In the plan</b> the pattern share (' + Math.round(share * 100) + '%) of the demand is lowered by the caution ' + caution + ': demand x ' + (1 - caution * share).toFixed(3) + (film.isNew ? '. This film has no records: its pattern is the manager\'s strength x the indices.' : '.') + '</p>' +
       (scr.length ? '<div class="scrollbox"><table><thead><tr><th>Date</th><th>Day</th><th class="n">Tickets</th><th class="n">Exposure w</th><th>Note</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<p class="muted">No screening of this film at this time and day type in the records.</p>') + '</div>');
   }
 
@@ -413,7 +430,7 @@
     openModal('<div class="mbody" style="padding-top:2rem"><h2 id="modalTitle">' + (which === 'proposed' ? 'SLOTWISE' : 'Rule of thumb') + ' · ' + E.DAY_NAMES[d] + ' ' + E.addDays(E.PLAN_START, d).slice(5) + ' · ' + E.toHHMM(P.times[s] % 1440) + ' · ' + esc(P.halls[h].name) + ' (' + P.halls[h].seats + ' seats)</h2>' +
       '<p>' + (chosen ? '<b>' + esc(chosen.title) + '</b> is planned here: ' + fmt1(P.expected(ex.chosen, h, d, s)) + ' expected tickets (demand ' + fmt1(P.est.demand(ex.chosen, s, d)) + ', seats ' + P.halls[h].seats + ').' : '<b>No film</b> is planned here' + (pinned === '' ? ' (blocked by you).' : '.')) + ' ' + why + '</p>' +
       '<div class="tablewrap"><table><thead><tr><th>Film</th><th class="n">Demand</th><th class="n">Expected in this hall</th><th class="n">Planning value</th><th>Evidence</th><th>Status</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-      '<p class="small muted">Expected = E[min(demand, seats)] under the posterior predictive. Planning value = the same with untried combinations lowered by the caution share. Ranked by planning value.</p>' +
+      '<p class="small muted">Expected = E[min(demand, seats)] under the negative-binomial predictive (screening spread r = ' + P.est.dispersion + ' plus estimation uncertainty). Planning value = the same after the pattern part of the demand is lowered by the caution. Ranked by planning value.</p>' +
       '<div class="actions">' + (pinned !== undefined ? '<button type="button" class="btn info sm" id="unpin">Remove pin / block</button>' : '<button type="button" class="btn ghost sm" id="block">Block this slot</button>') + (chosen && pinned === undefined ? '<button type="button" class="btn ghost sm" data-pin="' + chosen.tag + '">Pin ' + esc(chosen.title) + ' here</button>' : '') + '<span class="small muted">Pins apply to both plans and the page re-runs.</span></div></div>');
     const body = $('modalBody');
     body.querySelectorAll('[data-pin]').forEach((b) => b.addEventListener('click', () => { settings.pins[key] = b.dataset.pin; closeModal(); run(); }));
@@ -425,7 +442,7 @@
   function renderCompare(r) {
     const b = r.scores.baseline, p = r.scores.proposed;
     const kp = [
-      ['Expected tickets', fmt(b.tickets) + ' &rarr; ' + fmt(p.tickets), sgn(p.tickets - b.tickets) + ' (' + pct((p.tickets - b.tickets) / b.tickets) + ') under the same estimate', 'up'],
+      ['Expected tickets', fmt(b.tickets) + ' &rarr; ' + fmt(p.tickets), sgn(dR(p.tickets, b.tickets)) + ' (' + pctR(p.tickets, b.tickets) + ') under the same estimate', 'up'],
       ['Planning value', fmt(b.value) + ' &rarr; ' + fmt(p.value), 'what the optimiser maximises (caution applied)', ''],
       ['Untried combinations', b.untested + ' &rarr; ' + p.untested, 'screenings relying on extrapolation', ''],
       ['Expected turned away', fmt(b.away) + ' &rarr; ' + fmt(p.away), 'demand that finds the hall full', ''],
@@ -439,9 +456,10 @@
     const lp = r.proposed.lp, pr = r.proposed.prices;
     $('certPanel').innerHTML = '<h3>Is it the best plan? <span class="pill ' + (r.proposed.certificateOk ? 'pass' : 'fail') + '">' + (r.proposed.certificateOk ? 'CERTIFIED' : 'NOT CERTIFIED') + '</span></h3>' +
       '<table><tbody><tr><td>Linear program</td><td class="n">' + lp.vars + ' variables, ' + lp.rows + ' rules, ' + lp.pivots + ' simplex pivots</td></tr>' +
-      '<tr><td>Plan value (primal)</td><td class="n">' + fmt1(lp.objective) + '</td></tr><tr><td>Upper bound from dual prices</td><td class="n">' + fmt1(lp.dualBound) + '</td></tr>' +
+      '<tr><td>Planning value of the free cells (primal)</td><td class="n">' + fmt1(lp.objective) + '</td></tr><tr><td>Upper bound from dual prices</td><td class="n">' + fmt1(lp.dualBound) + '</td></tr>' +
+      (r.proposed.pins.length ? '<tr><td>+ pinned cells (fixed by you)</td><td class="n">' + fmt1(r.proposed.planValue - lp.objective) + '</td></tr><tr><td>Planning value of the whole plan</td><td class="n">' + fmt1(r.proposed.planValue) + '</td></tr>' : '') +
       '<tr><td>Largest reduced cost (must be &le; 0)</td><td class="n">' + lp.maxReducedCost.toExponential(1) + '</td></tr><tr><td>Whole-numbered schedule</td><td class="n">yes (checked)</td></tr></tbody></table>' +
-      '<p class="small">Bound = value, so no feasible week scores higher <i>under the stated formulation and estimates</i>; it says nothing about rules or effects the formulation omits.</p>' +
+      '<p class="small">Bound = value, so no feasible week scores higher on the <i>planning value</i> (expected tickets with the caution applied) under the stated formulation and estimates' + (r.proposed.pins.length ? ', given your pins' : '') + '. It says nothing about rules or effects the formulation omits, and a plan without caution would promise more expected tickets while being riskier (see the comparison below).</p>' +
       '<h3 style="margin-top:.8rem">What the rules cost (dual prices)</h3>' +
       (pr.min.length ? '<ul class="small">' + pr.min.map((x) => '<li>Each required show of <b>' + esc(x.title) + '</b> costs ' + fmt1(x.price) + ' expected tickets (its minimum binds).</li>').join('') + '</ul>' : '<p class="small">No minimum-show rule binds: the minimums cost nothing this week.</p>') +
       '<p class="tiny dim">Valid for small changes only (one show more or less).</p>';
@@ -456,16 +474,53 @@
   function renderMock(r) {
     const b = r.scores.baseline, p = r.scores.proposed;
     const o = r.oracle ? r.oracle.truth : null;
-    const wv = (w) => STUDY.results[w];
-    const studyRow = (k, label) => '<tr><td>' + label + '</td><td class="n">' + fmt(wv('sensible')[k].mean) + '</td><td class="n">' + (wv('sensible')[k].diff === undefined || k.startsWith('selected') ? '' : sgn(wv('sensible')[k].diff) + ' &plusmn; ' + fmt(wv('sensible')[k].ci95)) + '</td><td class="n">' + fmt(wv('random')[k].mean) + '</td><td class="n">' + (wv('random')[k].diff === undefined || k.startsWith('selected') ? '' : sgn(wv('random')[k].diff) + ' &plusmn; ' + fmt(wv('random')[k].ci95)) + '</td></tr>';
+    // where optimism hides: untried screenings of each plan, estimated vs true (mock)
+    const P = r.problem, T = E.truthFnFor(P);
+    const split = (plan) => { let n = 0, est = 0, tru = 0; for (let d = 0; d < 7; d++) for (let s = 0; s < P.nS; s++) plan[d][s].forEach((f, h) => { if (f !== null && P.untried(f, s, d)) { n++; est += P.expected(f, h, d, s); tru += T(f, h, d, s); } }); return { n, est, tru }; };
+    const ub = split(r.baseline.plan), up = split(r.proposed.plan);
+    const untriedLine = '<p class="small">Untried screenings: rule of thumb ' + ub.n + ' (estimated ' + fmt(ub.est) + ' tickets, truly ' + fmt(ub.tru) + '), SLOTWISE ' + up.n + (up.n ? ' (estimated ' + fmt(up.est) + ', truly ' + fmt(up.tru) + ')' : '') + '. This is the hidden-demand problem in numbers: the estimate is most optimistic exactly where the records are silent.</p>';
+    const studyTable = (res, nSeeds) => {
+      const worlds = E.STUDY_WORLDS;
+      const cell = (w, k) => { const x = res[w.id][k]; if (!x) return '<td></td><td></td>'; return '<td class="n">' + fmt(x.mean) + '</td><td class="n">' + (x.ci95 === undefined ? '' : sgn(x.diff) + ' &plusmn; ' + fmt(x.ci95)) + '</td>'; };
+      const rowsDef = [['selected', '<b>Selected: Bayes estimate, k = 1, caution 0.5 + LP</b>']].concat(E.STUDY_VARIANTS.slice(1).map((v) => [v.key, esc(v.label)])).concat([['simulated past programmer', 'Simulated past programmer (mock human)'], ['rule of thumb (baseline)', 'Rule of thumb (baseline)'], ['oracle (knows true demand)', 'Oracle (knows true demand)']]);
+      return '<div class="tablewrap"><table><thead><tr><th>Method (' + nSeeds + ' histories per world)</th>' + worlds.map((w) => '<th class="n">' + esc(w.label) + '</th><th class="n">vs selected</th>').join('') + '</tr></thead><tbody>' +
+        rowsDef.map(([k, label]) => '<tr><td>' + label + '</td>' + worlds.map((w) => cell(w, k)).join('') + '</tr>').join('') +
+        '<tr><td class="dim">Combinations tried in the records</td>' + worlds.map((w) => '<td class="n dim">' + Math.round(100 * res[w.id]['tested combinations share'].mean) + '%</td><td></td>').join('') + '</tr></tbody></table></div>';
+    };
     $('mockPanel').innerHTML = '<h3><span class="pill mock">MOCK</span> Scored against the generator\'s hidden demand</h3>' +
       '<p class="small">Only possible because the data are generated: the hidden true demand is used to compute what each plan would really sell on average. It checks the mechanism, not a real venue.</p>' +
-      '<div class="kpis"><div class="kpi"><div class="l">Rule of thumb</div><div class="v">' + fmt(b.truth) + '</div><div class="s">true expected tickets</div></div><div class="kpi"><div class="l">SLOTWISE</div><div class="v up">' + fmt(p.truth) + '</div><div class="s">' + sgn(p.truth - b.truth) + ' (' + pct((p.truth - b.truth) / b.truth) + ')</div></div>' + (o ? '<div class="kpi"><div class="l">Oracle (knows the truth)</div><div class="v">' + fmt(o) + '</div><div class="s">SLOTWISE reaches ' + (p.truth / o * 100).toFixed(1) + '%</div></div>' : '') + '<div class="kpi"><div class="l">Promised vs true (SLOTWISE)</div><div class="v">' + fmt(p.tickets) + ' / ' + fmt(p.truth) + '</div><div class="s">estimate vs hidden truth</div></div></div>' +
-      '<div class="actions"><button class="btn ghost sm" type="button" id="scoreAlt">Score the alternatives on these settings</button><span class="small muted">re-plans with each alternative estimate / caution and scores against the truth</span></div><div id="altTable"></div>' +
-      '<h3 style="margin-top:1rem">40 fictional histories (default settings, seeds 1-40)</h3><p class="small">Mean true expected tickets per week, and the difference to the selected method with a 95% interval. "Sensible": the past programmer knew roughly what sells (default). "Random": the past schedule was close to random, so every combination was tried.</p>' +
-      '<div class="tablewrap"><table><thead><tr><th>Method</th><th class="n">Sensible past</th><th class="n">vs selected</th><th class="n">Random past</th><th class="n">vs selected</th></tr></thead><tbody>' +
-      studyRow('selected (blend, k=1, caution 0.5)', '<b>Selected: Bayes blend, k = 1, caution 0.5 + LP</b>') + studyRow('film average', 'Film average + LP') + studyRow('own cell average', 'Own cell average + LP') + studyRow('pattern only', 'Pattern only + LP') + studyRow('blend, caution 0', 'Blend, no caution') + studyRow('blend, caution 0.3', 'Blend, caution 0.3') + studyRow('blend, caution 1 (exclude)', 'Blend, untried excluded') + studyRow('blend, k=2', 'Blend, k = 2') + studyRow('blend, k=4', 'Blend, k = 4') + studyRow('rule of thumb (baseline)', 'Rule of thumb (baseline)') + studyRow('oracle (knows true demand)', 'Oracle (knows true demand)') +
-      '</tbody></table></div><p class="tiny dim">Computed by the repository script study.cjs with this engine; embedded at build time. Caution helps when untried combinations were skipped for a reason (sensible past) and costs nothing measurable when everything was tried (random past).</p>';
+      '<div class="kpis"><div class="kpi"><div class="l">Rule of thumb</div><div class="v">' + fmt(b.truth) + '</div><div class="s">true expected tickets</div></div><div class="kpi"><div class="l">SLOTWISE</div><div class="v up">' + fmt(p.truth) + '</div><div class="s">' + sgn(dR(p.truth, b.truth)) + ' (' + pctR(p.truth, b.truth) + ')</div></div>' + (o ? '<div class="kpi"><div class="l">Oracle (knows the truth)</div><div class="v">' + fmt(o) + '</div><div class="s">SLOTWISE reaches ' + (Math.round(p.truth) / Math.round(o) * 100).toFixed(1) + '%</div></div>' : '') + '<div class="kpi"><div class="l">Promised vs true (SLOTWISE)</div><div class="v">' + fmt(p.tickets) + ' / ' + fmt(p.truth) + '</div><div class="s">estimate vs hidden truth</div></div></div>' +
+      untriedLine + '<div class="actions"><button class="btn ghost sm" type="button" id="scoreAlt">Score the alternatives on these settings</button><span class="small muted">re-plans with each alternative estimate / caution and scores against the truth</span></div><div id="altTable"></div>' +
+      '<h3 style="margin-top:1rem">' + STUDY.seeds + ' fictional histories per world (default settings, seeds 1-' + STUDY.seeds + ')</h3><p class="small">Mean true expected tickets per week, and the paired difference to the selected method with a 95% interval. <b>Sensible past:</b> the past programmer knew roughly what sells (default). <b>Random past:</b> the past schedule was close to random, so every combination was tried. <b>Random past, 1 week:</b> untried combinations are untried by chance, not because they sell badly.</p>' +
+      '<div id="studyTable">' + studyTable(STUDY.results, STUDY.seeds) + '</div>' +
+      '<div class="actions"><button class="btn ghost sm" type="button" id="rerunStudy">Re-run this study in the browser</button><button class="btn ghost sm" type="button" id="bruteBtn">Check the optimiser by brute force (100 small weeks)</button><span class="small muted" id="studyNote">Embedded table computed with this engine by the repository script; the buttons recompute it here.</span></div>' +
+      '<p class="tiny dim">Reading: caution matters when untried combinations were skipped for a reason (sensible past) and costs little when they were not; values above 0.5 gain a few tickets in the first world but lose where untried means "untried by chance". The sold-out correction was rejected because it did not improve plans.</p>';
+    $('rerunStudy').addEventListener('click', () => {
+      const btn = $('rerunStudy');
+      btn.disabled = true;
+      const nS = STUDY.seeds, worlds = E.STUDY_WORLDS, per = {};
+      worlds.forEach((w) => { per[w.id] = []; });
+      const jobs = [];
+      worlds.forEach((w) => { for (let seed = 1; seed <= nS; seed++) jobs.push([w, seed]); });
+      let i = 0;
+      const t0 = performance.now();
+      (function step() {
+        const t = performance.now();
+        while (i < jobs.length && performance.now() - t < 120) { const [w, seed] = jobs[i++]; per[w.id].push(E.studyOne(seed, w)); }
+        $('studyNote').textContent = 'Running: ' + i + ' / ' + jobs.length + ' histories ...';
+        if (i < jobs.length) { setTimeout(step, 0); return; }
+        const res = {};
+        worlds.forEach((w) => { res[w.id] = E.summarizeStudy(per[w.id]); });
+        $('studyTable').innerHTML = studyTable(res, nS);
+        $('studyNote').textContent = 'Recomputed in this browser in ' + ((performance.now() - t0) / 1000).toFixed(1) + ' s.';
+        btn.disabled = false;
+      })();
+    });
+    $('bruteBtn').addEventListener('click', () => {
+      const t0 = performance.now();
+      const bf = E.bruteForceCheck(100, 7);
+      $('studyNote').textContent = 'Brute force: ' + bf.agree + ' of ' + bf.compared + ' feasible small weeks give exactly the simplex optimum (' + bf.infeasibleBoth + ' infeasible instances rejected by both); ' + Math.round(performance.now() - t0) + ' ms.';
+    });
     $('scoreAlt').addEventListener('click', () => {
       const cm = E.compareMethods(settings);
       if (!cm) { $('altTable').innerHTML = '<p class="small">Run a valid plan first.</p>'; return; }
@@ -482,7 +537,9 @@
     const n = labels.length, gw = (W - L - R) / n, bw = Math.min(26, (gw * 0.8) / series.length);
     const y = (v) => T + (H - T - B) * (1 - v / max);
     let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="bar chart">';
-    for (let g = 0; g <= 4; g++) { const v = (max / 1.1) * g / 4; svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="#2a2a2a"/><text x="' + (L - 5) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + (o.decimals ? v.toFixed(o.decimals) : fmt(v)) + '</text>'; }
+    // round tick steps (1, 2 or 5 x a power of ten)
+    const raw = (max / 1.1) / 4, mag = Math.pow(10, Math.floor(Math.log10(raw))), stepV = [1, 2, 5, 10].map((m) => m * mag).find((x) => x >= raw);
+    for (let g = 0; g * stepV <= max; g++) { const v = g * stepV; svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="#2a2a2a"/><text x="' + (L - 5) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + (o.decimals ? v.toFixed(stepV < 0.1 ? 2 : 1) : fmt(v)) + '</text>'; }
     labels.forEach((lab, i) => {
       const x0 = L + i * gw + (gw - bw * series.length) / 2;
       series.forEach((s, k) => {
@@ -505,7 +562,7 @@
     if (r.status !== 'ok') return r.status.toUpperCase() + ': ' + r.errors.join(' ');
     const s = r.scores;
     const parts = ['Plan found; violations ' + r.checks.proposed.violations.length + ' / ' + r.checks.baseline.violations.length + ' (proposed / baseline)', 'certificate ' + (r.proposed.certificateOk ? 'holds' : 'fails'), 'expected tickets ' + fmt(s.proposed.tickets) + ' vs ' + fmt(s.baseline.tickets)];
-    if (tc.id === 'new-release') parts.push('The Scavengers: ' + r.checks.proposed.shows[r.slate.length - 1] + ' shows, no records');
+    if (tc.id === 'new-release') parts.push('The Scavengers: ' + r.checks.proposed.shows[r.slate.length - 1] + ' shows, flagged as manager estimate (no records)');
     if (tc.id === 'hall-closed') parts.push('screenings in Hall 3: 0');
     if (tc.id === 'one-week') parts.push('backtest: ' + (r.backtest.available ? 'available' : 'not available'));
     return parts.join('; ') + '.';
