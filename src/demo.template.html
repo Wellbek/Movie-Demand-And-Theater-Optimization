@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SLOTWISE Showtime Planner</title>
+<style>
+/* Netflix-like system: near-black canvas, one red accent, white primary actions, grey secondary. */
+:root{
+  --bg:#141414; --bg2:#181818; --bg3:#232323; --card:#2f2f2f; --line:#333; --line2:#4d4d4d;
+  --text:#fff; --text2:#e5e5e5; --muted:#b3b3b3; --dim:#808080;
+  --red:#e50914; --red2:#c11119; --green:#46d369; --amber:#f5c518; --blue:#54b9ff;
+  --font:"Netflix Sans","Helvetica Neue",Helvetica,Arial,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--bg);scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--text)}
+:focus-visible{outline:2px solid #fff;outline-offset:2px;border-radius:3px}
+.wrap{padding:0 4%}
+h2{font-size:clamp(1.15rem,1.7vw,1.6rem);font-weight:700;margin:0 0 .5rem;color:var(--text2)}
+h3{font-size:1.05rem;margin:0 0 .4rem}
+p{margin:.35rem 0}
+.muted{color:var(--muted)} .dim{color:var(--dim)} .up{color:var(--green)} .down{color:#ff6b72}
+.small{font-size:.86rem} .tiny{font-size:.76rem}
+code,.mono{font-family:var(--mono);font-size:.86em}
+section.row{padding:2.2rem 0 .4rem}
+.lead{color:var(--muted);max-width:110ch;margin:0 0 1rem}
+
+/* ---------- nav ---------- */
+.nav{position:fixed;inset:0 0 auto 0;height:68px;z-index:50;display:flex;align-items:center;gap:2.2rem;padding:0 4%;background:linear-gradient(180deg,rgba(0,0,0,.8) 10%,transparent);transition:background .4s}
+.nav.solid{background:var(--bg)}
+.logo{font-weight:900;font-size:1.75rem;letter-spacing:-.02em;color:var(--red);text-decoration:none;transform:scaleY(1.25);display:inline-block;line-height:1}
+.nav ul{display:flex;gap:1.3rem;list-style:none;margin:0;padding:0;font-size:.88rem}
+.nav ul a{color:var(--text2);text-decoration:none;transition:color .3s}
+.nav ul a:hover{color:var(--muted)}
+.nav ul a.on{font-weight:700;color:#fff}
+.nav .right{margin-left:auto;display:flex;align-items:center;gap:1rem;font-size:.85rem}
+.avatar{width:32px;height:32px;border-radius:4px;background:linear-gradient(135deg,#2a7fff,#0a3fa0);display:grid;place-items:center;font-weight:800;font-size:.8rem}
+.chip{border:1px solid rgba(255,255,255,.45);padding:0 .45em;font-size:.78rem;color:var(--text2);white-space:nowrap}
+@media (max-width:900px){.nav ul{display:none}}
+
+/* ---------- hero billboard ---------- */
+.hero{position:relative;min-height:min(86vh,760px);display:flex;align-items:flex-end;padding:120px 4% 3.2rem;overflow:hidden}
+.hero .art{position:absolute;inset:0;z-index:0}
+.hero .art svg{width:100%;height:100%;display:block}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(77deg,rgba(0,0,0,.75) 0%,rgba(0,0,0,.35) 45%,transparent 75%),linear-gradient(180deg,transparent 60%,var(--bg) 100%);z-index:1}
+.hero .content{position:relative;z-index:2;max-width:720px}
+.kicker{display:flex;align-items:center;gap:.5rem;font-weight:700;letter-spacing:.25em;font-size:.78rem;color:var(--text2)}
+.kicker .s{color:var(--red);font-size:1.4rem;letter-spacing:0;font-weight:900;transform:scaleY(1.25)}
+.hero h1{font-size:clamp(2.3rem,5.4vw,4.6rem);line-height:.98;margin:.4rem 0 .8rem;font-weight:900;letter-spacing:-.02em;text-shadow:2px 2px 4px rgba(0,0,0,.45)}
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;font-size:.95rem;margin-bottom:.8rem}
+.match{color:var(--green);font-weight:700}
+.hero p.desc{font-size:clamp(.98rem,1.2vw,1.15rem);color:var(--text2);text-shadow:1px 1px 2px rgba(0,0,0,.6);margin:0 0 1.3rem}
+.btns{display:flex;flex-wrap:wrap;gap:.7rem}
+.btn{display:inline-flex;align-items:center;gap:.55rem;border:0;border-radius:4px;padding:.62rem 1.6rem;font-size:1.05rem;font-weight:700;cursor:pointer;text-decoration:none;transition:background .2s}
+.btn svg{width:1.35em;height:1.35em}
+.btn.play{background:#fff;color:#000}.btn.play:hover{background:rgba(255,255,255,.75)}
+.btn.info{background:rgba(109,109,110,.7);color:#fff}.btn.info:hover{background:rgba(109,109,110,.4)}
+.btn.red{background:var(--red);color:#fff}.btn.red:hover{background:var(--red2)}
+.btn.sm{padding:.38rem .9rem;font-size:.88rem}
+.btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--text2)}.btn.ghost:hover{border-color:#fff}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.fp{font-family:var(--mono);font-size:.78rem;color:var(--muted);margin-top:.9rem}
+.alert{border-left:4px solid var(--red);background:rgba(229,9,20,.12);padding:.8rem 1rem;border-radius:0 4px 4px 0;margin:.8rem 0}
+.alert.ok{border-color:var(--green);background:rgba(70,211,105,.1)}
+.alert.warn{border-color:var(--amber);background:rgba(245,197,24,.09)}
+.alert ul{margin:.3rem 0 0;padding-left:1.1rem}
+.hero .alert{max-width:720px}
+.stale-badge{display:none;background:var(--amber);color:#000;font-weight:800;font-size:.75rem;padding:.1rem .5rem;border-radius:2px;letter-spacing:.06em}
+body.stale .stale-badge{display:inline-block}
+body.stale .result{opacity:.38;filter:grayscale(.8);pointer-events:none}
+
+/* ---------- carousels and title cards ---------- */
+.rowtitle{display:flex;align-items:baseline;gap:.8rem;flex-wrap:wrap}
+.rowtitle .more{font-size:.85rem;color:#54b9c5;font-weight:700}
+.slider{display:flex;gap:.45rem;overflow-x:auto;overflow-y:visible;padding:1.6rem 0 2.6rem;scroll-snap-type:x proximity;scrollbar-width:thin}
+.card{position:relative;flex:0 0 clamp(150px,15.5vw,230px);aspect-ratio:2/3;border-radius:4px;overflow:visible;cursor:pointer;scroll-snap-align:start;transition:transform .3s ease .1s,z-index 0s .1s;z-index:1;background:var(--bg2)}
+.card .poster{position:absolute;inset:0;border-radius:4px;overflow:hidden}
+.card .poster svg{width:100%;height:100%;display:block}
+.card .bob{position:absolute;left:0;right:0;top:100%;background:var(--bg2);border-radius:0 0 6px 6px;padding:.6rem .7rem .7rem;opacity:0;transform:translateY(-6px);transition:opacity .25s .1s,transform .25s .1s;box-shadow:0 10px 18px rgba(0,0,0,.6);font-size:.78rem;pointer-events:none}
+.card:hover,.card:focus-visible{transform:scale(1.22);z-index:10}
+.card:hover .bob,.card:focus-visible .bob{opacity:1;transform:none}
+.card:first-child:hover{transform-origin:left center}
+.card .bob .icons{display:flex;gap:.35rem;margin-bottom:.35rem}
+.circle{width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.55);display:grid;place-items:center;font-size:.8rem;font-weight:800;background:rgba(42,42,42,.6)}
+.circle.fill{background:#fff;color:#000;border-color:#fff}
+.tags{display:flex;flex-wrap:wrap;gap:.3rem;color:var(--text2)}
+.tags span+span::before{content:"\2022";color:var(--dim);margin-right:.3rem}
+.badge-top{position:absolute;top:0;right:6px;background:var(--red);color:#fff;font-weight:900;font-size:.6rem;line-height:1;padding:.25rem .22rem .2rem;text-align:center;border-radius:0 0 2px 2px;z-index:2}
+.badge-top b{display:block;font-size:.95rem}
+.badge-new{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);background:var(--red);color:#fff;font-weight:800;font-size:.68rem;padding:.12rem .45rem;border-radius:2px;white-space:nowrap;z-index:2}
+.top10{display:flex;gap:.1rem;overflow-x:auto;padding:1rem 0 1.6rem}
+.t10{position:relative;flex:0 0 clamp(210px,21vw,300px);height:clamp(150px,15vw,210px);display:flex;align-items:flex-end;cursor:pointer}
+.t10 .num{font-size:clamp(150px,15vw,215px);font-weight:900;line-height:.78;color:var(--bg);-webkit-text-stroke:4px #595959;letter-spacing:-.08em;width:55%;text-align:right;margin-right:-8%;user-select:none}
+.t10 .poster{width:47%;aspect-ratio:2/3;border-radius:4px;overflow:hidden;position:relative;transition:transform .25s}
+.t10:hover .poster{transform:scale(1.06)}
+.t10 .poster svg{width:100%;height:100%;display:block}
+.t10 .cap{position:absolute;left:0;bottom:-1.25rem;font-size:.78rem;color:var(--muted);white-space:nowrap}
+
+/* ---------- panels, forms, tables ---------- */
+.panel{background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:1rem 1.1rem}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:1rem}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:1rem}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:1rem}
+fieldset{border:1px solid var(--line);border-radius:6px;padding:.7rem .9rem .9rem;margin:0;min-width:0}
+legend{padding:0 .4rem;font-weight:700;color:var(--text2)}
+label.f{display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin:.32rem 0;font-size:.88rem;color:var(--text2)}
+label.f span.h{color:var(--dim);font-size:.75rem;display:block}
+input[type=number],input[type=text],select,textarea{background:#0f0f0f;border:1px solid var(--line2);border-radius:3px;padding:.32rem .45rem;color:#fff}
+input[type=number]{width:5.4rem;text-align:right}
+input[type=text]{width:6.2rem}
+input[type=range]{accent-color:var(--red);width:9rem}
+input[type=checkbox]{accent-color:var(--red);width:1rem;height:1rem}
+textarea{width:100%;min-height:5.2rem;font-family:var(--mono);font-size:.8rem;resize:vertical}
+.hall-row,.film-row{display:grid;grid-template-columns:1fr 5.2rem 3.6rem;gap:.4rem;align-items:center;font-size:.86rem;margin:.25rem 0}
+.film-row{grid-template-columns:1fr 4rem 4rem}
+.film-row .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.film-row input{width:100%}
+.colhead{color:var(--dim);font-size:.74rem;text-transform:uppercase;letter-spacing:.06em}
+.actions{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin-top:1rem}
+.changed{display:none;color:var(--amber);font-weight:700;font-size:.88rem}
+body.dirty .changed{display:inline}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{padding:.38rem .5rem;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.tablewrap{overflow-x:auto;max-width:100%}
+.scrollbox{max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:4px}
+.scrollbox thead th{position:sticky;top:0;background:var(--bg2)}
+#recTable td,#recTable th{white-space:nowrap;font-size:.8rem}
+.pill{display:inline-block;padding:.05rem .45rem;border-radius:2px;font-size:.72rem;font-weight:800;letter-spacing:.04em}
+.pill.used{background:var(--green);color:#000}
+.pill.filter{background:var(--blue);color:#000}
+.pill.notused{background:#5a5a5a;color:#fff}
+.pill.pass{background:var(--green);color:#000}
+.pill.fail{background:var(--red);color:#fff}
+.pill.mock{background:var(--amber);color:#000}
+.pill.real{background:#fff;color:#000}
+.pill.todo{background:#5a5a5a;color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:.7rem}
+.kpi{background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:.75rem .9rem}
+.kpi .l{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em}
+.kpi .v{font-size:1.65rem;font-weight:800;line-height:1.15}
+.kpi .s{font-size:.8rem;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:.8rem;font-size:.8rem;color:var(--muted);margin:.4rem 0}
+.legend i{display:inline-block;width:.85rem;height:.85rem;border-radius:2px;vertical-align:-2px;margin-right:.3rem}
+
+/* ---------- demand heat map ---------- */
+.heat{display:grid;gap:2px;font-size:.78rem}
+.heat .hc{padding:.35rem .25rem;text-align:center;border-radius:2px;cursor:pointer;position:relative;font-variant-numeric:tabular-nums;min-height:2.1rem;display:flex;flex-direction:column;justify-content:center;line-height:1.1}
+.heat .hc small{font-size:.66rem;opacity:.85}
+.heat .hh{color:var(--muted);font-size:.72rem;text-align:center;align-self:end;padding-bottom:.2rem}
+.heat .rh{color:var(--text2);font-size:.78rem;align-self:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:.3rem}
+.heat .untried{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.18) 0 4px,transparent 4px 9px)!important;outline:1px dashed rgba(255,255,255,.45)}
+.heat .so::after{content:"";position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:#fff}
+
+/* ---------- schedule grids ---------- */
+.sched{display:grid;gap:2px;font-size:.74rem}
+.sched .sh{color:var(--muted);font-size:.7rem;text-align:center;padding:.2rem 0}
+.sched .dh{color:var(--text2);font-weight:700;font-size:.74rem;padding:.25rem .2rem;align-self:center}
+.sched .sc{border-radius:2px;padding:.22rem .3rem;cursor:pointer;min-height:2.3rem;line-height:1.15;position:relative;overflow:hidden;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.6);border:0;text-align:left}
+.sched .sc .t{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.sched .sc .v{opacity:.9;font-variant-numeric:tabular-nums}
+.sched .sc.empty{background:#1f1f1f;color:var(--dim);text-shadow:none}
+.sched .sc.closed{background:repeating-linear-gradient(45deg,#1a1a1a 0 6px,#222 6px 12px);color:var(--dim);cursor:default}
+.sched .sc.flag::after{content:"?";position:absolute;right:3px;top:1px;font-weight:900;color:var(--amber)}
+.sched .sc.pin{outline:2px solid #fff;outline-offset:-2px}
+.sched .sc.diff{box-shadow:inset 0 -3px 0 var(--amber)}
+.tabs{display:flex;gap:.3rem;flex-wrap:wrap;margin:.3rem 0 .8rem}
+.tab{background:transparent;border:1px solid var(--line2);color:var(--text2);padding:.32rem .9rem;border-radius:3px;cursor:pointer;font-size:.86rem}
+.tab.on{background:#fff;color:#000;border-color:#fff;font-weight:700}
+
+/* ---------- charts ---------- */
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:11px;font-family:var(--font)}
+
+/* ---------- modal (title detail) ---------- */
+.modal-back{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:80;display:none;overflow-y:auto;padding:2rem 1rem}
+.modal-back.on{display:block}
+.modal{max-width:880px;margin:0 auto;background:var(--bg2);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.8);overflow:hidden;position:relative}
+.modal .mhead{position:relative;height:250px;overflow:hidden}
+.modal .mhead svg{width:100%;height:100%;display:block}
+.modal .mhead::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,var(--bg2) 3%,transparent 70%)}
+.modal .mtitle{position:absolute;left:2.4rem;bottom:1.2rem;z-index:2;font-size:clamp(1.6rem,3.4vw,2.6rem);font-weight:900;line-height:1;text-shadow:2px 2px 6px rgba(0,0,0,.6)}
+.modal .x{position:absolute;right:1rem;top:1rem;z-index:3;width:36px;height:36px;border-radius:50%;background:#181818;border:0;color:#fff;font-size:1.3rem;cursor:pointer;display:grid;place-items:center}
+.modal .mbody{padding:.6rem 2.4rem 2rem}
+@media (max-width:600px){.modal .mbody{padding:.6rem 1rem 1.4rem}.modal .mtitle{left:1rem}}
+
+/* ---------- explanation blocks ---------- */
+.steps{counter-reset:st;display:grid;gap:.8rem}
+.step{background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:.9rem 1rem;position:relative}
+.step h3{display:flex;gap:.6rem;align-items:baseline}
+.step h3::before{counter-increment:st;content:counter(st);font-size:1.6rem;font-weight:900;color:var(--red);line-height:1}
+.src{color:var(--dim);font-size:.78rem}
+.katex{font-size:1.06em}
+.katex-display{margin:.5rem 0;overflow-x:auto;overflow-y:hidden}
+footer{padding:3rem 4% 4rem;color:var(--dim);font-size:.8rem}
+footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;max-width:1000px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+@media print{.nav,.modal-back{display:none}}
+</style>
+</head>
+<body>
+<nav class="nav" id="nav" aria-label="Sections">
+  <a class="logo" href="#top" aria-label="SLOTWISE home">SLOTWISE</a>
+  <ul>
+    <li><a href="#top" class="on">Home</a></li>
+    <li><a href="#settings">Settings</a></li>
+    <li><a href="#records">Records</a></li>
+    <li><a href="#demand">Demand</a></li>
+    <li><a href="#plan">Plan</a></li>
+    <li><a href="#compare">Compare</a></li>
+    <li><a href="#checks">Test cases</a></li>
+    <li><a href="#about">What is real</a></li>
+  </ul>
+  <div class="right"><span class="chip">FICTIONAL DATA</span><span class="stale-badge">STALE</span><span class="muted">Programming manager</span><span class="avatar" aria-hidden="true">PM</span></div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="art" id="heroArt" aria-hidden="true"></div>
+  <div class="content">
+    <div class="kicker"><span class="s">S</span> DECISION SUPPORT DEMO</div>
+    <h1 id="heroTitle">Next week at RIVERSIDE</h1>
+    <div class="meta" id="heroMeta"></div>
+    <p class="desc" id="heroDesc">Which film plays in which hall at what time, for one venue and one week. The demo learns demand from purchase records (six fields, fictional), plans the week as a linear program and compares it with a rule of thumb under the same inputs. You approve, pin or change it, and run again.</p>
+    <div class="btns">
+      <button class="btn play" id="runTop" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 4v16a1 1 0 0 0 1.5.86l13-8a1 1 0 0 0 0-1.72l-13-8A1 1 0 0 0 6 4Z"/></svg>Run plan</button>
+      <a class="btn info" href="#how"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path fill="currentColor" d="M11 10h2v7h-2zM11 6.5h2v2h-2z"/></svg>How it works</a>
+    </div>
+    <div id="heroAlert"></div>
+    <div class="fp" id="heroFp"></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section class="row result" id="slate">
+  <div class="rowtitle"><h2>Top films next week at RIVERSIDE</h2><span class="more">ranked by planned expected tickets</span></div>
+  <div class="top10" id="top10"></div>
+  <div class="rowtitle"><h2>The slate</h2><span class="more">hover for numbers, click for the film's demand and shows</span></div>
+  <div class="slider" id="slateRow"></div>
+</section>
+
+<section class="row" id="settings">
+  <div class="rowtitle"><h2>1 · Settings</h2><span class="changed">Settings changed: press Run to recalculate</span></div>
+  <p class="lead">Every number below is a planning setting or a generator setting, not a record field. Halls, seats, the show-time grid, runtimes and minimum shows are operating rules the programming manager confirms each week; their defaults are fictional <b>[ASSUMPTION]</b>. Generator settings only shape the fictional history (they replace the real dataset the brief does not give). Changing a setting regenerates the history and the plan.</p>
+  <div class="form-grid">
+    <fieldset><legend>Venue and halls (plan week)</legend>
+      <div class="hall-row colhead"><span>Hall</span><span>Seats</span><span>Open</span></div>
+      <div id="hallRows"></div>
+      <div class="actions" style="margin-top:.4rem"><button class="btn ghost sm" type="button" id="addHall">+ hall</button><button class="btn ghost sm" type="button" id="delHall">- hall</button></div>
+      <p class="tiny dim">"Open" applies to the plan week; past shows in the records used every hall with seats.</p>
+    </fieldset>
+    <fieldset><legend>Show-time grid</legend>
+      <label class="f">First show <input type="text" id="firstStart" inputmode="numeric"></label>
+      <label class="f">Shows per hall per day <input type="number" id="slots" min="1" max="8" step="1"></label>
+      <label class="f">Slot length (min) <input type="number" id="slotMinutes" min="60" max="300" step="5"></label>
+      <label class="f">Changeover / cleaning (min) <input type="number" id="cleaning" min="0" max="60" step="1"></label>
+      <p class="tiny dim" id="gridPreview"></p>
+    </fieldset>
+    <fieldset><legend>Slate and show limits (plan week)</legend>
+      <label class="f">Films in the records <input type="number" id="filmCount" min="2" max="8" step="1"></label>
+      <label class="f"><span>Add new release <span class="h">The Scavengers, opens in the plan week, no records</span></span><input type="checkbox" id="newRelease"></label>
+      <label class="f"><span>New-release strength <span class="h">manager's guess vs the average film</span></span><input type="number" id="newReleaseStrength" min="0.1" max="5" step="0.1"></label>
+      <div class="film-row colhead"><span>Film (runtime)</span><span>Min</span><span>Max</span></div>
+      <div id="filmRows"></div>
+      <p class="tiny dim">Min and max shows stand in for distributor terms and house rules (unknown, TBD). Blank max = no cap.</p>
+    </fieldset>
+    <fieldset><legend>Method</legend>
+      <label class="f" style="flex-wrap:wrap"><span>Caution for untried times <span class="h">share of demand removed (robust LP)</span></span><span style="display:flex;gap:.5rem;align-items:center"><input type="range" id="caution" min="0" max="1" step="0.05"><b id="cautionV" class="mono"></b></span></label>
+      <label class="f"><span>Pattern weight k <span class="h">screenings' worth of prior</span></span><input type="number" id="credibility" min="0" max="20" step="1"></label>
+      <p class="tiny dim">Defaults (caution 0.5, k = 1) were chosen on a 40-history mock study; see Compare.</p>
+    </fieldset>
+    <fieldset><legend>Fictional data generator (mock)</legend>
+      <label class="f">Seed <input type="number" id="seed" min="0" step="1"></label>
+      <label class="f">Weeks of history <input type="number" id="historyWeeks" min="1" max="12" step="1"></label>
+      <label class="f"><span>Demand dispersion r <span class="h">negative binomial shape</span></span><input type="number" id="nbShape" min="1" max="100" step="1"></label>
+      <label class="f"><span>Past programmer noise <span class="h">0 = always right, 3 = near random</span></span><input type="number" id="pastNoise" min="0" max="5" step="0.1"></label>
+    </fieldset>
+    <fieldset><legend>Extra purchase rows (optional)</legend>
+      <textarea id="extraRows" spellcheck="false" placeholder="title_tag,venue_tag,play_day,curtain_time,account_tag,passes_bought&#10;caterpillar-man,RIVERSIDE,2026-10-03,19:00,AC-00042,2"></textarea>
+      <p class="tiny dim">Same six fields as the brief. Invalid rows block the run with a line number; other venues, unknown titles and dates outside the window are set aside with a note.</p>
+    </fieldset>
+  </div>
+  <div class="actions">
+    <button class="btn red" type="button" id="run">&#9654; Run</button>
+    <button class="btn info sm" type="button" id="reset">Reset to defaults</button>
+    <button class="btn ghost sm" type="button" id="clearPins">Clear pins</button>
+    <span class="small muted" id="pinCount"></span>
+  </div>
+  <div id="settingsAlert"></div>
+</section>
+
+<section class="row result" id="records">
+  <h2>2 · Purchase records (input)</h2>
+  <p class="lead">One row is one completed purchase for one screening; date and time describe the screening, not the purchase (brief, Section 2). Rows are summed per <code>title_tag</code> + <code>venue_tag</code> + <code>play_day</code> + <code>curtain_time</code> into screenings.</p>
+  <div class="kpis" id="recKpis"></div>
+  <div class="grid2" style="margin-top:1rem">
+    <div class="panel">
+      <div class="rowtitle"><h3>Generated rows</h3><span class="small muted" id="recNote"></span></div>
+      <div class="scrollbox"><table id="recTable"></table></div>
+      <div class="actions"><button class="btn ghost sm" type="button" id="dlCsv">Download all rows (CSV)</button></div>
+    </div>
+    <div class="panel">
+      <h3>What each field is used for</h3>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Field</th><th>Status</th><th>Used for here</th><th>Could support later (out of scope now)</th></tr></thead>
+        <tbody>
+          <tr><td><code>title_tag</code></td><td><span class="pill used">USED</span></td><td>Groups purchases into screenings and screenings into film x time x day-type cells; maps to the slate (title, runtime).</td><td>Film ageing across weeks. Needs release dates and a longer history.</td></tr>
+          <tr><td><code>venue_tag</code></td><td><span class="pill filter">FILTER</span></td><td>Only RIVERSIDE rows enter; other venues are set aside with a note.</td><td>Pooling evidence across venues, shared audiences. Multi-venue is excluded from the first step.</td></tr>
+          <tr><td><code>play_day</code></td><td><span class="pill used">USED</span></td><td>Weekday and day type (Mon-Thu, Fri-Sun), weekday index, history window and backtest cut.</td><td>Holiday effects and trends. Needs a holiday calendar and more weeks.</td></tr>
+          <tr><td><code>curtain_time</code></td><td><span class="pill used">USED</span></td><td>Maps each screening to a slot of the show-time grid (time-of-day index). Off-grid times are rejected.</td><td>Designing a new grid. The grid is an operating rule, not learned.</td></tr>
+          <tr><td><code>account_tag</code></td><td><span class="pill notused">NOT USED</span></td><td>Only checked to be non-empty; distinct accounts are counted for information.</td><td>Repeat visits, audience overlap between films (cannibalisation), loyalty. Decision value unproven; needs a privacy review.</td></tr>
+          <tr><td><code>passes_bought</code></td><td><span class="pill used">USED</span></td><td>Summed per screening = tickets sold, the demand observation.</td><td>Group-size mix (families vs couples) to refine time-of-day profiles.</td></tr>
+        </tbody>
+      </table></div>
+      <p class="small">"Label any additional fields or operating rules as your own assumptions" (brief, Section 2). <b>We required no additional record fields</b>: the mechanism runs on these six fields. Anything the business has not given is not assumed unless it is stated and tagged [ASSUMPTION] (the operating rules in Settings).</p>
+      <div class="alert warn small"><b>Please confirm the data contract.</b> We treat the six-field specification as the fixed and complete export. If fields are renamed, removed or change meaning (for example purchase time instead of screening time, or pre-aggregated rows), validation will reject the file or, worse, estimates will silently degrade.</div>
+    </div>
+  </div>
+  <div class="alert" style="margin-top:1rem">
+    <b>GAP: there is no real data.</b> The brief gives a record specification, not a dataset; size, period, quality and current practice are unknown. Every row on this page is generated. Real records of this venue would replace the generator one for one. Demand could be predicted more accurately with information beyond the six fields: sales of other cinemas showing the same film, each film's national box-office results (film success), pre-sales and booking curves, social-media reach and audience retention (trailer views, mentions, review scores), the release and holiday calendar, weather, competitor schedules and marketing spend. These are <b>out of scope</b> for the first step because none is in the records, each needs a collection agreement, and their link to one venue's admissions is unproven. We simplify by generating history from two distributions:
+    <ul>
+      <li><b>Distribution 1 - demand per screening: negative binomial</b> with mean = film strength x time-of-day shape x weekday factor (all fictional) and dispersion r. Ticket buyers arrive as a count (Poisson) whose rate varies from screening to screening (Gamma mixing); this mixture is the negative binomial, the same Poisson-Gamma pair used by the estimate (Lecture 2, conjugate pairs and posterior predictive).</li>
+      <li><b>Distribution 2 - tickets per purchase: categorical</b> 1 to 6 tickets with fixed shares (30%, 45%, 10%, 10%, 3%, 2%; fictional). Sales = min(demand, seats) are split into purchases with this distribution.</li>
+    </ul>
+    <span class="small">The past schedule is chosen by a fictional programmer who knows roughly what sells (judgement noise set in Settings), so some film-time combinations are never tried, as in real records.</span>
+  </div>
+</section>
+
+<section class="row result" id="demand">
+  <h2>3 · Demand belief per film, time and day type</h2>
+  <p class="lead">Expected tickets per screening (posterior mean, Fri-Sun or Mon-Thu). Hatched = never screened at that time and day type (pattern only, an extrapolation). White dot = at least one screening read as sold out (total equals a hall's seats). Click a cell for the calculation.</p>
+  <div class="tabs" id="dtTabs"></div>
+  <div class="panel"><div class="tablewrap"><div class="heat" id="heat"></div></div>
+    <div class="legend" id="heatLegend"></div>
+  </div>
+  <div class="grid2" style="margin-top:1rem">
+    <div class="panel"><h3>Time-of-day index <span class="small muted">S, fitted by maximum likelihood</span></h3><div class="chart" id="chartS"></div></div>
+    <div class="panel"><h3>Weekday index <span class="small muted">D, fitted by maximum likelihood</span></h3><div class="chart" id="chartD"></div></div>
+  </div>
+</section>
+
+<section class="row result" id="plan">
+  <h2>4 · Next week's plan: rule of thumb vs SLOTWISE</h2>
+  <p class="lead">Both plans use the same inputs, rules and evaluation. Each cell shows the film and its expected tickets. <b>?</b> = untried combination. Yellow underline = differs from the other plan. White outline = pinned by you. Click a cell to see why, the ranked alternatives, and to pin or block it.</p>
+  <div class="tabs" id="planTabs"></div>
+  <div class="tabs" id="dayTabs"></div>
+  <div class="grid2"><div class="panel" id="planA"></div><div class="panel" id="planB"></div></div>
+  <div class="legend" id="filmLegend"></div>
+</section>
+
+<section class="row result" id="compare">
+  <h2>5 · Comparison and checks of the result</h2>
+  <div class="kpis" id="kpis"></div>
+  <div class="grid2" style="margin-top:1rem">
+    <div class="panel"><h3>Expected tickets per day</h3><div class="chart" id="chartDay"></div></div>
+    <div class="panel"><h3>Shows per film</h3><div class="chart" id="chartShows"></div></div>
+  </div>
+  <div class="grid2" style="margin-top:1rem">
+    <div class="panel" id="certPanel"></div>
+    <div class="panel" id="backtestPanel"></div>
+  </div>
+  <div class="panel" style="margin-top:1rem" id="mockPanel"></div>
+</section>
+
+<section class="row" id="how">
+  <h2>How the plan is made</h2>
+  <p class="lead">Methods come only from the course's Lectures 0-4 (Bayesian statistics for the belief, linear programming with a robust value and duality for the decision). Every step runs in this page; nothing is pre-computed.</p>
+  <div class="steps">
+    <div class="step"><h3>Sum purchases into screenings</h3><p>Tickets of a screening \(y_i = \sum \text{passes\_bought}\) over its rows. A total equal to one of the venue's hall sizes is read as a sell-out [ASSUMPTION], because records carry no hall: it means "demand was at least \(y_i\)", and the estimate uses \(\max(y_i,\ \text{pattern})\) for it.</p></div>
+    <div class="step"><h3>Fit the pattern by maximum likelihood</h3><p>\[\mu^{\text{pattern}}_{f,s,d} = F_f \cdot S_s \cdot D_d\] Film strength \(F\), time-of-day index \(S\) and weekday index \(D\) maximise the Poisson likelihood of all screenings (each factor = observed / expected tickets over its rows, repeated until stable). It gives every film-time-day an estimate, even where the film never played. <span class="src">Lecture 2, MLE (p. 24).</span></p></div>
+    <div class="step"><h3>Update the belief per cell with Bayes' rule</h3><p>For film \(f\), time \(s\), day type \(t\): prior \(\theta \sim \text{Gamma}(k P,\ k)\) with mean \(P\) = pattern, worth \(k\) screenings; Poisson likelihood of the cell's screenings; posterior \[\theta \mid y \sim \text{Gamma}\Big(kP + \textstyle\sum_i y_i,\ \ k + \sum_i w_i\Big),\qquad \mathbb{E}[\theta \mid y] = \frac{k}{k+\sum_i w_i}\,P + \frac{\sum_i w_i}{k+\sum_i w_i}\,\bar y\] a weighted average of pattern and own average (\(w_i\) = weekday exposure inside the day type). <span class="src">Lecture 2, Example 2.1 Poisson likelihood with Gamma prior (p. 20); posterior as a weighted average (pp. 16, 22).</span></p></div>
+    <div class="step"><h3>Expected tickets in a given hall</h3><p>Integrate over the belief instead of plugging in the mean: the posterior predictive of a Poisson-Gamma model is negative binomial, and expected sales in hall \(h\) are \[v_{f h d s} = \mathbb{E}\big[\min(D_{f s d},\ \text{seats}_h)\big],\quad D_{f s d} \mid y \sim \text{NegBin}\] so a bigger hall is worth more only when demand can exceed the smaller one. <span class="src">Lecture 2, "Full Bayes - integrate, don't plug in" (p. 31) and the predictive table (p. 32).</span></p></div>
+    <div class="step"><h3>Be cautious where the records are silent</h3><p>For a film with records, a time and day type it never played is an extrapolation, and an optimiser seeks out exactly the most optimistic extrapolations. Its demand is valued at the low end of a box, \((1-c)\) times the estimate (caution \(c\), default 0.5). With \(x \ge 0\) the worst case of a box is its lower corner, so the problem stays a linear program. A new release has no records at all; it is planned on the manager's own estimate and flagged. <span class="src">Lecture 1, robust LP (p. 25); "the optimiser will exploit the surrogate wherever it is wrong" (Lecture 0, p. 25; Lecture 1, p. 31).</span></p></div>
+    <div class="step"><h3>Plan the week as a linear program</h3><p>\(x_{f h d s} \in \{0,1\}\): film \(f\) in hall \(h\) on day \(d\) at slot \(s\). \[\max \sum v_{fhds}\,x_{fhds}\ \ \text{s.t.}\ \sum_f x_{fhds} \le 1,\ \ \sum_h x_{fhds} \le 1,\ \ \text{min}_f \le \sum_{h,d,s} x_{fhds} \le \text{max}_f,\ \ x_{fhds}=0 \text{ if runtime}_f + \text{changeover} > \text{slot}\] The 0/1 requirement is relaxed to \(x \ge 0\): the hall rows and the film rows form two nested families with 0/1 coefficients, so every vertex of the polyhedron is a whole schedule, and the LP optimum sits at a vertex. The page solves it with the simplex method and refuses any fractional result. <span class="src">Lecture 1, LP and the vertex property (p. 16).</span></p></div>
+    <div class="step"><h3>Certify the plan and price the rules</h3><p>LP duality gives an upper bound on every feasible week; when it equals the plan's value (and every reduced cost is \(\le 0\)), no better week exists <i>for the stated formulation</i>. The dual price of a minimum-show rule says how many expected tickets one more required show costs. <span class="src">Lecture 1, KKT and duality (pp. 37-42).</span></p></div>
+    <div class="step"><h3>Compare with the rule of thumb</h3><p>Baseline (a proposed reference, not the operator's known practice): score each film by last week's tickets per screening, give it shows in proportion to its score within its min/max, then fill the best-selling day-times first, biggest hall first, with the highest-scoring film that still has shows left, fits the slot and is not already on. Both plans are scored with the same expected-ticket function and the same rules.</p></div>
+  </div>
+</section>
+
+<section class="row" id="checks">
+  <h2>6 · Test cases (normal, boundary, failure)</h2>
+  <p class="lead">Each case loads its settings, runs the same engine and checks the stated pass criterion. "Load" puts the case into Settings so you can inspect it; "Run all" checks every case without changing your settings.</p>
+  <div class="actions" style="margin:0 0 .8rem"><button class="btn red sm" type="button" id="runAll">Run all checks</button><span class="small muted" id="runAllNote"></span></div>
+  <div class="tablewrap"><table id="caseTable"></table></div>
+</section>
+
+<section class="row" id="about">
+  <h2>What is real, what is mock, what is not built</h2>
+  <div class="grid3">
+    <div class="panel"><h3><span class="pill real">REAL CALCULATION</span></h3><p class="small">Validation, aggregation, the maximum-likelihood pattern, the Bayes update, the negative-binomial expected sales, the robust value, the linear program (simplex), the integrality check, the duality certificate, the rule-of-thumb baseline, the backtest and every test case run live in this page from the settings above.</p></div>
+    <div class="panel"><h3><span class="pill mock">MOCK / FICTIONAL</span></h3><p class="small">All titles (invented parodies, no real film's data), the venue RIVERSIDE, halls, seats, runtimes, show limits, accounts and every purchase row. "True" demand exists only inside the generator; the panels marked MOCK score plans against it, which is impossible with real records. The +x% figures are fictional and say nothing about a real venue.</p></div>
+    <div class="panel"><h3><span class="pill todo">NOT IMPLEMENTED</span></h3><p class="small">Film booking (which films to acquire), pricing and revenue, several venues, mid-week changes, holidays and film ageing, a film in two halls at the same time, after-midnight shows, staff rosters, connection to a ticketing system, and the exploration (test-screening) policy proposed for later stages.</p></div>
+  </div>
+  <div class="panel" style="margin-top:1rem">
+    <h3>Reproduce a result</h3>
+    <p class="small">Results depend only on the settings: the same settings give the same fingerprint (shown under the title; default <span class="mono" id="fpDefault"></span>). Randomness is used only by the fictional generator, through a seeded generator (mulberry32). The simplex uses fixed pivot rules (largest gain first; Bland's rule after a run of degenerate pivots), so ties are always broken the same way. The settings are also stored in the page address, so a reload restores them; "Reset to defaults" restores the defaults.</p>
+    <p class="small">Checked offline (no network requests) in Chromium and Firefox desktop. No server, login, API key, CDN, web font or image file is used; fonts for formulas are embedded.</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="cols">
+    <div><b class="up">SLOTWISE</b><br>IE437 Assignment 1 demonstration. Fictional cinema operator; fictional data.</div>
+    <div>Companion files: <code>problem-definition.md</code>, <a href="proposal.html">proposal.html</a></div>
+    <div>Layout inspired by streaming-service interfaces; no third-party logo, font or image is used.</div>
+  </div>
+</footer>
+
+<div class="modal-back" id="modalBack" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal"><button class="x" id="modalX" type="button" aria-label="Close">&times;</button><div id="modalBody"></div></div>
+</div>
+
+<script>/*__ENGINE__*/</script>
+<script>/*__APP__*/</script>
+</body>
+</html>

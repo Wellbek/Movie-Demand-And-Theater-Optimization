@@ -744,6 +744,32 @@
       const pick = order.find((i) => quota[i] > 0 && P.fits[i] && !busy.has(i));
       if (pick !== undefined) { plan[d][s][h] = pick; quota[pick]--; }
     });
+    // 4 repair: the fill can strand a film below its minimum when its remaining shows only fit
+    // times it already plays. Such a film takes the least attractive show of a film above its
+    // minimum (or an empty slot); leftover empty slots go to the best film free at that time.
+    const shows = P.slate.map(() => 0);
+    plan.forEach((day) => day.forEach((slot) => slot.forEach((f) => { if (f !== null) shows[f]++; })));
+    const isPinned = (d, s, h) => pinned.pins.some((p) => p.d === d && p.s === s && p.h === h);
+    const capOf = (i) => (P.slate[i].max === null ? 7 * P.nS : P.slate[i].max);
+    const worstFirst = open.slice().reverse();
+    for (const i of [...order].reverse()) {
+      while (P.fits[i] && shows[i] < P.slate[i].min) {
+        const spot = worstFirst.find(({ d, s, h }) => {
+          const cur = plan[d][s][h];
+          return !isPinned(d, s, h) && !plan[d][s].includes(i) && (cur === null || shows[cur] > P.slate[cur].min);
+        });
+        if (!spot) break;
+        const cur = plan[spot.d][spot.s][spot.h];
+        if (cur !== null) shows[cur]--;
+        plan[spot.d][spot.s][spot.h] = i;
+        shows[i]++;
+      }
+    }
+    open.forEach(({ d, s, h }) => {
+      if (plan[d][s][h] !== null) return;
+      const pick = order.find((i) => P.fits[i] && !plan[d][s].includes(i) && shows[i] < capOf(i));
+      if (pick !== undefined) { plan[d][s][h] = pick; shows[pick]++; }
+    });
     return { plan, score, pins: pinned.pins };
   }
 

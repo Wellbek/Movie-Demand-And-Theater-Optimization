@@ -165,3 +165,11 @@ test('pins: a pinned film stays, and an impossible pin is reported', () => {
   const bad = E.run({ ...def(), pins: { '0|0|0': 'oppenhammer', '0|0|1': 'oppenhammer' } });
   assert.equal(bad.status, 'invalid');
 });
+
+test('baseline never breaks a rule across seeds, slate sizes and a new release', () => {
+  for (const seed of [1, 7, 21, 437]) for (const filmCount of [4, 6, 8]) for (const newRelease of [false, true]) {
+    const r = E.run({ ...def(), seed, filmCount, newRelease }, { skipOracle: true });
+    assert.equal(r.status, 'ok');
+    assert.deepEqual(r.checks.baseline.violations, [], 'seed ' + seed + ' films ' + filmCount + ' new ' + newRelease);
+  }
+});
