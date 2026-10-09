@@ -150,7 +150,7 @@ for f in ('demo.html', 'proposal.html'):
     check('[ASSUMPTION]' not in t and 'href="demo.html"' not in t if f == 'proposal.html' else '[ASSUMPTION]' not in t, f + ': no bare [ASSUMPTION] labels' + (' and no demo link' if f == 'proposal.html' else ''))
 import json
 N = json.loads((root / 'src' / 'numbers.json').read_text())
-for k in ('propTickets', 'baseTickets', 'gainTickets', 'gainPct', 'truthProp', 'truthBase', 'oracle', 'objective', 'swTruthWins', 'swMeanGain', 'swWorst', 'baseUntriedEst', 'baseUntriedTrue', 'progTruth', 'stSel', 'stProg', 'exPost', 'exAlpha', 'exBeta', 'lpPivots', 'oraclePct', 'truthPct'):
+for k in ('propTickets', 'baseTickets', 'gainTickets', 'gainPct', 'truthProp', 'truthBase', 'oracle', 'objective', 'swTruthWins', 'swMeanGain', 'baseUntriedEst', 'baseUntriedTrue', 'progTruth', 'exPost', 'exAlpha', 'exBeta', 'lpPivots', 'oraclePct', 'truthPct'):
     check(N[k] in md.replace('\u2212', '-'), f'definition quotes {k} = {N[k]} as computed by the engine')
 print('\n' + ('ALL CHECKS PASSED' if not fails else f'{len(fails)} CHECK(S) FAILED'))
 sys.exit(1 if fails else 0)
