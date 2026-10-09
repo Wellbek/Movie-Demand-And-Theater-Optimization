@@ -126,16 +126,17 @@ test('sold-out screenings are detected from totals equal to a hall size and corr
   if (cell) assert.ok(cell.estimate >= Math.min(...r.screenings.filter((s) => s.f === cell.f && s.s === cell.s && s.t === cell.t).map((s) => s.tickets)) - 1e-9);
 });
 
-test('caution: only the pattern part of an estimate is discounted, new releases included', () => {
+test('caution: only the pattern part of an estimate is discounted; films without records are exempt', () => {
   const r = E.run({ ...def(), newRelease: true });
   const P = r.problem;
   let checked = 0;
   for (let f = 0; f < P.slate.length; f++) for (let s = 0; s < P.nS; s++) for (let d = 0; d < 7; d++) {
     const c = P.est.cellOf(f, s, d);
-    assert.ok(Math.abs(P.factor(f, s, d) - (1 - r.settings.caution * c.priorShare)) < 1e-12);
+    const want = P.est.hasRows[f] ? 1 - r.settings.caution * c.priorShare : 1;
+    assert.ok(Math.abs(P.factor(f, s, d) - want) < 1e-12);
     assert.ok(P.value(f, 0, d, s) <= P.expected(f, 0, d, s) + 1e-9);
     if (!c.tested) { assert.equal(c.priorShare, 1); checked++; }
-    if (!P.est.hasRows[f]) assert.ok(P.value(f, 0, d, s) < P.expected(f, 0, d, s));
+    if (!P.est.hasRows[f]) assert.equal(P.value(f, 0, d, s), P.expected(f, 0, d, s));
   }
   assert.ok(checked > 0);
   // more own screenings -> smaller discount
@@ -190,4 +191,14 @@ test('brute-force check exported for the demo agrees on every comparable instanc
   const r = E.bruteForceCheck(60, 11);
   assert.ok(r.compared > 30);
   assert.equal(r.agree, r.compared);
+});
+
+test('rule costs come from re-solving, and the repeat-last-week reference keeps every rule', () => {
+  const r = E.run(def());
+  assert.ok(r.ruleCosts.length > 0);
+  for (const c of r.ruleCosts) assert.ok(c.upValue >= -1e-6 && (c.downValue === null || c.downValue >= -1e-6));
+  for (const seed of [1, 5, 437]) for (const newRelease of [false, true]) {
+    const rr = E.run({ ...def(), seed, newRelease }, { skipOracle: true });
+    assert.deepEqual(E.checkPlan(rr.problem, E.repeatLastWeekPlan(rr.problem, rr.screenings)).violations, []);
+  }
 });

@@ -75,6 +75,8 @@ section.row{padding:2.2rem 0 .4rem}
 .stale-badge{display:none;background:var(--amber);color:#000;font-weight:800;font-size:.75rem;padding:.1rem .5rem;border-radius:2px;letter-spacing:.06em}
 body.stale .stale-badge{display:inline-block}
 body.stale .result{opacity:.38;filter:grayscale(.8);pointer-events:none}
+body.dirty .result{opacity:.55}
+body.dirty .hero .content::after{content:'Settings changed: results below are from the last run until you press Run';display:block;margin-top:.6rem;color:var(--amber);font-weight:700;font-size:.9rem}
 
 /* ---------- carousels and title cards ---------- */
 .rowtitle{display:flex;align-items:baseline;gap:.8rem;flex-wrap:wrap}
@@ -283,7 +285,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
     <fieldset><legend>Method</legend>
       <label class="f" style="flex-wrap:wrap"><span>Caution <span class="h">share of the pattern part of demand removed (robust LP)</span></span><span style="display:flex;gap:.5rem;align-items:center"><input type="range" id="caution" min="0" max="1" step="0.05"><b id="cautionV" class="mono"></b></span></label>
       <label class="f"><span>Pattern weight k <span class="h">screenings' worth of prior</span></span><input type="number" id="credibility" min="0.5" max="20" step="0.5"></label>
-      <p class="tiny dim">Defaults (caution 0.5, k = 1) were chosen on a mock study of 40 histories in three worlds; see Compare. The demand spread r is estimated from the records.</p>
+      <p class="tiny dim">Defaults (caution 0.5, k = 4) were tuned on 40 fictional histories per world (seeds 1-40) and are reported on seeds 41-80; see Compare. The demand spread r is estimated from the records.</p>
     </fieldset>
     <fieldset><legend>Fictional data generator (mock)</legend>
       <label class="f">Seed <input type="number" id="seed" min="0" step="1"></label>
@@ -335,7 +337,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
   <div class="alert" style="margin-top:1rem">
     <b>GAP: there is no real data.</b> The brief gives a record specification, not a dataset; size, period, quality and current practice are unknown. Every row on this page is generated. Real records of this venue would replace the generator one for one. Demand could be predicted more accurately with information beyond the six fields: sales of other cinemas showing the same film, each film's national box-office results (film success), pre-sales and booking curves, social-media reach and audience retention (trailer views, mentions, review scores), the release and holiday calendar, weather, competitor schedules and marketing spend. These are <b>out of scope</b> for the first step because none is in the records, each needs a collection agreement, and their link to one venue's admissions is unproven. We simplify by generating history from two distributions:
     <ul>
-      <li><b>Distribution 1 - demand per screening: negative binomial</b> with mean = film strength x time-of-day shape x weekday factor (all fictional) and dispersion r (setting, default 6). Ticket buyers arrive as a count (Poisson) whose rate varies from screening to screening (Gamma mixing), which is the negative binomial. The planner assumes the same family for the screening-to-screening spread and estimates r from the records by maximum likelihood; it never sees the generator's value.</li>
+      <li><b>Distribution 1 - demand per screening: negative binomial</b> with mean = film strength x time-of-day shape of its profile (family, action, drama, general) x weekday factor (all fictional) and dispersion r (setting, default 6). Ticket buyers arrive as a count (Poisson) whose rate varies from screening to screening (Gamma mixing), which is the negative binomial. The planner assumes the same family for the screening-to-screening spread and estimates r from the records by maximum likelihood; it never sees the generator's value.</li>
       <li><b>Distribution 2 - tickets per purchase: categorical</b> 1 to 6 tickets with fixed shares (30%, 45%, 10%, 10%, 3%, 2%; fictional). Sales = min(demand, seats) are split into purchases with this distribution.</li>
     </ul>
     <span class="small">The past schedule is chosen by a fictional programmer who knows roughly what sells (judgement noise set in Settings), so some film-time combinations are never tried, as in real records.</span>
@@ -350,7 +352,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
     <div class="legend" id="heatLegend"></div>
   </div>
   <div class="grid2" style="margin-top:1rem">
-    <div class="panel"><h3>Time-of-day index <span class="small muted">S, fitted by maximum likelihood</span></h3><div class="chart" id="chartS"></div></div>
+    <div class="panel"><h3>Time-of-day index <span class="small muted">S per audience group, fitted by maximum likelihood</span></h3><div class="chart" id="chartS"></div></div>
     <div class="panel"><h3>Weekday index <span class="small muted">D, fitted by maximum likelihood</span></h3><div class="chart" id="chartD"></div></div>
   </div>
 </section>
@@ -383,10 +385,10 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
   <p class="lead">Methods come only from the course's Lectures 0-4 (Bayesian statistics for the belief, linear programming with a robust value and duality for the decision). Every step runs in this page; nothing is pre-computed.</p>
   <div class="steps">
     <div class="step"><h3>Sum purchases into screenings</h3><p>Tickets of a screening <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.06em;vertical-align:-0.31em;"></span><span class="mop op-symbol small-op" style="position:relative;top:0em;">∑</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord text"><span class="mord">passes_bought</span></span></span></span></span> over its rows. A total equal to one of the venue's hall sizes is read as a sell-out [ASSUMPTION], because records carry no hall: demand was at least <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>. Such totals are flagged and used as recorded (lower bounds). An "at least the seats" correction was tested and did not improve plans, so the real fix is the screening log (information request).</p></div>
-    <div class="step"><h3>Fit the pattern by maximum likelihood</h3><p><span class="katex-display"><span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.3489em;vertical-align:-0.4374em;"></span><span class="mord"><span class="mord mathnormal">μ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.9115em;"><span style="top:-2.3987em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span><span class="mpunct mtight">,</span><span class="mord mathnormal mtight">s</span><span class="mpunct mtight">,</span><span class="mord mathnormal mtight">d</span></span></span></span><span style="top:-3.1809em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">pattern</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.4374em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">F</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0576em;">S</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0576em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">s</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">D</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span> Film strength <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">F</span></span></span></span>, time-of-day index <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0576em;">S</span></span></span></span> and weekday index <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0278em;">D</span></span></span></span> maximise the Poisson likelihood of all screening totals (each factor = observed / expected tickets over its rows, repeated until stable). It gives every film-time-day an estimate, even where the film never played. <span class="src">Lecture 2, MLE (p. 24).</span></p></div>
+    <div class="step"><h3>Fit the pattern by maximum likelihood</h3><p><span class="katex-display"><span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.3489em;vertical-align:-0.4374em;"></span><span class="mord"><span class="mord mathnormal">μ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.9115em;"><span style="top:-2.3987em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span><span class="mpunct mtight">,</span><span class="mord mathnormal mtight">s</span><span class="mpunct mtight">,</span><span class="mord mathnormal mtight">d</span></span></span></span><span style="top:-3.1809em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord text mtight"><span class="mord mtight">pattern</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.4374em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">F</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0385em;vertical-align:-0.3552em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0576em;">S</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3448em;"><span style="top:-2.5198em;margin-left:-0.0576em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0359em;">g</span><span class="mopen mtight">(</span><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span><span class="mclose mtight">)</span><span class="mpunct mtight">,</span><span class="mord mathnormal mtight">s</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.3552em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">D</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span> Film strength <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">F</span></span></span></span>, a time-of-day index <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0576em;">S</span></span></span></span> per audience group <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.0359em;">g</span></span></span></span> (family films vs all others, marked by the manager on the slate [ASSUMPTION]) and weekday index <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0278em;">D</span></span></span></span> maximise the Poisson likelihood of all screening totals (each factor = observed / expected tickets over its rows, repeated until stable). It gives every film-time-day an estimate, even where the film never played; a group never screened at a time takes the index of its nearest screened time (the lower one on a tie). <span class="src">Lecture 2, MLE (p. 24).</span></p></div>
     <div class="step"><h3>Update the belief per cell with Bayes' rule</h3><p>For film <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8889em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.1076em;">f</span></span></span></span>, time <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">s</span></span></span></span>, day type <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">t</span></span></span></span>: prior <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal" style="margin-right:0.0278em;">θ</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∼</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">Gamma</span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0315em;">k</span><span class="mord mathnormal" style="margin-right:0.1389em;">P</span><span class="mpunct">,</span><span class="mspace"> </span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.0315em;">k</span><span class="mclose">)</span></span></span></span> with mean <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">P</span></span></span></span> = pattern, worth <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal" style="margin-right:0.0315em;">k</span></span></span></span> screenings; Poisson likelihood of the cell's screenings; posterior <span class="katex-display"><span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0278em;">θ</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.0359em;">y</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∼</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.8em;vertical-align:-0.65em;"></span><span class="mord text"><span class="mord">Gamma</span></span><span class="mord"><span class="delimsizing size2">(</span></span><span class="mord mathnormal" style="margin-right:0.0315em;">k</span><span class="mord mathnormal" style="margin-right:0.1389em;">P</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0497em;vertical-align:-0.2997em;"></span><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:0em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.162em;"><span style="top:-2.4003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2997em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace"> </span><span class="mspace"> </span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.0315em;">k</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.8em;vertical-align:-0.65em;"></span><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:0em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.162em;"><span style="top:-2.4003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2997em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0269em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord"><span class="delimsizing size2">)</span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:2em;"></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathbb">E</span><span class="mopen">[</span><span class="mord mathnormal" style="margin-right:0.0278em;">θ</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0359em;">y</span><span class="mclose">]</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.4501em;vertical-align:-0.57em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8801em;"><span style="top:-2.655em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0315em;">k</span><span class="mbin mtight">+</span><span class="mop mtight"><span class="mop op-symbol small-op mtight" style="position:relative;top:0em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1496em;"><span style="top:-2.1786em;margin-left:0em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.3214em;"><span></span></span></span></span></span></span><span class="mspace mtight" style="margin-right:0.1952em;"></span><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0269em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3281em;"><span style="top:-2.357em;margin-left:-0.0269em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.143em;"><span></span></span></span></span></span></span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.394em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0315em;">k</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.57em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">P</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.63em;vertical-align:-0.57em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.06em;"><span style="top:-2.655em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0315em;">k</span><span class="mbin mtight">+</span><span class="mop mtight"><span class="mop op-symbol small-op mtight" style="position:relative;top:0em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1496em;"><span style="top:-2.1786em;margin-left:0em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.3214em;"><span></span></span></span></span></span></span><span class="mspace mtight" style="margin-right:0.1952em;"></span><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0269em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3281em;"><span style="top:-2.357em;margin-left:-0.0269em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.143em;"><span></span></span></span></span></span></span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.535em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mop mtight"><span class="mop op-symbol small-op mtight" style="position:relative;top:0em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1496em;"><span style="top:-2.1786em;margin-left:0em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.3214em;"><span></span></span></span></span></span></span><span class="mspace mtight" style="margin-right:0.1952em;"></span><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.0269em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3281em;"><span style="top:-2.357em;margin-left:-0.0269em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.143em;"><span></span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.57em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord accent"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.5678em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="margin-right:0.0359em;">y</span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.1944em;"><span class="mord">ˉ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1944em;"><span></span></span></span></span></span></span></span></span></span> a weighted average of pattern and own average (<span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0269em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> = weekday exposure inside the day type, <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7622em;vertical-align:-0.1944em;"></span><span class="mord accent"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.5678em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="margin-right:0.0359em;">y</span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.1944em;"><span class="mord">ˉ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1944em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop op-symbol small-op" style="position:relative;top:0em;">∑</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">/</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop op-symbol small-op" style="position:relative;top:0em;">∑</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0269em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>). <span class="src">Lecture 2, Example 2.1 Poisson likelihood with Gamma prior (p. 20); posterior as a weighted average (pp. 16, 22).</span></p></div>
     <div class="step"><h3>Expected tickets in a given hall</h3><p>Integrate instead of plugging in the mean: one screening's demand varies around <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">μ</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathbb">E</span><span class="mopen">[</span><span class="mord mathnormal" style="margin-right:0.0278em;">θ</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0359em;">y</span><span class="mclose">]</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0269em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> with variance <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7778em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">μ</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0641em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">μ</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mord">/</span><span class="mord mathnormal" style="margin-right:0.0278em;">r</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0972em;vertical-align:-0.2831em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0269em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-2.4169em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">d</span></span></span><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2831em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord text"><span class="mord">Var</span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0278em;">θ</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0359em;">y</span><span class="mclose">)</span></span></span></span> (Poisson count, screening-to-screening spread with shape <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.0278em;">r</span></span></span></span> fitted by maximum likelihood on the records, and estimation uncertainty), represented by a negative binomial with that mean and variance: <span class="katex-display"><span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7167em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">v</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span><span class="mord mathnormal mtight">h</span><span class="mord mathnormal mtight">d</span><span class="mord mathnormal mtight">s</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.2em;vertical-align:-0.35em;"></span><span class="mord mathbb">E</span><span class="mord"><span class="delimsizing size1">[</span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop">min</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">D</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span><span class="mord mathnormal mtight">s</span><span class="mord mathnormal mtight">d</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace"> </span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord text"><span class="mord">seats</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">h</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mord"><span class="delimsizing size1">]</span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:1em;"></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">D</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span><span class="mord mathnormal mtight">s</span><span class="mord mathnormal mtight">d</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∼</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8778em;vertical-align:-0.1944em;"></span><span class="mord text"><span class="mord">NegBin</span></span></span></span></span></span> so a bigger hall is worth more only when demand can exceed the smaller one. <span class="src">Lecture 2, "Full Bayes - integrate, don't plug in" (p. 31), negative binomial as the Poisson-Gamma predictive (p. 32), MLE (p. 24).</span></p></div>
-    <div class="step"><h3>Be cautious where the records are silent</h3><p>The part of each estimate that comes from the pattern rather than from the film's own screenings at that time (share <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0315em;">k</span><span class="mord">/</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0315em;">k</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop op-symbol small-op" style="position:relative;top:0em;">∑</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0269em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span>) is lowered by the caution <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">c</span></span></span></span> (default 0.5): <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6389em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">μ</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.4445em;"></span><span class="mord mathnormal">c</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">pattern share</span></span><span class="mclose">)</span></span></span></span>. An untried combination or a film without records (new release) is all pattern and loses the full <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">c</span></span></span></span>; a well-observed cell loses almost nothing. This is the worst case of a box around each value; written with an epigraph variable the objective becomes a robust constraint, and with <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7719em;vertical-align:-0.136em;"></span><span class="mord mathnormal">x</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≥</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0</span></span></span></span> the worst case is the lower corner, so the problem stays a linear program. Optimisers seek out exactly the most optimistic extrapolations. <span class="src">Lecture 1, robust LP (p. 25) and epigraph (p. 18); "the optimiser will exploit the surrogate wherever it is wrong" (Lecture 0, p. 25; Lecture 1, p. 31).</span></p></div>
+    <div class="step"><h3>Be cautious where the records are silent</h3><p>The planning value is <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0019em;vertical-align:-0.25em;"></span><span class="mord mathbb">E</span><span class="mopen">[</span><span class="mop">min</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">D</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.7519em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">′</span></span></span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord text"><span class="mord">seats</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">h</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)]</span></span></span></span> where <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7519em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0278em;">D</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.7519em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">′</span></span></span></span></span></span></span></span></span></span></span></span> has the same distribution shape with mean <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">μ</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.4445em;"></span><span class="mord mathnormal">c</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">pattern share</span></span><span class="mclose">)</span></span></span></span>, pattern share <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.3669em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0315em;">k</span><span class="mord">/</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0315em;">k</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop op-symbol small-op" style="position:relative;top:0em;">∑</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0269em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span>, caution <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">c</span></span></span></span> = 0.5. An untried combination is all pattern and loses the full <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">c</span></span></span></span>; a well-observed cell loses little. A film without any records (new release) is planned on the manager's estimate without this discount and flagged: discounting it only shrinks the manager's number and, in the mock study, starves new films of shows. This is the worst case of a box around each value; written with an epigraph variable the objective becomes a robust constraint, and with <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7719em;vertical-align:-0.136em;"></span><span class="mord mathnormal">x</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≥</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0</span></span></span></span> the worst case is the lower corner, so the problem stays a linear program. Optimisers seek out exactly the most optimistic extrapolations. <span class="src">Lecture 1, robust LP (p. 25) and epigraph (p. 18); "the optimiser will exploit the surrogate wherever it is wrong" (Lecture 0, p. 25; Lecture 1, p. 31).</span></p></div>
     <div class="step"><h3>Plan the week as a linear program</h3><p><span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8252em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span><span class="mord mathnormal mtight">h</span><span class="mord mathnormal mtight">d</span><span class="mord mathnormal mtight">s</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∈</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">{</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">1</span><span class="mclose">}</span></span></span></span>: film <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8889em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.1076em;">f</span></span></span></span> in hall <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal">h</span></span></span></span> on day <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal">d</span></span></span></span> at slot <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">s</span></span></span></span>. <span class="katex-display"><span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:2.4882em;vertical-align:-1.4382em;"></span><span class="mop">max</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop op-symbol large-op" style="position:relative;top:0em;">∑</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0359em;">v</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span><span class="mord mathnormal mtight">h</span><span class="mord mathnormal mtight">d</span><span class="mord mathnormal mtight">s</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span><span class="mord mathnormal mtight">h</span><span class="mord mathnormal mtight">d</span><span class="mord mathnormal mtight">s</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace"> </span><span class="mspace"> </span><span class="mord text"><span class="mord">s.t.</span></span><span class="mspace"> </span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.05em;"><span style="top:-1.8479em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span></span></span><span style="top:-3.05em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.4382em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span><span class="mord mathnormal mtight">h</span><span class="mord mathnormal mtight">d</span><span class="mord mathnormal mtight">s</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≤</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:2.3521em;vertical-align:-1.3021em;"></span><span class="mord">1</span><span class="mpunct">,</span><span class="mspace"> </span><span class="mspace"> </span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.05em;"><span style="top:-1.8479em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">h</span></span></span><span style="top:-3.05em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.3021em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span><span class="mord mathnormal mtight">h</span><span class="mord mathnormal mtight">d</span><span class="mord mathnormal mtight">s</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≤</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.954em;vertical-align:-0.2861em;"></span><span class="mord">1</span><span class="mpunct">,</span><span class="mspace"> </span><span class="mspace"> </span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord text"><span class="mord">min</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≤</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:2.4882em;vertical-align:-1.4382em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.05em;"><span style="top:-1.8479em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">h</span><span class="mpunct mtight">,</span><span class="mord mathnormal mtight">d</span><span class="mpunct mtight">,</span><span class="mord mathnormal mtight">s</span></span></span></span><span style="top:-3.05em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.4382em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span><span class="mord mathnormal mtight">h</span><span class="mord mathnormal mtight">d</span><span class="mord mathnormal mtight">s</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≤</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7167em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord text"><span class="mord">max</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace"> </span><span class="mspace"> </span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span><span class="mord mathnormal mtight">h</span><span class="mord mathnormal mtight">d</span><span class="mord mathnormal mtight">s</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.9805em;vertical-align:-0.2861em;"></span><span class="mord">0</span><span class="mord"><span class="mord text"><span class="mord"> if runtime</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.1076em;">f</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8889em;vertical-align:-0.1944em;"></span><span class="mord text"><span class="mord">changeover</span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord text"><span class="mord">slot</span></span></span></span></span></span> The 0/1 requirement is relaxed to <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7719em;vertical-align:-0.136em;"></span><span class="mord mathnormal">x</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≥</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0</span></span></span></span>. The LP optimum sits at a vertex (Lecture 1, p. 16), and here every vertex is a whole schedule because the hall rows and the film rows form two nested families with 0/1 coefficients (a standard LP result, not on the slides); the page solves the LP with the simplex method and refuses any fractional result.</p></div>
     <div class="step"><h3>Certify the plan and price the rules</h3><p>LP duality gives an upper bound on every feasible week; when it equals the plan's value (and every reduced cost is <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7719em;vertical-align:-0.136em;"></span><span class="mrel">≤</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0</span></span></span></span>), no better week exists <i>for the stated formulation</i>, that is, on the planning value with the caution applied. The dual price of a minimum-show rule says how many expected tickets one more required show costs. <span class="src">Lecture 1, KKT and duality (pp. 37-42).</span></p></div>
     <div class="step"><h3>Compare with the rule of thumb</h3><p>Baseline (a proposed reference, not the operator's known practice): score each film by last week's tickets per screening, give it shows in proportion to its score within its min/max, then fill the best-selling day-times first, biggest hall first, with the highest-scoring film that still has shows left, fits the slot and is not already on; a film stranded below its minimum takes the least attractive show of a film above its minimum, and leftover empty slots go to the best free film. Both plans are scored with the same expected-ticket function and the same rules.</p></div>
@@ -403,7 +405,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
 <section class="row" id="about">
   <h2>What is real, what is mock, what is not built</h2>
   <div class="grid3">
-    <div class="panel"><h3><span class="pill real">REAL CALCULATION</span></h3><p class="small">Validation, aggregation, the maximum-likelihood pattern, the Bayes update, the negative-binomial expected sales, the robust value, the linear program (simplex), the integrality check, the duality certificate, the rule-of-thumb baseline, the backtest and every test case run live in this page from the settings above.</p></div>
+    <div class="panel"><h3><span class="pill real">REAL CALCULATION</span></h3><p class="small">Validation, aggregation, the maximum-likelihood pattern, the Bayes update, the fitted screening spread, the negative-binomial expected sales, the cautious value, the linear program (simplex), the integrality check, the duality certificate, the rule-of-thumb baseline, the backtest and every test case run live in this page from the settings above.</p></div>
     <div class="panel"><h3><span class="pill mock">MOCK / FICTIONAL</span></h3><p class="small">All titles (invented parodies, no real film's data), the venue RIVERSIDE, halls, seats, runtimes, show limits, accounts and every purchase row. "True" demand exists only inside the generator; the panels marked MOCK score plans against it, which is impossible with real records. The +x% figures are fictional and say nothing about a real venue.</p></div>
     <div class="panel"><h3><span class="pill todo">NOT IMPLEMENTED</span></h3><p class="small">Film booking (which films to acquire), pricing and revenue, several venues, mid-week changes, holidays and film ageing, a film in two halls at the same time, after-midnight shows, staff rosters, connection to a ticketing system, and the exploration (test-screening) policy proposed for later stages.</p></div>
   </div>
@@ -447,14 +449,14 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
   // generator. The planner never reads them; it sees only the purchase records.
   // ---------------------------------------------------------------------------
   const CATALOG = [
-    { tag: 'caterpillar-man', title: 'Caterpillar-Man', tagline: 'No Way Down', genre: 'Superhero', profile: 'action', runtime: 148, rating: '12', base: 104, hue: 355 },
+    { tag: 'caterpillar-man', title: 'Caterpillar-Man', tagline: 'No Way Down', genre: 'Superhero', profile: 'action', runtime: 142, rating: '12', base: 104, hue: 355 },
     { tag: 'avocado-2', title: 'Avocado', tagline: 'The Way of Guac', genre: 'Sci-fi epic', profile: 'general', runtime: 162, rating: '12', base: 90, hue: 145 },
-    { tag: 'defrosted-2', title: 'Defrosted II', tagline: 'Let It Drip', genre: 'Family animation', profile: 'family', runtime: 103, rating: 'ALL', base: 78, hue: 190 },
+    { tag: 'defrosted-2', title: 'Defrosted II', tagline: 'Let It Drip', genre: 'Family animation', audience: 'family', profile: 'family', runtime: 99, rating: 'ALL', base: 78, hue: 190 },
     { tag: 'gigantic', title: 'Gigantic', tagline: 'Never Let Go of the Door', genre: 'Romance epic', profile: 'drama', runtime: 165, rating: '12', base: 58, hue: 235 },
-    { tag: 'outside-in-2', title: 'Outside In 2', tagline: 'New Feelings', genre: 'Family animation', profile: 'family', runtime: 96, rating: 'ALL', base: 66, hue: 48 },
+    { tag: 'outside-in-2', title: 'Outside In 2', tagline: 'New Feelings', genre: 'Family animation', audience: 'family', profile: 'family', runtime: 92, rating: 'ALL', base: 66, hue: 48 },
     { tag: 'oppenhammer', title: 'Oppenhammer', tagline: 'The Loudest Workshop', genre: 'Historical drama', profile: 'drama', runtime: 158, rating: '15', base: 45, hue: 18 },
-    { tag: 'triassic-world', title: 'Triassic World', tagline: 'Life Finds a Way Earlier', genre: 'Adventure', profile: 'action', runtime: 124, rating: '12', base: 60, hue: 95 },
-    { tag: 'top-bun', title: 'Top Bun', tagline: 'Maverick Bakery', genre: 'Action comedy', profile: 'general', runtime: 131, rating: '12', base: 50, hue: 320 },
+    { tag: 'triassic-world', title: 'Triassic World', tagline: 'Life Finds a Way Earlier', genre: 'Adventure', profile: 'action', runtime: 119, rating: '12', base: 60, hue: 95 },
+    { tag: 'top-bun', title: 'Top Bun', tagline: 'Maverick Bakery', genre: 'Action comedy', profile: 'general', runtime: 127, rating: '12', base: 50, hue: 320 },
   ];
   // Boundary case: a release that opens in the planning week, so it has no purchase records.
   const NEW_RELEASE = { tag: 'scavengers-endgame', title: 'The Scavengers', tagline: 'Endgame Sale', genre: 'Superhero', profile: 'action', runtime: 155, rating: '12', base: 120, hue: 285, isNew: true };
@@ -497,7 +499,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
       newReleaseStrength: 1.3,
       limits: {}, // tag -> { min, max }; missing means DEFAULT_MIN / no cap
       caution: 0.5, // share of value removed from never-screened film x time x day-type combinations
-      credibility: 1, // k: screenings' worth of weight given to the pattern in each cell
+      credibility: 4, // k: screenings' worth of weight given to the pattern in each cell (tuned, src/tune.cjs)
       nbShape: 6, // generator only: demand dispersion (distribution 1)
       pastNoise: 0.5, // generator only: judgement noise of the fictional past programmer
       extraRows: '',
@@ -798,7 +800,13 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
     const o = opts || {};
     const k = o.credibility === undefined ? st.credibility : o.credibility;
     const nF = slate.length, nS = st.slots;
-    const F = new Float64Array(nF).fill(0), S = new Float64Array(nS).fill(1), D = new Float64Array(7).fill(1);
+    // Time-of-day index per audience group (family films vs all others): the manager marks a film as
+    // a family film on the slate [ASSUMPTION], so a family film is not assumed to share the evening peak.
+    const NG = 2;
+    const grp = slate.map((f) => (f.audience === 'family' ? 1 : 0));
+    const F = new Float64Array(nF).fill(0), D = new Float64Array(7).fill(1);
+    const SG = [new Float64Array(nS).fill(1), new Float64Array(nS).fill(1)];
+    const Sx = (x) => SG[grp[x.f]][x.s];
     const hasRows = new Array(nF).fill(false);
     screenings.forEach((x) => { hasRows[x.f] = true; });
     // start: plain mean tickets per screening of each film
@@ -809,29 +817,44 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
     // (max(total, pattern), applied inside the fit) was tested in the mock study and did not improve
     // plans, so it is kept only as a comparison option; the screening log is the real fix.
     const correct = o.soldOutCorrection === true;
-    const adj = (x) => (correct && x.soldOut ? Math.max(x.tickets, F[x.f] * S[x.s] * D[x.d]) : x.tickets);
+    const adj = (x) => (correct && x.soldOut ? Math.max(x.tickets, F[x.f] * Sx(x) * D[x.d]) : x.tickets);
     // Maximum likelihood for Poisson counts with mean F*S*D: each factor = observed / expected over its rows.
     let iterations = 0;
-    for (let it = 0; it < 200; it++) {
+    for (let it = 0; it < 300; it++) {
       iterations = it + 1;
       const y = screenings.map(adj);
       const nf = new Float64Array(nF), df = new Float64Array(nF);
-      screenings.forEach((x, i) => { nf[x.f] += y[i]; df[x.f] += S[x.s] * D[x.d]; });
+      screenings.forEach((x, i) => { nf[x.f] += y[i]; df[x.f] += Sx(x) * D[x.d]; });
       const F2 = F.map((v, f) => (df[f] ? nf[f] / df[f] : 0));
-      const ns = new Float64Array(nS), ds = new Float64Array(nS);
-      screenings.forEach((x, i) => { ns[x.s] += y[i]; ds[x.s] += F2[x.f] * D[x.d]; });
-      const S2 = S.map((v, s) => (ds[s] ? ns[s] / ds[s] : 1));
+      const ns = [new Float64Array(nS), new Float64Array(nS)], ds = [new Float64Array(nS), new Float64Array(nS)];
+      const pn = new Float64Array(nS), pd = new Float64Array(nS);
+      screenings.forEach((x, i) => { const g = grp[x.f]; ns[g][x.s] += y[i]; ds[g][x.s] += F2[x.f] * D[x.d]; pn[x.s] += y[i]; pd[x.s] += F2[x.f] * D[x.d]; });
+      // a group never screened at a time takes the index of its nearest screened time (the lower one on
+      // a tie, to stay cautious); a group with no screenings at all uses the pooled index
+      const S2 = [0, 1].map((g) => {
+        const own = Array.from({ length: nS }, (v, s) => (ds[g][s] ? ns[g][s] / ds[g][s] : null));
+        return own.map((v, s) => {
+          if (v !== null) return v;
+          for (let dist = 1; dist < nS; dist++) {
+            const c = [own[s - dist], own[s + dist]].filter((x) => x !== null && x !== undefined);
+            if (c.length) return Math.min(...c);
+          }
+          return pd[s] ? pn[s] / pd[s] : 1;
+        });
+      });
       const nd = new Float64Array(7), dd = new Float64Array(7);
-      screenings.forEach((x, i) => { nd[x.d] += y[i]; dd[x.d] += F2[x.f] * S2[x.s]; });
+      screenings.forEach((x, i) => { nd[x.d] += y[i]; dd[x.d] += F2[x.f] * S2[grp[x.f]][x.s]; });
       const D2 = D.map((v, d) => (dd[d] ? nd[d] / dd[d] : 1));
-      // scale so time and weekday indices average 1; film strength carries the level
-      const ms = S2.reduce((a, b) => a + b, 0) / nS, md = D2.reduce((a, b) => a + b, 0) / 7;
+      // scale so each group's time index and the weekday index average 1; film strength carries the level
+      const ms = S2.map((a) => a.reduce((p, q) => p + q, 0) / nS), md = D2.reduce((a, b) => a + b, 0) / 7;
       let change = 0;
-      for (let f = 0; f < nF; f++) { const v = F2[f] * ms * md; change = Math.max(change, Math.abs(v - F[f])); F[f] = v; }
-      for (let s = 0; s < nS; s++) S[s] = S2[s] / ms;
+      for (let f = 0; f < nF; f++) { const v = F2[f] * ms[grp[f]] * md; change = Math.max(change, Math.abs(v - F[f])); F[f] = v; }
+      for (let g = 0; g < NG; g++) for (let s = 0; s < nS; s++) SG[g][s] = S2[g][s] / ms[g];
       for (let d = 0; d < 7; d++) D[d] = D2[d] / md;
       if (change < 1e-6) break;
     }
+    const S = SG[0];
+    const Sf = (f, s) => SG[grp[f]][s];
     // films with no rows (new release, or nothing that fitted the grid): manager's strength x average film
     const withRows = F.filter((v, f) => hasRows[f]);
     const avgF = withRows.length ? withRows.reduce((a, b) => a + b, 0) / withRows.length : 0;
@@ -843,7 +866,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
     const cells = [];
     const cellIdx = (f, s, t) => (f * nS + s) * 2 + t;
     for (let f = 0; f < nF; f++) for (let s = 0; s < nS; s++) for (let t = 0; t < 2; t++) {
-      cells.push({ f, s, t, n: 0, sumY: 0, sumW: 0, soldOut: 0, raw: 0, pattern: F[f] * S[s] * typeMean[t] });
+      cells.push({ f, s, t, n: 0, sumY: 0, sumW: 0, soldOut: 0, raw: 0, pattern: F[f] * Sf(f, s) * typeMean[t] });
     }
     screenings.forEach((x) => {
       const c = cells[cellIdx(x.f, x.s, x.t)];
@@ -892,7 +915,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
       const extra = (mu * mu) / r + (w(d) * w(d) * c.alpha) / (c.beta * c.beta);
       return extra > 0 ? Math.max((mu * mu) / extra, 1e-3) : 1e6;
     };
-    return { F, S, D, typeMean, w, cells, cellIdx, cellOf, demand, shape, hasRows, iterations, credibility: k, dispersion: r, dispersionN: obs.length };
+    return { F, S, SG, Sf, grp, D, typeMean, w, cells, cellIdx, cellOf, demand, shape, hasRows, iterations, credibility: k, dispersion: r, dispersionN: obs.length };
   }
   function logGamma(x) {
     // Lanczos approximation, accurate to about 1e-10 for x > 0
@@ -914,7 +937,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
     const est = estimateDemand(screenings, slate, st);
     if (kind === 'blend') return est;
     const poisson = () => est.dispersion; // point estimates: only the screening spread, no estimation uncertainty
-    if (kind === 'pattern') return { ...est, demand: (f, s, d) => est.F[f] * est.S[s] * est.D[d], shape: poisson };
+    if (kind === 'pattern') return { ...est, demand: (f, s, d) => est.F[f] * est.Sf(f, s) * est.D[d], shape: poisson };
     // film average: what the rule of thumb looks at (tickets per screening, any time, any day)
     const sum = new Float64Array(slate.length), cnt = new Float64Array(slate.length);
     screenings.forEach((x) => { sum[x.f] += x.tickets; cnt[x.f]++; });
@@ -1043,9 +1066,11 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
     const expected = (f, h, d, s) => sold(f, h, d, s, 1);
     // planning value (robust LP, worst case of a box): the part of each estimate that comes from the
     // pattern rather than from the film's own screenings at that time is lowered by the `caution` share.
-    // Untried combinations and films without records (all pattern or manager estimate) lose c; a cell
-    // with many own screenings loses almost nothing.
-    const factor = (f, s, d) => 1 - st.caution * est.cells[est.cellIdx(f, s, dayType(d))].priorShare;
+    // Untried combinations (all pattern) lose c; a cell with many own screenings loses almost nothing.
+    // A film without any records (new release) is planned on the manager's own estimate, uncautioned
+    // and flagged: discounting it would only shrink the manager's number, and the mock study's
+    // new-release world shows that this starves new films of shows.
+    const factor = (f, s, d) => (est.hasRows[f] ? 1 - st.caution * est.cells[est.cellIdx(f, s, dayType(d))].priorShare : 1);
     const value = (f, h, d, s) => sold(f, h, d, s, factor(f, s, d));
     return { st, slate, est, times, halls, fits, tested, untried, factor, expected, value, nD: 7, nS: times.length };
   }
@@ -1081,7 +1106,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
       needed += need;
       if (need > 0 && !P.fits[i]) out.push(f.title + ' needs ' + (f.runtime + P.st.cleaning) + ' min (' + f.runtime + ' runtime + ' + P.st.cleaning + ' changeover) but slots are ' + P.st.slotMinutes + ' min, so its minimum of ' + f.min + ' shows cannot be met (rule slot-fit). Fix: lengthen slots to ' + (f.runtime + P.st.cleaning) + ' min or set its minimum to 0.');
       else if (need > 0) {
-        if (openHalls === 0) out.push('No hall is open, so ' + f.title + ' cannot get its ' + f.min + ' shows (rule one-film-per-hall). Fix: open a hall.');
+        if (openHalls === 0) out.push('No hall is open with seats, so ' + f.title + ' cannot get its ' + f.min + ' shows (rule one-film-per-hall). Fix: open a hall.');
         else if (f.min > nDS) out.push(f.title + ' needs ' + f.min + ' shows, but one film can play at most ' + nDS + ' times a week (one hall at a time, ' + P.nS + ' slots x 7 days; rule no-self-clash). Fix: lower its minimum to ' + nDS + ' or less.');
       }
     });
@@ -1152,6 +1177,58 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
       prices: summarizePrices(rows, lp.y, P),
       pinnedValue,
     };
+  }
+
+  // What a minimum-show rule costs, by re-solving with the minimum one higher and one lower
+  // (dual prices of this degenerate LP hold in one direction only, so they are not reported as costs).
+  function ruleCosts(P, base, shows) {
+    const out = [];
+    P.slate.forEach((film, f) => {
+      if (shows[f] !== film.min || film.min === 0) return;
+      const at = (m) => {
+        const slate2 = P.slate.map((x, i) => (i === f ? { ...x, min: m } : x));
+        const P2 = { ...P, slate: slate2 };
+        const sol = solveProposed(P2);
+        if (sol.status !== 'optimal') return null;
+        return { value: sol.planValue, tickets: scorePlan(P2, sol.plan).tickets };
+      };
+      const b0 = { value: base.planValue, tickets: scorePlan(P, base.plan).tickets };
+      const up = at(film.min + 1), down = at(film.min - 1);
+      out.push({ tag: film.tag, title: film.title, min: film.min,
+        upValue: up ? b0.value - up.value : null, upTickets: up ? b0.tickets - up.tickets : null,
+        downValue: down ? down.value - b0.value : null, downTickets: down ? down.tickets - b0.tickets : null });
+    });
+    return out;
+  }
+
+  // Second reference plan built from the records alone: repeat last week's observed schedule
+  // (same films at the same weekday and time, the best-selling one in the largest hall), then
+  // meet this week's minimums with the same repair step as the rule of thumb.
+  function repeatLastWeekPlan(P, screenings) {
+    const lastWeekStart = addDays(HISTORY_END, -6);
+    const plan = emptyPlan(P);
+    const pinned = pinList(P);
+    pinned.pins.forEach((p) => { plan[p.d][p.s][p.h] = p.f; });
+    const halls = P.halls.filter((h) => h.usable).sort((a, b) => b.seats - a.seats || a.i - b.i);
+    const open = [];
+    for (let d = 0; d < 7; d++) for (let s = 0; s < P.nS; s++) {
+      const shown = screenings.filter((x) => x.date >= lastWeekStart && x.d === d && x.s === s && P.fits[x.f]).sort((a, b) => b.tickets - a.tickets);
+      let k = 0;
+      halls.forEach((h) => {
+        if (pinned.blocked.has(d + '|' + s + '|' + h.i)) return;
+        open.push({ d, s, h: h.i });
+        if (plan[d][s][h.i] !== null) return;
+        while (k < shown.length && plan[d][s].includes(shown[k].f)) k++;
+        if (k < shown.length) plan[d][s][h.i] = shown[k++].f;
+      });
+    }
+    const avg = P.slate.map((f, i) => { const xs = screenings.filter((x) => x.f === i); return xs.length ? xs.reduce((a, x) => a + x.tickets, 0) / xs.length : 0; });
+    const order = P.slate.map((f, i) => i).sort((a, b) => avg[b] - avg[a] || a - b);
+    const shows = P.slate.map(() => 0);
+    plan.forEach((day) => day.forEach((slot) => slot.forEach((f) => { if (f !== null) shows[f]++; })));
+    [...open].reverse().forEach(({ d, s, h }) => { const f = plan[d][s][h]; if (f !== null && P.slate[f].max !== null && shows[f] > P.slate[f].max) { plan[d][s][h] = null; shows[f]--; } });
+    repairMinimums(P, plan, order, open, pinned);
+    return plan;
   }
 
   function summarizePrices(rows, y, P) {
@@ -1432,6 +1509,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
     out.scores = { proposed: scorePlan(P, proposed.plan, truth), baseline: scorePlan(P, baseline.plan, truth) };
     out.backtest = backtest(agg.screenings, slate, st);
     out.diagnostics = diagnostics(history, agg.screenings, est, slate, st);
+    out.ruleCosts = o.skipOracle ? [] : ruleCosts(P, proposed, out.checks.proposed.shows);
     if (!o.skipOracle) {
       const oracle = solveProposed(P, truth);
       out.oracle = oracle.status === 'optimal' ? { truth: scorePlan(P, oracle.plan, truth).truth } : null;
@@ -1488,6 +1566,9 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
       if (sol.status === 'optimal') { const sc = scorePlan(P, sol.plan, truth); rows.push({ label: 'Blend + LP with an "at least the seats" sold-out correction', id: 'soldOutFix', truth: sc.truth, promised: sc.tickets, untested: sc.untested }); }
     }
     rows.push({ label: 'Rule of thumb (baseline)', id: 'baseline', truth: base.scores.baseline.truth, promised: base.scores.baseline.tickets, untested: base.scores.baseline.untested });
+    const rl = repeatLastWeekPlan(P0, base.screenings);
+    const rlScore = scorePlan(P0, rl, truth);
+    rows.push({ label: 'Repeat last week (second reference, from the records)', id: 'repeat', truth: rlScore.truth, promised: rlScore.tickets, untested: rlScore.untested, violations: checkPlan(P0, rl).violations.length });
     const pp = pastProgrammerPlan(P0);
     const ppScore = scorePlan(P0, pp, truth);
     rows.push({ label: 'Simulated past programmer (knows true demand up to judgement noise)', id: 'programmer', truth: ppScore.truth, promised: ppScore.tickets, untested: ppScore.untested, violations: checkPlan(P0, pp).violations.length });
@@ -1502,9 +1583,10 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
     { id: 'sensible', label: 'Sensible past', pastNoise: 0.5, historyWeeks: 4 },
     { id: 'random', label: 'Random past', pastNoise: 3, historyWeeks: 4 },
     { id: 'sparse', label: 'Random past, 1 week', pastNoise: 3, historyWeeks: 1 },
+    { id: 'newrel', label: 'Sensible past + new release', pastNoise: 0.5, historyWeeks: 4, newRelease: true },
   ];
   const STUDY_VARIANTS = [
-    { key: 'selected', label: 'Selected: Bayes estimate, k = 1, caution 0.5', est: 'blend' },
+    { key: 'selected', label: 'Selected: Bayes estimate, k = 4, caution 0.5', est: 'blend' },
     { key: 'film average', label: 'Film average + LP', est: 'filmAverage', caution: 0 },
     { key: 'own cell average', label: 'Own cell average + LP', est: 'cellAverage', caution: 0 },
     { key: 'pattern only', label: 'Pattern only + LP', est: 'pattern', caution: 0 },
@@ -1513,18 +1595,20 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
     { key: 'caution 0.25', label: 'Caution 0.25', est: 'blend', caution: 0.25 },
     { key: 'caution 0.75', label: 'Caution 0.75', est: 'blend', caution: 0.75 },
     { key: 'caution 1', label: 'Caution 1', est: 'blend', caution: 1 },
-    { key: 'k 0.5', label: 'k = 0.5', est: 'blend', credibility: 0.5 },
+    { key: 'k 1', label: 'k = 1', est: 'blend', credibility: 1 },
     { key: 'k 2', label: 'k = 2', est: 'blend', credibility: 2 },
-    { key: 'k 4', label: 'k = 4', est: 'blend', credibility: 4 },
+    { key: 'k 8', label: 'k = 8', est: 'blend', credibility: 8 },
+    { key: 'caution on new release', label: 'Caution also on films without records', est: 'blend', cautionNoRows: true },
   ];
   function studyOne(seed, world) {
-    const st = { ...defaultSettings(), seed, pastNoise: world.pastNoise, historyWeeks: world.historyWeeks };
+    const st = { ...defaultSettings(), seed, pastNoise: world.pastNoise, historyWeeks: world.historyWeeks, newRelease: !!world.newRelease };
     const base = run(st);
     if (base.status !== 'ok') return null;
     const truth = truthFnFor(base.problem);
     const out = {
       'rule of thumb (baseline)': base.scores.baseline.truth,
       'simulated past programmer': scorePlan(base.problem, pastProgrammerPlan(base.problem), truth).truth,
+      'repeat last week': scorePlan(base.problem, repeatLastWeekPlan(base.problem, base.screenings), truth).truth,
       'oracle (knows true demand)': base.oracle.truth,
       'fitted dispersion r': base.estimate.dispersion,
       'sold-out share': base.diagnostics.soldOutTrue / base.diagnostics.screenings,
@@ -1536,7 +1620,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
       if (v.caution !== undefined) st2.caution = v.caution;
       if (v.credibility !== undefined) st2.credibility = v.credibility;
       const est = v.soldOut ? estimateDemand(base.screenings, base.slate, st2, { soldOutCorrection: true }) : estimateAlternative(v.est, base.screenings, base.slate, st2);
-      const P = buildProblem(st2, base.slate, est);
+      const P = buildProblem(st2, base.slate, v.cautionNoRows ? { ...est, hasRows: est.hasRows.map(() => true) } : est);
       const sol = solveProposed(P);
       if (sol.status === 'optimal') out[v.key] = scorePlan(P, sol.plan, truthFnFor(P)).truth;
     });
@@ -1623,9 +1707,9 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
     {
       id: 'new-release', kind: 'Boundary', title: 'New release with no records',
       how: 'Add The Scavengers (opens in the planning week, so zero purchase rows), minimum 7 shows.',
-      expect: 'Plan found; the new film gets at least 7 shows; its demand is flagged as a manager estimate (no records) and discounted by the caution.',
+      expect: 'Plan found; the new film gets at least 7 shows; its demand is flagged as a manager estimate (no records) and planned without the caution discount.',
       apply: (st) => ({ ...st, newRelease: true }),
-      check: (r) => r.status === 'ok' && r.checks.proposed.shows[r.slate.length - 1] >= 7 && r.checks.proposed.violations.length === 0 && r.estimate.hasRows[r.slate.length - 1] === false,
+      check: (r) => r.status === 'ok' && r.checks.proposed.shows[r.slate.length - 1] >= 7 && r.checks.proposed.violations.length === 0 && r.estimate.hasRows[r.slate.length - 1] === false && r.problem.factor(r.slate.length - 1, 0, 0) === 1,
     },
     {
       id: 'hall-closed', kind: 'Boundary', title: 'Hall 3 closed next week',
@@ -1669,7 +1753,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
     defaultSettings, validateSettings, slateOf, gridOf, toHHMM, toMinutes, addDays, weekdayIndex, dayType,
     mulberry32, negBinSample, expectedSoldNB, trueMean, generateHistory, parseExtraRows, aggregate,
     estimateDemand, estimateAlternative, simplex, buildProblem, solveProposed, solveBaseline, checkPlan, scorePlan,
-    truthFnFor, explainCell, backtest, run, compareMethods, pastProgrammerPlan, TEST_CASES, fnv1a,
+    truthFnFor, explainCell, backtest, run, compareMethods, pastProgrammerPlan, repeatLastWeekPlan, ruleCosts, TEST_CASES, fnv1a,
     STUDY_WORLDS, STUDY_VARIANTS, studyOne, summarizeStudy, bruteForceCheck,
   };
 });
@@ -1690,6 +1774,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const STUDY = {
  "seeds": 40,
+ "seedFrom": 41,
  "worlds": [
   {
    "id": "sensible",
@@ -1708,345 +1793,518 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
    "label": "Random past, 1 week",
    "pastNoise": 3,
    "historyWeeks": 1
+  },
+  {
+   "id": "newrel",
+   "label": "Sensible past + new release",
+   "pastNoise": 0.5,
+   "historyWeeks": 4,
+   "newRelease": true
   }
  ],
  "results": {
   "sensible": {
    "rule of thumb (baseline)": {
-    "mean": 6388.012188002396,
+    "mean": 6494.234251823902,
     "n": 40,
-    "diff": -1799.1390513251354,
-    "ci95": 67.96276481229829
+    "diff": -1704.0399045276015,
+    "ci95": 61.698225629428926
    },
    "simulated past programmer": {
-    "mean": 7585.5774557160385,
+    "mean": 7574.036906380153,
     "n": 40,
-    "diff": -601.5737836114929,
-    "ci95": 34.35827061453204
+    "diff": -624.2372499713512,
+    "ci95": 44.84215678336188
+   },
+   "repeat last week": {
+    "mean": 7701.204213446466,
+    "n": 40,
+    "diff": -497.0699429050384,
+    "ci95": 38.169295527385316
    },
    "oracle (knows true demand)": {
     "mean": 8284.224980973468,
     "n": 40,
-    "diff": 97.07374164594201,
-    "ci95": 15.845079202621813
+    "diff": 85.9508246219691,
+    "ci95": 12.7433576076253
+   },
+   "fitted dispersion r": {
+    "mean": 6.2,
+    "n": 40
+   },
+   "sold-out share": {
+    "mean": 0.25869047619047614,
+    "n": 40
+   },
+   "tested combinations share": {
+    "mean": 0.865,
+    "n": 40
+   },
+   "backtest WAPE filmAverage": {
+    "mean": 0.38557966057388254,
+    "n": 40
+   },
+   "backtest WAPE cellAverage": {
+    "mean": 0.29575657618538803,
+    "n": 40
+   },
+   "backtest WAPE pattern": {
+    "mean": 0.29405794519740613,
+    "n": 40
+   },
+   "backtest WAPE blend": {
+    "mean": 0.28484384582586963,
+    "n": 40
+   },
+   "selected": {
+    "mean": 8198.274156351503,
+    "n": 40
+   },
+   "film average": {
+    "mean": 6978.906113969759,
+    "n": 40,
+    "diff": -1219.368042381743,
+    "ci95": 101.69425295527694
+   },
+   "own cell average": {
+    "mean": 7604.704031620017,
+    "n": 40,
+    "diff": -593.5701247314867,
+    "ci95": 57.50248543998007
+   },
+   "pattern only": {
+    "mean": 8048.954240635506,
+    "n": 40,
+    "diff": -149.31991571599562,
+    "ci95": 24.689777222910255
+   },
+   "with sold-out correction": {
+    "mean": 8211.619008968213,
+    "n": 40,
+    "diff": 13.344852616710659,
+    "ci95": 10.522228696155574
+   },
+   "caution 0": {
+    "mean": 8180.953242981741,
+    "n": 40,
+    "diff": -17.32091336976564,
+    "ci95": 8.833281486068573
+   },
+   "caution 0.25": {
+    "mean": 8189.08993662189,
+    "n": 40,
+    "diff": -9.184219729611073,
+    "ci95": 6.39391750324095
+   },
+   "caution 0.75": {
+    "mean": 8198.801908243913,
+    "n": 40,
+    "diff": 0.5277518924101059,
+    "ci95": 3.7752249044466786
+   },
+   "caution 1": {
+    "mean": 8205.837622961073,
+    "n": 40,
+    "diff": 7.563466609570787,
+    "ci95": 7.406605891766572
+   },
+   "k 1": {
+    "mean": 8180.489510388045,
+    "n": 40,
+    "diff": -17.784645963460274,
+    "ci95": 10.2926151433866
+   },
+   "k 2": {
+    "mean": 8185.95721879446,
+    "n": 40,
+    "diff": -12.316937557047254,
+    "ci95": 8.661381872631459
+   },
+   "k 8": {
+    "mean": 8200.031181014874,
+    "n": 40,
+    "diff": 1.757024663370089,
+    "ci95": 7.941752244039047
+   },
+   "caution on new release": {
+    "mean": 8198.274156351503,
+    "n": 40,
+    "diff": 0,
+    "ci95": 0
+   }
+  },
+  "random": {
+   "rule of thumb (baseline)": {
+    "mean": 6714.30940458799,
+    "n": 40,
+    "diff": -1383.1658103730285,
+    "ci95": 61.56309353882545
+   },
+   "simulated past programmer": {
+    "mean": 6327.4536104546905,
+    "n": 40,
+    "diff": -1770.021604506328,
+    "ci95": 63.38484567450525
+   },
+   "repeat last week": {
+    "mean": 6719.1593849001165,
+    "n": 40,
+    "diff": -1378.3158300609023,
+    "ci95": 61.91423226492789
+   },
+   "oracle (knows true demand)": {
+    "mean": 8284.224980973468,
+    "n": 40,
+    "diff": 186.7497660124538,
+    "ci95": 24.39377682338144
    },
    "fitted dispersion r": {
     "mean": 5.75,
     "n": 40
    },
    "sold-out share": {
-    "mean": 0.2582142857142857,
+    "mean": 0.2095833333333334,
     "n": 40
    },
    "tested combinations share": {
-    "mean": 0.8633333333333333,
+    "mean": 1,
     "n": 40
    },
    "backtest WAPE filmAverage": {
-    "mean": 0.3869808108661701,
+    "mean": 0.42565075894073223,
     "n": 40
    },
    "backtest WAPE cellAverage": {
-    "mean": 0.2958428931001865,
+    "mean": 0.31008903955220607,
     "n": 40
    },
    "backtest WAPE pattern": {
-    "mean": 0.3075042444306889,
+    "mean": 0.29933119593821633,
     "n": 40
    },
    "backtest WAPE blend": {
-    "mean": 0.29108847909961566,
+    "mean": 0.294579631939569,
     "n": 40
    },
    "selected": {
-    "mean": 8187.151239327533,
+    "mean": 8097.475214961021,
     "n": 40
    },
    "film average": {
-    "mean": 6980.732812091906,
+    "mean": 7432.0635677892815,
     "n": 40,
-    "diff": -1206.4184272356238,
-    "ci95": 109.91774786373817
+    "diff": -665.411647171737,
+    "ci95": 32.167800879725014
    },
    "own cell average": {
-    "mean": 7618.309130184563,
+    "mean": 8038.94739976827,
     "n": 40,
-    "diff": -568.8421091429676,
-    "ci95": 60.22846246615717
+    "diff": -58.52781519274917,
+    "ci95": 26.76777400129057
    },
    "pattern only": {
-    "mean": 6949.263728270339,
+    "mean": 8063.029901041913,
     "n": 40,
-    "diff": -1237.8875110571917,
-    "ci95": 96.24630341313387
+    "diff": -34.445313919102134,
+    "ci95": 28.592643348233633
    },
    "with sold-out correction": {
-    "mean": 8162.44134799523,
+    "mean": 8156.685446203293,
     "n": 40,
-    "diff": -24.70989133230055,
-    "ci95": 20.090645312540193
+    "diff": 59.21023124227531,
+    "ci95": 20.00601081809406
    },
    "caution 0": {
-    "mean": 7521.0398045095235,
+    "mean": 8116.786661814653,
     "n": 40,
-    "diff": -666.1114348180075,
-    "ci95": 59.61983042033208
+    "diff": 19.31144685363181,
+    "ci95": 19.356333252070705
    },
    "caution 0.25": {
-    "mean": 7996.514027448407,
+    "mean": 8113.150917168797,
     "n": 40,
-    "diff": -190.63721187912296,
-    "ci95": 53.48901548529368
+    "diff": 15.675702207779523,
+    "ci95": 14.425681433788604
    },
    "caution 0.75": {
-    "mean": 8190.883903996868,
+    "mean": 8087.618417672236,
     "n": 40,
-    "diff": 3.7326646693336443,
-    "ci95": 3.2496474060577447
+    "diff": -9.856797288783492,
+    "ci95": 9.268967530656958
    },
    "caution 1": {
-    "mean": 8199.686219279774,
+    "mean": 8062.5343513088765,
     "n": 40,
-    "diff": 12.534979952241589,
-    "ci95": 6.591173777789963
+    "diff": -34.94086365214018,
+    "ci95": 17.555286424998545
    },
-   "k 0.5": {
-    "mean": 8181.722495048857,
+   "k 1": {
+    "mean": 8079.222991672816,
     "n": 40,
-    "diff": -5.428744278673321,
-    "ci95": 4.219613994082848
+    "diff": -18.252223288204004,
+    "ci95": 22.260617191387198
    },
    "k 2": {
-    "mean": 8193.72744253428,
+    "mean": 8094.411229493882,
     "n": 40,
-    "diff": 6.576203206747732,
-    "ci95": 4.973767127407278
+    "diff": -3.0639854671381044,
+    "ci95": 15.14539223859174
    },
-   "k 4": {
-    "mean": 8201.619773750732,
+   "k 8": {
+    "mean": 8113.972938568753,
     "n": 40,
-    "diff": 14.468534423198253,
-    "ci95": 8.997182781126549
-   }
-  },
-  "random": {
-   "rule of thumb (baseline)": {
-    "mean": 6655.078434602301,
+    "diff": 16.49772360773404,
+    "ci95": 14.098622752137242
+   },
+   "caution on new release": {
+    "mean": 8097.475214961021,
     "n": 40,
-    "diff": -1404.4584735467893,
-    "ci95": 76.26807975792562
-   },
-   "simulated past programmer": {
-    "mean": 6346.2048010690505,
-    "n": 40,
-    "diff": -1713.3321070800382,
-    "ci95": 85.01554160777934
-   },
-   "oracle (knows true demand)": {
-    "mean": 8284.224980973468,
-    "n": 40,
-    "diff": 224.68807282438124,
-    "ci95": 27.350320331510716
-   },
-   "fitted dispersion r": {
-    "mean": 5.25,
-    "n": 40
-   },
-   "sold-out share": {
-    "mean": 0.2117261904761905,
-    "n": 40
-   },
-   "tested combinations share": {
-    "mean": 0.9995833333333334,
-    "n": 40
-   },
-   "backtest WAPE filmAverage": {
-    "mean": 0.43040688713864145,
-    "n": 40
-   },
-   "backtest WAPE cellAverage": {
-    "mean": 0.3139923056536202,
-    "n": 40
-   },
-   "backtest WAPE pattern": {
-    "mean": 0.36724283796466695,
-    "n": 40
-   },
-   "backtest WAPE blend": {
-    "mean": 0.31221646628661204,
-    "n": 40
-   },
-   "selected": {
-    "mean": 8059.536908149088,
-    "n": 40
-   },
-   "film average": {
-    "mean": 7458.2821674983015,
-    "n": 40,
-    "diff": -601.2547406507881,
-    "ci95": 31.539144035323584
-   },
-   "own cell average": {
-    "mean": 8029.781191275388,
-    "n": 40,
-    "diff": -29.755716873702113,
-    "ci95": 17.639912437314095
-   },
-   "pattern only": {
-    "mean": 7433.626574695559,
-    "n": 40,
-    "diff": -625.9103334535314,
-    "ci95": 27.133190347426673
-   },
-   "with sold-out correction": {
-    "mean": 8063.665313896423,
-    "n": 40,
-    "diff": 4.128405747329566,
-    "ci95": 24.366994284805088
-   },
-   "caution 0": {
-    "mean": 8048.174681953778,
-    "n": 40,
-    "diff": -11.362226195313406,
-    "ci95": 13.29980782357849
-   },
-   "caution 0.25": {
-    "mean": 8051.096262394266,
-    "n": 40,
-    "diff": -8.440645754823617,
-    "ci95": 9.298316315364682
-   },
-   "caution 0.75": {
-    "mean": 8060.568974742491,
-    "n": 40,
-    "diff": 1.0320665934040563,
-    "ci95": 8.272247377823813
-   },
-   "caution 1": {
-    "mean": 8062.586148146589,
-    "n": 40,
-    "diff": 3.049239997498444,
-    "ci95": 11.98234559297007
-   },
-   "k 0.5": {
-    "mean": 8048.751361466944,
-    "n": 40,
-    "diff": -10.785546682147105,
-    "ci95": 13.552903301981509
-   },
-   "k 2": {
-    "mean": 8060.198557781543,
-    "n": 40,
-    "diff": 0.6616496324500758,
-    "ci95": 11.166709027834758
-   },
-   "k 4": {
-    "mean": 8044.260625078656,
-    "n": 40,
-    "diff": -15.276283070438627,
-    "ci95": 25.43086913632391
+    "diff": 0,
+    "ci95": 0
    }
   },
   "sparse": {
    "rule of thumb (baseline)": {
-    "mean": 6677.365213254331,
+    "mean": 6710.988026272711,
     "n": 40,
-    "diff": -1095.670963959573,
-    "ci95": 64.58520415311244
+    "diff": -1241.9192121781634,
+    "ci95": 72.11174746127344
    },
    "simulated past programmer": {
-    "mean": 6346.2048010690505,
+    "mean": 6327.4536104546905,
     "n": 40,
-    "diff": -1426.8313761448528,
-    "ci95": 85.55655101887686
+    "diff": -1625.4536279961835,
+    "ci95": 67.49189878279122
+   },
+   "repeat last week": {
+    "mean": 6663.075175306789,
+    "n": 40,
+    "diff": -1289.8320631440859,
+    "ci95": 51.063780735118684
    },
    "oracle (knows true demand)": {
     "mean": 8284.224980973468,
     "n": 40,
-    "diff": 511.1888037595669,
-    "ci95": 58.82233267549345
+    "diff": 331.31774252259873,
+    "ci95": 42.991530200395744
    },
    "fitted dispersion r": {
-    "mean": 4.2,
+    "mean": 6.525,
     "n": 40
    },
    "sold-out share": {
-    "mean": 0.2090476190476191,
+    "mean": 0.21166666666666673,
     "n": 40
    },
    "tested combinations share": {
-    "mean": 0.8958333333333333,
+    "mean": 0.8962499999999999,
     "n": 40
    },
    "selected": {
-    "mean": 7773.036177213906,
+    "mean": 7952.907238450876,
     "n": 40
    },
    "film average": {
-    "mean": 7333.421467058707,
+    "mean": 7281.361968522494,
     "n": 40,
-    "diff": -439.6147101551992,
-    "ci95": 79.652117764849
+    "diff": -671.5452699283778,
+    "ci95": 101.56925621033463
    },
    "own cell average": {
-    "mean": 7562.717422368,
+    "mean": 7590.463887167383,
     "n": 40,
-    "diff": -210.31875484590472,
-    "ci95": 60.31163493996563
+    "diff": -362.4433512834909,
+    "ci95": 57.985984597281146
    },
    "pattern only": {
-    "mean": 7405.3759310061405,
+    "mean": 7934.520723033687,
     "n": 40,
-    "diff": -367.66024620776614,
-    "ci95": 76.0432625830076
+    "diff": -18.386515417186615,
+    "ci95": 36.791239978609894
    },
    "with sold-out correction": {
-    "mean": 7798.640509659122,
+    "mean": 7965.0962813301685,
     "n": 40,
-    "diff": 25.604332445217572,
-    "ci95": 34.890440159301505
+    "diff": 12.189042879294357,
+    "ci95": 23.51129953693449
    },
    "caution 0": {
-    "mean": 7744.692882387464,
+    "mean": 7959.256659135433,
     "n": 40,
-    "diff": -28.34329482644323,
-    "ci95": 44.65842079954835
+    "diff": 6.349420684558117,
+    "ci95": 33.381082420532024
    },
    "caution 0.25": {
-    "mean": 7792.510548693326,
+    "mean": 7966.592592776789,
     "n": 40,
-    "diff": 19.474371479420483,
-    "ci95": 27.94599294179931
+    "diff": 13.685354325913455,
+    "ci95": 22.893883826804363
    },
    "caution 0.75": {
-    "mean": 7725.431864718569,
+    "mean": 7863.2754734467,
     "n": 40,
-    "diff": -47.60431249533228,
-    "ci95": 29.6757887933712
+    "diff": -89.63176500417543,
+    "ci95": 28.193275850234276
    },
    "caution 1": {
-    "mean": 7689.348800807525,
+    "mean": 7628.4347251118525,
     "n": 40,
-    "diff": -83.68737640637748,
-    "ci95": 39.713170499071964
+    "diff": -324.4725133390214,
+    "ci95": 52.26672683457559
    },
-   "k 0.5": {
-    "mean": 7748.479391670886,
+   "k 1": {
+    "mean": 7859.227154517868,
     "n": 40,
-    "diff": -24.556785543019373,
-    "ci95": 20.36521388957247
+    "diff": -93.68008393300809,
+    "ci95": 30.69613742027171
    },
    "k 2": {
-    "mean": 7788.698080063383,
+    "mean": 7918.193078714228,
     "n": 40,
-    "diff": 15.661902849477428,
-    "ci95": 29.881715734340805
+    "diff": -34.714159736650046,
+    "ci95": 19.564673638291087
    },
-   "k 4": {
-    "mean": 7774.255541945534,
+   "k 8": {
+    "mean": 7950.58766046051,
     "n": 40,
-    "diff": 1.21936473162707,
-    "ci95": 46.10139426150329
+    "diff": -2.3195779903634275,
+    "ci95": 19.28454277625127
+   },
+   "caution on new release": {
+    "mean": 7952.907238450876,
+    "n": 40,
+    "diff": 0,
+    "ci95": 0
+   }
+  },
+  "newrel": {
+   "rule of thumb (baseline)": {
+    "mean": 7190.499548163479,
+    "n": 40,
+    "diff": -1555.8303612182167,
+    "ci95": 71.32386887928901
+   },
+   "simulated past programmer": {
+    "mean": 8085.729312660757,
+    "n": 40,
+    "diff": -660.6005967209387,
+    "ci95": 39.03515240051644
+   },
+   "repeat last week": {
+    "mean": 7707.544038950725,
+    "n": 40,
+    "diff": -1038.7858704309695,
+    "ci95": 42.195255436938126
+   },
+   "oracle (knows true demand)": {
+    "mean": 8922.199890330257,
+    "n": 40,
+    "diff": 175.86998094856213,
+    "ci95": 18.250165696674244
+   },
+   "fitted dispersion r": {
+    "mean": 6.2,
+    "n": 40
+   },
+   "sold-out share": {
+    "mean": 0.25869047619047614,
+    "n": 40
+   },
+   "tested combinations share": {
+    "mean": 0.7414285714285714,
+    "n": 40
+   },
+   "backtest WAPE filmAverage": {
+    "mean": 0.38557966057388254,
+    "n": 40
+   },
+   "backtest WAPE cellAverage": {
+    "mean": 0.29575657618538803,
+    "n": 40
+   },
+   "backtest WAPE pattern": {
+    "mean": 0.29405794519740613,
+    "n": 40
+   },
+   "backtest WAPE blend": {
+    "mean": 0.28484384582586963,
+    "n": 40
+   },
+   "selected": {
+    "mean": 8746.329909381693,
+    "n": 40
+   },
+   "film average": {
+    "mean": 7748.280372839125,
+    "n": 40,
+    "diff": -998.0495365425675,
+    "ci95": 121.24915546376404
+   },
+   "own cell average": {
+    "mean": 8182.353349407032,
+    "n": 40,
+    "diff": -563.9765599746636,
+    "ci95": 38.935528789074546
+   },
+   "pattern only": {
+    "mean": 8467.077315790653,
+    "n": 40,
+    "diff": -279.25259359104285,
+    "ci95": 32.619519285449115
+   },
+   "with sold-out correction": {
+    "mean": 8740.77623986387,
+    "n": 40,
+    "diff": -5.553669517824892,
+    "ci95": 13.136544080346603
+   },
+   "caution 0": {
+    "mean": 8585.793102279953,
+    "n": 40,
+    "diff": -160.53680710174052,
+    "ci95": 22.18600765578504
+   },
+   "caution 0.25": {
+    "mean": 8681.633939930802,
+    "n": 40,
+    "diff": -64.6959694508927,
+    "ci95": 15.647717246573903
+   },
+   "caution 0.75": {
+    "mean": 8741.574150269777,
+    "n": 40,
+    "diff": -4.75575911191886,
+    "ci95": 19.470851280902092
+   },
+   "caution 1": {
+    "mean": 8713.808187991683,
+    "n": 40,
+    "diff": -32.52172139001514,
+    "ci95": 23.60302804449044
+   },
+   "k 1": {
+    "mean": 8646.29751793313,
+    "n": 40,
+    "diff": -100.03239144856835,
+    "ci95": 23.56748579993661
+   },
+   "k 2": {
+    "mean": 8689.89134217606,
+    "n": 40,
+    "diff": -56.43856720563595,
+    "ci95": 18.529433206525386
+   },
+   "k 8": {
+    "mean": 8735.813902702266,
+    "n": 40,
+    "diff": -10.516006679428619,
+    "ci95": 22.407444611311156
+   },
+   "caution on new release": {
+    "mean": 8223.348214590074,
+    "n": 40,
+    "diff": -522.9816947916217,
+    "ci95": 20.85641036048538
    }
   }
  }
@@ -2235,6 +2493,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
       $('heroDesc').textContent = 'No plan is shown for these settings; the reasons and fixes are listed below. ' + (result ? 'Everything further down belongs to the last successful run and is marked STALE.' : '');
       $('heroFp').textContent = result ? 'last successful run (stale): seed ' + result.settings.seed + ' · fingerprint ' + result.fingerprint : '';
       $('heroFp').style.opacity = '.5';
+      $('heroArt').innerHTML = heroArt(null);
     }
   }
 
@@ -2258,8 +2517,8 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
     $('heroTitle').textContent = 'Next week at ' + r.settings.venue;
     $('heroDesc').style.opacity = '';
     $('heroFp').style.opacity = '';
-    $('heroMeta').innerHTML = '<span class="match">' + pctR(p.tickets, b.tickets) + ' expected tickets vs rule of thumb</span><span class="chip">12-18 OCT 2026</span><span>' + open + ' hall' + (open === 1 ? '' : 's') + '</span><span>' + r.times.length * 7 + ' show-times</span><span class="chip">' + r.slate.length + ' FILMS</span><span class="chip">FICTIONAL</span>';
-    $('heroDesc').innerHTML = 'SLOTWISE plans ' + fmt(p.tickets) + ' expected tickets against ' + fmt(b.tickets) + ' for the rule of thumb (' + sgn(gain) + '), under the same inputs and rules, and uses ' + p.untested + ' untried film-time combination' + (p.untested === 1 ? '' : 's') + ' against ' + b.untested + '. No other week scores higher on the planning value (expected tickets with the caution applied): the duality certificate ' + (r.proposed.certificateOk ? 'holds' : 'FAILED') + '. Fictional data; real effects are untested.';
+    $('heroMeta').innerHTML = '<span class="match">' + pctR(p.tickets, b.tickets) + ' expected tickets vs rule of thumb</span><span class="chip">12-18 OCT 2026</span><span>' + open + ' hall' + (open === 1 ? '' : 's') + '</span><span>' + r.times.length * 7 + ' show-times</span><span class="chip">' + r.slate.length + ' FILMS</span>';
+    $('heroDesc').innerHTML = 'On its own demand estimate, SLOTWISE plans ' + fmt(p.tickets) + ' expected tickets against ' + fmt(b.tickets) + ' for the rule of thumb (' + sgn(gain) + '), under the same inputs and rules, and uses ' + p.untested + ' untried film-time combination' + (p.untested === 1 ? '' : 's') + ' against ' + b.untested + '. No other week scores higher on the planning value (expected tickets with the caution applied): the duality certificate ' + (r.proposed.certificateOk ? 'holds' : 'FAILED') + '. Fictional data; real effects are untested.';
     $('heroFp').textContent = 'seed ' + r.settings.seed + ' · fingerprint ' + r.fingerprint + ' · ' + fmt(r.rowCount) + ' purchase rows · computed in ' + Math.round(r.ms) + ' ms';
   }
 
@@ -2279,7 +2538,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
     $('slateRow').innerHTML = stats.map((x) => {
       const top = ranked.indexOf(x) < 3;
       return '<div class="card" tabindex="0" role="button" data-film="' + x.i + '" aria-label="' + esc(x.f.title) + ' details"><div class="poster">' + poster(x.f) + '</div>' + (top ? '<div class="badge-top">TOP<b>' + (ranked.indexOf(x) + 1) + '</b></div>' : '') + (x.f.isNew ? '<span class="badge-new">Opens this week</span>' : '') +
-        '<div class="bob"><div class="icons"><span class="circle fill">&#9654;</span><span class="circle">+</span><span class="circle" style="margin-left:auto">&#8964;</span></div>' +
+        '<div class="bob"><div class="icons"><span class="circle fill" title="Open details">&#9654;</span></div>' +
         '<div class="match" style="font-size:.8rem">' + x.shows + ' shows · ' + fmt(x.tickets) + ' exp. tickets</div>' +
         '<div class="tags" style="margin:.25rem 0"><span class="chip">' + x.f.rating + (x.f.rating === 'ALL' ? '' : '+') + '</span><span>' + x.f.runtime + ' min</span><span>' + esc(x.f.genre) + '</span></div>' +
         '<div class="dim">' + (x.n ? x.n + ' screenings in the records' : 'No records: manager estimate') + ' · rule of thumb ' + x.baseShows + ' shows</div></div></div>';
@@ -2364,7 +2623,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
       el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
     });
     $('heatLegend').innerHTML = '<span><i style="background:rgba(229,9,20,.15)"></i>low</span><span><i style="background:rgba(229,9,20,.93)"></i>high (max ' + fmt(max) + ')</span><span><i style="background:repeating-linear-gradient(135deg,rgba(255,255,255,.4) 0 3px,transparent 3px 6px)"></i>untried: pattern only</span><span><i style="background:#fff;border-radius:50%"></i>sold out at least once</span>';
-    barChart('chartS', P.times.map((t) => E.toHHMM(t % 1440)), [{ name: 'S', color: '#e50914', values: Array.from(P.est.S) }], { ref: 1, decimals: 2 });
+    barChart('chartS', P.times.map((t) => E.toHHMM(t % 1440)), [{ name: 'General audience', color: '#e50914', values: Array.from(P.est.SG[0]) }, { name: 'Family films', color: '#54b9ff', values: Array.from(P.est.SG[1]) }], { ref: 1, decimals: 2 });
     barChart('chartD', E.DAY_NAMES, [{ name: 'D', color: '#e50914', values: Array.from(P.est.D) }], { ref: 1, decimals: 2 });
   }
 
@@ -2382,12 +2641,12 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
     const share = c.priorShare;
     const caution = r.settings.caution;
     openModal('<div class="mbody" style="padding-top:2rem"><h2 id="modalTitle">' + esc(film.title) + ' · ' + E.toHHMM(P.times[s] % 1440) + ' · ' + E.DAY_TYPE_NAMES[t] + '</h2>' +
-      '<div class="kpis" style="margin:.8rem 0"><div class="kpi"><div class="l">Pattern (prior mean)</div><div class="v">' + f2(P2) + '</div><div class="s">F ' + f2(P.est.F[f]) + ' x S ' + P.est.S[s].toFixed(3) + ' x D ' + P.est.typeMean[t].toFixed(3) + '</div></div>' +
+      '<div class="kpis" style="margin:.8rem 0"><div class="kpi"><div class="l">Pattern (prior mean)</div><div class="v">' + f2(P2) + '</div><div class="s">F ' + f2(P.est.F[f]) + ' x S<sub>' + (P.est.grp[f] ? 'family' : 'general') + '</sub> ' + P.est.Sf(f, s).toFixed(3) + ' x D ' + P.est.typeMean[t].toFixed(3) + '</div></div>' +
       '<div class="kpi"><div class="l">Own screenings</div><div class="v">' + (c.n ? Math.round(Y) + ' / ' + f2(W2) : 'none') + '</div><div class="s">' + (c.n ? 'tickets / exposure = ' + f2(Y / W2) + ' per screening (' + c.n + ' screening' + (c.n === 1 ? '' : 's') + ')' : 'never screened at this time and day type') + '</div></div>' +
       '<div class="kpi"><div class="l">Posterior mean</div><div class="v">' + f2(a2 / b2) + '</div><div class="s">' + Math.round((100 * W2) / b2) + '% own evidence, ' + Math.round((100 * k) / b2) + '% pattern</div></div></div>' +
       '<p class="small">Prior Gamma(k x pattern, k) = Gamma(' + f2(k * P2) + ', ' + k + '): mean = pattern, worth k = ' + k + ' screening(s). Posterior Gamma(' + f2(k * P2) + ' + ' + Math.round(Y) + ', ' + k + ' + ' + f2(W2) + ') = Gamma(' + f2(a2) + ', ' + f2(b2) + '): mean = ' + f2(a2) + ' / ' + f2(b2) + ' = <b>' + f2(a2 / b2) + '</b> tickets per screening on an average ' + E.DAY_TYPE_NAMES[t] + ' day.' +
       (sold ? ' ' + sold + ' of ' + c.n + ' screenings were read as sold out (total = a hall size): their totals are lower bounds and enter as recorded, so this estimate is cautious.' : '') +
-      ' <b>In the plan</b> the pattern share (' + Math.round(share * 100) + '%) of the demand is lowered by the caution ' + caution + ': demand x ' + (1 - caution * share).toFixed(3) + (film.isNew ? '. This film has no records: its pattern is the manager\'s strength x the indices.' : '.') + '</p>' +
+      ' <b>In the plan</b> the pattern share (' + Math.round(share * 100) + '%) of the demand is lowered by the caution ' + caution + ': demand x ' + (1 - caution * share).toFixed(3) + (film.isNew ? '. This film has no records: its pattern is the manager\'s strength x the indices, and it is planned without the caution discount (flagged instead).' : '.') + '</p>' +
       (scr.length ? '<div class="scrollbox"><table><thead><tr><th>Date</th><th>Day</th><th class="n">Tickets</th><th class="n">Exposure w</th><th>Note</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<p class="muted">No screening of this film at this time and day type in the records.</p>') + '</div>');
   }
 
@@ -2498,9 +2757,9 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
       (r.proposed.pins.length ? '<tr><td>+ pinned cells (fixed by you)</td><td class="n">' + fmt1(r.proposed.planValue - lp.objective) + '</td></tr><tr><td>Planning value of the whole plan</td><td class="n">' + fmt1(r.proposed.planValue) + '</td></tr>' : '') +
       '<tr><td>Largest reduced cost (must be &le; 0)</td><td class="n">' + lp.maxReducedCost.toExponential(1) + '</td></tr><tr><td>Whole-numbered schedule</td><td class="n">yes (checked)</td></tr></tbody></table>' +
       '<p class="small">Bound = value, so no feasible week scores higher on the <i>planning value</i> (expected tickets with the caution applied) under the stated formulation and estimates' + (r.proposed.pins.length ? ', given your pins' : '') + '. It says nothing about rules or effects the formulation omits, and a plan without caution would promise more expected tickets while being riskier (see the comparison below).</p>' +
-      '<h3 style="margin-top:.8rem">What the rules cost (dual prices)</h3>' +
-      (pr.min.length ? '<ul class="small">' + pr.min.map((x) => '<li>Each required show of <b>' + esc(x.title) + '</b> costs ' + fmt1(x.price) + ' expected tickets (its minimum binds).</li>').join('') + '</ul>' : '<p class="small">No minimum-show rule binds: the minimums cost nothing this week.</p>') +
-      '<p class="tiny dim">Valid for small changes only (one show more or less).</p>';
+      '<h3 style="margin-top:.8rem">What the minimum-show rules cost (re-solved)</h3>' +
+      (r.ruleCosts.length ? '<ul class="small">' + r.ruleCosts.map((c) => '<li><b>' + esc(c.title) + '</b> (minimum ' + c.min + ', binding): one more required show costs ' + fmt1(c.upTickets) + ' expected tickets; one fewer would gain ' + (c.downTickets === null ? 'n/a' : fmt1(c.downTickets)) + '.</li>').join('') + '</ul>' : '<p class="small">No minimum-show rule binds: the minimums cost nothing this week.</p>') +
+      '<p class="tiny dim">Computed by solving the week again with the minimum one higher and one lower (expected tickets, caution not applied). The LP\'s dual prices hold in one direction only here, so they are not quoted as costs.</p>';
     const bt = r.backtest;
     $('backtestPanel').innerHTML = '<h3>Does the estimate predict? (backtest on the records)</h3>' + (bt.available
       ? '<p class="small">Learn from the first ' + bt.trainWeeks + ' week(s), predict the ' + bt.testScreenings + ' screenings of the last recorded week (from ' + bt.cut + '). Error = weighted absolute percentage error (lower is better); a sold-out screening counts only if the prediction is below its seats.</p><table><thead><tr><th>Estimate</th><th class="n">Error (WAPE)</th></tr></thead><tbody>' + bt.methods.map((m) => '<tr><td>' + esc(m.label) + '</td><td class="n">' + (m.wape * 100).toFixed(1) + '%</td></tr>').join('') + '</tbody></table><p class="tiny dim">This checks only combinations the past programmer chose; untried combinations cannot be backtested, which is why the plan is cautious there and why the trial (proposal) tests a few deliberately.</p>'
@@ -2520,7 +2779,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
     const studyTable = (res, nSeeds) => {
       const worlds = E.STUDY_WORLDS;
       const cell = (w, k) => { const x = res[w.id][k]; if (!x) return '<td></td><td></td>'; return '<td class="n">' + fmt(x.mean) + '</td><td class="n">' + (x.ci95 === undefined ? '' : sgn(x.diff) + ' &plusmn; ' + fmt(x.ci95)) + '</td>'; };
-      const rowsDef = [['selected', '<b>Selected: Bayes estimate, k = 1, caution 0.5 + LP</b>']].concat(E.STUDY_VARIANTS.slice(1).map((v) => [v.key, esc(v.label)])).concat([['simulated past programmer', 'Simulated past programmer (mock human)'], ['rule of thumb (baseline)', 'Rule of thumb (baseline)'], ['oracle (knows true demand)', 'Oracle (knows true demand)']]);
+      const rowsDef = [['selected', '<b>Selected: Bayes estimate, k = 4, caution 0.5 + LP</b>']].concat(E.STUDY_VARIANTS.slice(1).map((v) => [v.key, esc(v.label)])).concat([['simulated past programmer', 'Simulated past programmer (mock human)'], ['repeat last week', 'Repeat last week (second reference)'], ['rule of thumb (baseline)', 'Rule of thumb (baseline)'], ['oracle (knows true demand)', 'Oracle (knows true demand)']]);
       return '<div class="tablewrap"><table><thead><tr><th>Method (' + nSeeds + ' histories per world)</th>' + worlds.map((w) => '<th class="n">' + esc(w.label) + '</th><th class="n">vs selected</th>').join('') + '</tr></thead><tbody>' +
         rowsDef.map(([k, label]) => '<tr><td>' + label + '</td>' + worlds.map((w) => cell(w, k)).join('') + '</tr>').join('') +
         '<tr><td class="dim">Combinations tried in the records</td>' + worlds.map((w) => '<td class="n dim">' + Math.round(100 * res[w.id]['tested combinations share'].mean) + '%</td><td></td>').join('') + '</tr></tbody></table></div>';
@@ -2529,17 +2788,18 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
       '<p class="small">Only possible because the data are generated: the hidden true demand is used to compute what each plan would really sell on average. It checks the mechanism, not a real venue.</p>' +
       '<div class="kpis"><div class="kpi"><div class="l">Rule of thumb</div><div class="v">' + fmt(b.truth) + '</div><div class="s">true expected tickets</div></div><div class="kpi"><div class="l">SLOTWISE</div><div class="v up">' + fmt(p.truth) + '</div><div class="s">' + sgn(dR(p.truth, b.truth)) + ' (' + pctR(p.truth, b.truth) + ')</div></div>' + (o ? '<div class="kpi"><div class="l">Oracle (knows the truth)</div><div class="v">' + fmt(o) + '</div><div class="s">SLOTWISE reaches ' + (Math.round(p.truth) / Math.round(o) * 100).toFixed(1) + '%</div></div>' : '') + '<div class="kpi"><div class="l">Promised vs true (SLOTWISE)</div><div class="v">' + fmt(p.tickets) + ' / ' + fmt(p.truth) + '</div><div class="s">estimate vs hidden truth</div></div></div>' +
       untriedLine + '<div class="actions"><button class="btn ghost sm" type="button" id="scoreAlt">Score the alternatives on these settings</button><span class="small muted">re-plans with each alternative estimate / caution and scores against the truth</span></div><div id="altTable"></div>' +
-      '<h3 style="margin-top:1rem">' + STUDY.seeds + ' fictional histories per world (default settings, seeds 1-' + STUDY.seeds + ')</h3><p class="small">Mean true expected tickets per week, and the paired difference to the selected method with a 95% interval. <b>Sensible past:</b> the past programmer knew roughly what sells (default). <b>Random past:</b> the past schedule was close to random, so every combination was tried. <b>Random past, 1 week:</b> untried combinations are untried by chance, not because they sell badly.</p>' +
+      '<h3 style="margin-top:1rem">' + STUDY.seeds + ' fictional histories per world (default settings, seeds ' + STUDY.seedFrom + '-' + (STUDY.seedFrom + STUDY.seeds - 1) + '; caution and k were tuned on other seeds, 1-40)</h3><p class="small">Mean true expected tickets per week, and the paired difference to the selected method with a 95% interval. <b>Sensible past:</b> the past programmer knew roughly what sells (default). <b>Random past:</b> the past schedule was close to random, so every combination was tried. <b>Random past, 1 week:</b> untried combinations are untried by chance, not because they sell badly. <b>Sensible past + new release:</b> a film without records joins the slate.</p>' +
       '<div id="studyTable">' + studyTable(STUDY.results, STUDY.seeds) + '</div>' +
-      '<div class="actions"><button class="btn ghost sm" type="button" id="rerunStudy">Re-run this study in the browser</button><button class="btn ghost sm" type="button" id="bruteBtn">Check the optimiser by brute force (100 small weeks)</button><span class="small muted" id="studyNote">Embedded table computed with this engine by the repository script; the buttons recompute it here.</span></div>' +
-      '<p class="tiny dim">Reading: caution matters when untried combinations were skipped for a reason (sensible past) and costs little when they were not; values above 0.5 gain a few tickets in the first world but lose where untried means "untried by chance". The sold-out correction was rejected because it did not improve plans.</p>';
+      '<div class="actions"><button class="btn ghost sm" type="button" id="rerunStudy">Re-run this study in the browser</button><button class="btn ghost sm" type="button" id="bruteBtn">Check the optimiser by brute force (100 random one-day instances)</button><span class="small muted" id="studyNote">Embedded table computed with this engine by the repository script; the buttons recompute it here.</span></div>' +
+      '<p class="tiny dim">Reading: caution matters most with a new release and when untried combinations were skipped for a reason, and higher values lose where untried means "untried by chance"; 0.5 is the balance. Caution on films without records starves new releases. The sold-out correction helps in one world only and was left out for simplicity.</p>';
     $('rerunStudy').addEventListener('click', () => {
       const btn = $('rerunStudy');
       btn.disabled = true;
       const nS = STUDY.seeds, worlds = E.STUDY_WORLDS, per = {};
       worlds.forEach((w) => { per[w.id] = []; });
       const jobs = [];
-      worlds.forEach((w) => { for (let seed = 1; seed <= nS; seed++) jobs.push([w, seed]); });
+      const from = STUDY.seedFrom || 1;
+      worlds.forEach((w) => { for (let seed = from; seed < from + nS; seed++) jobs.push([w, seed]); });
       let i = 0;
       const t0 = performance.now();
       (function step() {
@@ -2557,7 +2817,7 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
     $('bruteBtn').addEventListener('click', () => {
       const t0 = performance.now();
       const bf = E.bruteForceCheck(100, 7);
-      $('studyNote').textContent = 'Brute force: ' + bf.agree + ' of ' + bf.compared + ' feasible small weeks give exactly the simplex optimum (' + bf.infeasibleBoth + ' infeasible instances rejected by both); ' + Math.round(performance.now() - t0) + ' ms.';
+      $('studyNote').textContent = 'Brute force: ' + bf.agree + ' of ' + bf.compared + ' feasible one-day instances (up to 2 show-times, 2 halls, 3 films; every schedule enumerated) give exactly the simplex optimum (' + bf.infeasibleBoth + ' infeasible instances rejected by both); ' + Math.round(performance.now() - t0) + ' ms.';
     });
     $('scoreAlt').addEventListener('click', () => {
       const cm = E.compareMethods(settings);

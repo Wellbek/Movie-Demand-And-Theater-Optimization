@@ -197,6 +197,7 @@
       $('heroDesc').textContent = 'No plan is shown for these settings; the reasons and fixes are listed below. ' + (result ? 'Everything further down belongs to the last successful run and is marked STALE.' : '');
       $('heroFp').textContent = result ? 'last successful run (stale): seed ' + result.settings.seed + ' · fingerprint ' + result.fingerprint : '';
       $('heroFp').style.opacity = '.5';
+      $('heroArt').innerHTML = heroArt(null);
     }
   }
 
@@ -220,8 +221,8 @@
     $('heroTitle').textContent = 'Next week at ' + r.settings.venue;
     $('heroDesc').style.opacity = '';
     $('heroFp').style.opacity = '';
-    $('heroMeta').innerHTML = '<span class="match">' + pctR(p.tickets, b.tickets) + ' expected tickets vs rule of thumb</span><span class="chip">12-18 OCT 2026</span><span>' + open + ' hall' + (open === 1 ? '' : 's') + '</span><span>' + r.times.length * 7 + ' show-times</span><span class="chip">' + r.slate.length + ' FILMS</span><span class="chip">FICTIONAL</span>';
-    $('heroDesc').innerHTML = 'SLOTWISE plans ' + fmt(p.tickets) + ' expected tickets against ' + fmt(b.tickets) + ' for the rule of thumb (' + sgn(gain) + '), under the same inputs and rules, and uses ' + p.untested + ' untried film-time combination' + (p.untested === 1 ? '' : 's') + ' against ' + b.untested + '. No other week scores higher on the planning value (expected tickets with the caution applied): the duality certificate ' + (r.proposed.certificateOk ? 'holds' : 'FAILED') + '. Fictional data; real effects are untested.';
+    $('heroMeta').innerHTML = '<span class="match">' + pctR(p.tickets, b.tickets) + ' expected tickets vs rule of thumb</span><span class="chip">12-18 OCT 2026</span><span>' + open + ' hall' + (open === 1 ? '' : 's') + '</span><span>' + r.times.length * 7 + ' show-times</span><span class="chip">' + r.slate.length + ' FILMS</span>';
+    $('heroDesc').innerHTML = 'On its own demand estimate, SLOTWISE plans ' + fmt(p.tickets) + ' expected tickets against ' + fmt(b.tickets) + ' for the rule of thumb (' + sgn(gain) + '), under the same inputs and rules, and uses ' + p.untested + ' untried film-time combination' + (p.untested === 1 ? '' : 's') + ' against ' + b.untested + '. No other week scores higher on the planning value (expected tickets with the caution applied): the duality certificate ' + (r.proposed.certificateOk ? 'holds' : 'FAILED') + '. Fictional data; real effects are untested.';
     $('heroFp').textContent = 'seed ' + r.settings.seed + ' · fingerprint ' + r.fingerprint + ' · ' + fmt(r.rowCount) + ' purchase rows · computed in ' + Math.round(r.ms) + ' ms';
   }
 
@@ -241,7 +242,7 @@
     $('slateRow').innerHTML = stats.map((x) => {
       const top = ranked.indexOf(x) < 3;
       return '<div class="card" tabindex="0" role="button" data-film="' + x.i + '" aria-label="' + esc(x.f.title) + ' details"><div class="poster">' + poster(x.f) + '</div>' + (top ? '<div class="badge-top">TOP<b>' + (ranked.indexOf(x) + 1) + '</b></div>' : '') + (x.f.isNew ? '<span class="badge-new">Opens this week</span>' : '') +
-        '<div class="bob"><div class="icons"><span class="circle fill">&#9654;</span><span class="circle">+</span><span class="circle" style="margin-left:auto">&#8964;</span></div>' +
+        '<div class="bob"><div class="icons"><span class="circle fill" title="Open details">&#9654;</span></div>' +
         '<div class="match" style="font-size:.8rem">' + x.shows + ' shows · ' + fmt(x.tickets) + ' exp. tickets</div>' +
         '<div class="tags" style="margin:.25rem 0"><span class="chip">' + x.f.rating + (x.f.rating === 'ALL' ? '' : '+') + '</span><span>' + x.f.runtime + ' min</span><span>' + esc(x.f.genre) + '</span></div>' +
         '<div class="dim">' + (x.n ? x.n + ' screenings in the records' : 'No records: manager estimate') + ' · rule of thumb ' + x.baseShows + ' shows</div></div></div>';
@@ -326,7 +327,7 @@
       el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
     });
     $('heatLegend').innerHTML = '<span><i style="background:rgba(229,9,20,.15)"></i>low</span><span><i style="background:rgba(229,9,20,.93)"></i>high (max ' + fmt(max) + ')</span><span><i style="background:repeating-linear-gradient(135deg,rgba(255,255,255,.4) 0 3px,transparent 3px 6px)"></i>untried: pattern only</span><span><i style="background:#fff;border-radius:50%"></i>sold out at least once</span>';
-    barChart('chartS', P.times.map((t) => E.toHHMM(t % 1440)), [{ name: 'S', color: '#e50914', values: Array.from(P.est.S) }], { ref: 1, decimals: 2 });
+    barChart('chartS', P.times.map((t) => E.toHHMM(t % 1440)), [{ name: 'General audience', color: '#e50914', values: Array.from(P.est.SG[0]) }, { name: 'Family films', color: '#54b9ff', values: Array.from(P.est.SG[1]) }], { ref: 1, decimals: 2 });
     barChart('chartD', E.DAY_NAMES, [{ name: 'D', color: '#e50914', values: Array.from(P.est.D) }], { ref: 1, decimals: 2 });
   }
 
@@ -344,12 +345,12 @@
     const share = c.priorShare;
     const caution = r.settings.caution;
     openModal('<div class="mbody" style="padding-top:2rem"><h2 id="modalTitle">' + esc(film.title) + ' · ' + E.toHHMM(P.times[s] % 1440) + ' · ' + E.DAY_TYPE_NAMES[t] + '</h2>' +
-      '<div class="kpis" style="margin:.8rem 0"><div class="kpi"><div class="l">Pattern (prior mean)</div><div class="v">' + f2(P2) + '</div><div class="s">F ' + f2(P.est.F[f]) + ' x S ' + P.est.S[s].toFixed(3) + ' x D ' + P.est.typeMean[t].toFixed(3) + '</div></div>' +
+      '<div class="kpis" style="margin:.8rem 0"><div class="kpi"><div class="l">Pattern (prior mean)</div><div class="v">' + f2(P2) + '</div><div class="s">F ' + f2(P.est.F[f]) + ' x S<sub>' + (P.est.grp[f] ? 'family' : 'general') + '</sub> ' + P.est.Sf(f, s).toFixed(3) + ' x D ' + P.est.typeMean[t].toFixed(3) + '</div></div>' +
       '<div class="kpi"><div class="l">Own screenings</div><div class="v">' + (c.n ? Math.round(Y) + ' / ' + f2(W2) : 'none') + '</div><div class="s">' + (c.n ? 'tickets / exposure = ' + f2(Y / W2) + ' per screening (' + c.n + ' screening' + (c.n === 1 ? '' : 's') + ')' : 'never screened at this time and day type') + '</div></div>' +
       '<div class="kpi"><div class="l">Posterior mean</div><div class="v">' + f2(a2 / b2) + '</div><div class="s">' + Math.round((100 * W2) / b2) + '% own evidence, ' + Math.round((100 * k) / b2) + '% pattern</div></div></div>' +
       '<p class="small">Prior Gamma(k x pattern, k) = Gamma(' + f2(k * P2) + ', ' + k + '): mean = pattern, worth k = ' + k + ' screening(s). Posterior Gamma(' + f2(k * P2) + ' + ' + Math.round(Y) + ', ' + k + ' + ' + f2(W2) + ') = Gamma(' + f2(a2) + ', ' + f2(b2) + '): mean = ' + f2(a2) + ' / ' + f2(b2) + ' = <b>' + f2(a2 / b2) + '</b> tickets per screening on an average ' + E.DAY_TYPE_NAMES[t] + ' day.' +
       (sold ? ' ' + sold + ' of ' + c.n + ' screenings were read as sold out (total = a hall size): their totals are lower bounds and enter as recorded, so this estimate is cautious.' : '') +
-      ' <b>In the plan</b> the pattern share (' + Math.round(share * 100) + '%) of the demand is lowered by the caution ' + caution + ': demand x ' + (1 - caution * share).toFixed(3) + (film.isNew ? '. This film has no records: its pattern is the manager\'s strength x the indices.' : '.') + '</p>' +
+      ' <b>In the plan</b> the pattern share (' + Math.round(share * 100) + '%) of the demand is lowered by the caution ' + caution + ': demand x ' + (1 - caution * share).toFixed(3) + (film.isNew ? '. This film has no records: its pattern is the manager\'s strength x the indices, and it is planned without the caution discount (flagged instead).' : '.') + '</p>' +
       (scr.length ? '<div class="scrollbox"><table><thead><tr><th>Date</th><th>Day</th><th class="n">Tickets</th><th class="n">Exposure w</th><th>Note</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<p class="muted">No screening of this film at this time and day type in the records.</p>') + '</div>');
   }
 
@@ -460,9 +461,9 @@
       (r.proposed.pins.length ? '<tr><td>+ pinned cells (fixed by you)</td><td class="n">' + fmt1(r.proposed.planValue - lp.objective) + '</td></tr><tr><td>Planning value of the whole plan</td><td class="n">' + fmt1(r.proposed.planValue) + '</td></tr>' : '') +
       '<tr><td>Largest reduced cost (must be &le; 0)</td><td class="n">' + lp.maxReducedCost.toExponential(1) + '</td></tr><tr><td>Whole-numbered schedule</td><td class="n">yes (checked)</td></tr></tbody></table>' +
       '<p class="small">Bound = value, so no feasible week scores higher on the <i>planning value</i> (expected tickets with the caution applied) under the stated formulation and estimates' + (r.proposed.pins.length ? ', given your pins' : '') + '. It says nothing about rules or effects the formulation omits, and a plan without caution would promise more expected tickets while being riskier (see the comparison below).</p>' +
-      '<h3 style="margin-top:.8rem">What the rules cost (dual prices)</h3>' +
-      (pr.min.length ? '<ul class="small">' + pr.min.map((x) => '<li>Each required show of <b>' + esc(x.title) + '</b> costs ' + fmt1(x.price) + ' expected tickets (its minimum binds).</li>').join('') + '</ul>' : '<p class="small">No minimum-show rule binds: the minimums cost nothing this week.</p>') +
-      '<p class="tiny dim">Valid for small changes only (one show more or less).</p>';
+      '<h3 style="margin-top:.8rem">What the minimum-show rules cost (re-solved)</h3>' +
+      (r.ruleCosts.length ? '<ul class="small">' + r.ruleCosts.map((c) => '<li><b>' + esc(c.title) + '</b> (minimum ' + c.min + ', binding): one more required show costs ' + fmt1(c.upTickets) + ' expected tickets; one fewer would gain ' + (c.downTickets === null ? 'n/a' : fmt1(c.downTickets)) + '.</li>').join('') + '</ul>' : '<p class="small">No minimum-show rule binds: the minimums cost nothing this week.</p>') +
+      '<p class="tiny dim">Computed by solving the week again with the minimum one higher and one lower (expected tickets, caution not applied). The LP\'s dual prices hold in one direction only here, so they are not quoted as costs.</p>';
     const bt = r.backtest;
     $('backtestPanel').innerHTML = '<h3>Does the estimate predict? (backtest on the records)</h3>' + (bt.available
       ? '<p class="small">Learn from the first ' + bt.trainWeeks + ' week(s), predict the ' + bt.testScreenings + ' screenings of the last recorded week (from ' + bt.cut + '). Error = weighted absolute percentage error (lower is better); a sold-out screening counts only if the prediction is below its seats.</p><table><thead><tr><th>Estimate</th><th class="n">Error (WAPE)</th></tr></thead><tbody>' + bt.methods.map((m) => '<tr><td>' + esc(m.label) + '</td><td class="n">' + (m.wape * 100).toFixed(1) + '%</td></tr>').join('') + '</tbody></table><p class="tiny dim">This checks only combinations the past programmer chose; untried combinations cannot be backtested, which is why the plan is cautious there and why the trial (proposal) tests a few deliberately.</p>'
@@ -482,7 +483,7 @@
     const studyTable = (res, nSeeds) => {
       const worlds = E.STUDY_WORLDS;
       const cell = (w, k) => { const x = res[w.id][k]; if (!x) return '<td></td><td></td>'; return '<td class="n">' + fmt(x.mean) + '</td><td class="n">' + (x.ci95 === undefined ? '' : sgn(x.diff) + ' &plusmn; ' + fmt(x.ci95)) + '</td>'; };
-      const rowsDef = [['selected', '<b>Selected: Bayes estimate, k = 1, caution 0.5 + LP</b>']].concat(E.STUDY_VARIANTS.slice(1).map((v) => [v.key, esc(v.label)])).concat([['simulated past programmer', 'Simulated past programmer (mock human)'], ['rule of thumb (baseline)', 'Rule of thumb (baseline)'], ['oracle (knows true demand)', 'Oracle (knows true demand)']]);
+      const rowsDef = [['selected', '<b>Selected: Bayes estimate, k = 4, caution 0.5 + LP</b>']].concat(E.STUDY_VARIANTS.slice(1).map((v) => [v.key, esc(v.label)])).concat([['simulated past programmer', 'Simulated past programmer (mock human)'], ['repeat last week', 'Repeat last week (second reference)'], ['rule of thumb (baseline)', 'Rule of thumb (baseline)'], ['oracle (knows true demand)', 'Oracle (knows true demand)']]);
       return '<div class="tablewrap"><table><thead><tr><th>Method (' + nSeeds + ' histories per world)</th>' + worlds.map((w) => '<th class="n">' + esc(w.label) + '</th><th class="n">vs selected</th>').join('') + '</tr></thead><tbody>' +
         rowsDef.map(([k, label]) => '<tr><td>' + label + '</td>' + worlds.map((w) => cell(w, k)).join('') + '</tr>').join('') +
         '<tr><td class="dim">Combinations tried in the records</td>' + worlds.map((w) => '<td class="n dim">' + Math.round(100 * res[w.id]['tested combinations share'].mean) + '%</td><td></td>').join('') + '</tr></tbody></table></div>';
@@ -491,17 +492,18 @@
       '<p class="small">Only possible because the data are generated: the hidden true demand is used to compute what each plan would really sell on average. It checks the mechanism, not a real venue.</p>' +
       '<div class="kpis"><div class="kpi"><div class="l">Rule of thumb</div><div class="v">' + fmt(b.truth) + '</div><div class="s">true expected tickets</div></div><div class="kpi"><div class="l">SLOTWISE</div><div class="v up">' + fmt(p.truth) + '</div><div class="s">' + sgn(dR(p.truth, b.truth)) + ' (' + pctR(p.truth, b.truth) + ')</div></div>' + (o ? '<div class="kpi"><div class="l">Oracle (knows the truth)</div><div class="v">' + fmt(o) + '</div><div class="s">SLOTWISE reaches ' + (Math.round(p.truth) / Math.round(o) * 100).toFixed(1) + '%</div></div>' : '') + '<div class="kpi"><div class="l">Promised vs true (SLOTWISE)</div><div class="v">' + fmt(p.tickets) + ' / ' + fmt(p.truth) + '</div><div class="s">estimate vs hidden truth</div></div></div>' +
       untriedLine + '<div class="actions"><button class="btn ghost sm" type="button" id="scoreAlt">Score the alternatives on these settings</button><span class="small muted">re-plans with each alternative estimate / caution and scores against the truth</span></div><div id="altTable"></div>' +
-      '<h3 style="margin-top:1rem">' + STUDY.seeds + ' fictional histories per world (default settings, seeds 1-' + STUDY.seeds + ')</h3><p class="small">Mean true expected tickets per week, and the paired difference to the selected method with a 95% interval. <b>Sensible past:</b> the past programmer knew roughly what sells (default). <b>Random past:</b> the past schedule was close to random, so every combination was tried. <b>Random past, 1 week:</b> untried combinations are untried by chance, not because they sell badly.</p>' +
+      '<h3 style="margin-top:1rem">' + STUDY.seeds + ' fictional histories per world (default settings, seeds ' + STUDY.seedFrom + '-' + (STUDY.seedFrom + STUDY.seeds - 1) + '; caution and k were tuned on other seeds, 1-40)</h3><p class="small">Mean true expected tickets per week, and the paired difference to the selected method with a 95% interval. <b>Sensible past:</b> the past programmer knew roughly what sells (default). <b>Random past:</b> the past schedule was close to random, so every combination was tried. <b>Random past, 1 week:</b> untried combinations are untried by chance, not because they sell badly. <b>Sensible past + new release:</b> a film without records joins the slate.</p>' +
       '<div id="studyTable">' + studyTable(STUDY.results, STUDY.seeds) + '</div>' +
-      '<div class="actions"><button class="btn ghost sm" type="button" id="rerunStudy">Re-run this study in the browser</button><button class="btn ghost sm" type="button" id="bruteBtn">Check the optimiser by brute force (100 small weeks)</button><span class="small muted" id="studyNote">Embedded table computed with this engine by the repository script; the buttons recompute it here.</span></div>' +
-      '<p class="tiny dim">Reading: caution matters when untried combinations were skipped for a reason (sensible past) and costs little when they were not; values above 0.5 gain a few tickets in the first world but lose where untried means "untried by chance". The sold-out correction was rejected because it did not improve plans.</p>';
+      '<div class="actions"><button class="btn ghost sm" type="button" id="rerunStudy">Re-run this study in the browser</button><button class="btn ghost sm" type="button" id="bruteBtn">Check the optimiser by brute force (100 random one-day instances)</button><span class="small muted" id="studyNote">Embedded table computed with this engine by the repository script; the buttons recompute it here.</span></div>' +
+      '<p class="tiny dim">Reading: caution matters most with a new release and when untried combinations were skipped for a reason, and higher values lose where untried means "untried by chance"; 0.5 is the balance. Caution on films without records starves new releases. The sold-out correction helps in one world only and was left out for simplicity.</p>';
     $('rerunStudy').addEventListener('click', () => {
       const btn = $('rerunStudy');
       btn.disabled = true;
       const nS = STUDY.seeds, worlds = E.STUDY_WORLDS, per = {};
       worlds.forEach((w) => { per[w.id] = []; });
       const jobs = [];
-      worlds.forEach((w) => { for (let seed = 1; seed <= nS; seed++) jobs.push([w, seed]); });
+      const from = STUDY.seedFrom || 1;
+      worlds.forEach((w) => { for (let seed = from; seed < from + nS; seed++) jobs.push([w, seed]); });
       let i = 0;
       const t0 = performance.now();
       (function step() {
@@ -519,7 +521,7 @@
     $('bruteBtn').addEventListener('click', () => {
       const t0 = performance.now();
       const bf = E.bruteForceCheck(100, 7);
-      $('studyNote').textContent = 'Brute force: ' + bf.agree + ' of ' + bf.compared + ' feasible small weeks give exactly the simplex optimum (' + bf.infeasibleBoth + ' infeasible instances rejected by both); ' + Math.round(performance.now() - t0) + ' ms.';
+      $('studyNote').textContent = 'Brute force: ' + bf.agree + ' of ' + bf.compared + ' feasible one-day instances (up to 2 show-times, 2 halls, 3 films; every schedule enumerated) give exactly the simplex optimum (' + bf.infeasibleBoth + ' infeasible instances rejected by both); ' + Math.round(performance.now() - t0) + ' ms.';
     });
     $('scoreAlt').addEventListener('click', () => {
       const cm = E.compareMethods(settings);

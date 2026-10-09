@@ -18,14 +18,14 @@
   // generator. The planner never reads them; it sees only the purchase records.
   // ---------------------------------------------------------------------------
   const CATALOG = [
-    { tag: 'caterpillar-man', title: 'Caterpillar-Man', tagline: 'No Way Down', genre: 'Superhero', profile: 'action', runtime: 148, rating: '12', base: 104, hue: 355 },
+    { tag: 'caterpillar-man', title: 'Caterpillar-Man', tagline: 'No Way Down', genre: 'Superhero', profile: 'action', runtime: 142, rating: '12', base: 104, hue: 355 },
     { tag: 'avocado-2', title: 'Avocado', tagline: 'The Way of Guac', genre: 'Sci-fi epic', profile: 'general', runtime: 162, rating: '12', base: 90, hue: 145 },
-    { tag: 'defrosted-2', title: 'Defrosted II', tagline: 'Let It Drip', genre: 'Family animation', profile: 'family', runtime: 103, rating: 'ALL', base: 78, hue: 190 },
+    { tag: 'defrosted-2', title: 'Defrosted II', tagline: 'Let It Drip', genre: 'Family animation', audience: 'family', profile: 'family', runtime: 99, rating: 'ALL', base: 78, hue: 190 },
     { tag: 'gigantic', title: 'Gigantic', tagline: 'Never Let Go of the Door', genre: 'Romance epic', profile: 'drama', runtime: 165, rating: '12', base: 58, hue: 235 },
-    { tag: 'outside-in-2', title: 'Outside In 2', tagline: 'New Feelings', genre: 'Family animation', profile: 'family', runtime: 96, rating: 'ALL', base: 66, hue: 48 },
+    { tag: 'outside-in-2', title: 'Outside In 2', tagline: 'New Feelings', genre: 'Family animation', audience: 'family', profile: 'family', runtime: 92, rating: 'ALL', base: 66, hue: 48 },
     { tag: 'oppenhammer', title: 'Oppenhammer', tagline: 'The Loudest Workshop', genre: 'Historical drama', profile: 'drama', runtime: 158, rating: '15', base: 45, hue: 18 },
-    { tag: 'triassic-world', title: 'Triassic World', tagline: 'Life Finds a Way Earlier', genre: 'Adventure', profile: 'action', runtime: 124, rating: '12', base: 60, hue: 95 },
-    { tag: 'top-bun', title: 'Top Bun', tagline: 'Maverick Bakery', genre: 'Action comedy', profile: 'general', runtime: 131, rating: '12', base: 50, hue: 320 },
+    { tag: 'triassic-world', title: 'Triassic World', tagline: 'Life Finds a Way Earlier', genre: 'Adventure', profile: 'action', runtime: 119, rating: '12', base: 60, hue: 95 },
+    { tag: 'top-bun', title: 'Top Bun', tagline: 'Maverick Bakery', genre: 'Action comedy', profile: 'general', runtime: 127, rating: '12', base: 50, hue: 320 },
   ];
   // Boundary case: a release that opens in the planning week, so it has no purchase records.
   const NEW_RELEASE = { tag: 'scavengers-endgame', title: 'The Scavengers', tagline: 'Endgame Sale', genre: 'Superhero', profile: 'action', runtime: 155, rating: '12', base: 120, hue: 285, isNew: true };
@@ -68,7 +68,7 @@
       newReleaseStrength: 1.3,
       limits: {}, // tag -> { min, max }; missing means DEFAULT_MIN / no cap
       caution: 0.5, // share of value removed from never-screened film x time x day-type combinations
-      credibility: 1, // k: screenings' worth of weight given to the pattern in each cell
+      credibility: 4, // k: screenings' worth of weight given to the pattern in each cell (tuned, src/tune.cjs)
       nbShape: 6, // generator only: demand dispersion (distribution 1)
       pastNoise: 0.5, // generator only: judgement noise of the fictional past programmer
       extraRows: '',
@@ -369,7 +369,13 @@
     const o = opts || {};
     const k = o.credibility === undefined ? st.credibility : o.credibility;
     const nF = slate.length, nS = st.slots;
-    const F = new Float64Array(nF).fill(0), S = new Float64Array(nS).fill(1), D = new Float64Array(7).fill(1);
+    // Time-of-day index per audience group (family films vs all others): the manager marks a film as
+    // a family film on the slate [ASSUMPTION], so a family film is not assumed to share the evening peak.
+    const NG = 2;
+    const grp = slate.map((f) => (f.audience === 'family' ? 1 : 0));
+    const F = new Float64Array(nF).fill(0), D = new Float64Array(7).fill(1);
+    const SG = [new Float64Array(nS).fill(1), new Float64Array(nS).fill(1)];
+    const Sx = (x) => SG[grp[x.f]][x.s];
     const hasRows = new Array(nF).fill(false);
     screenings.forEach((x) => { hasRows[x.f] = true; });
     // start: plain mean tickets per screening of each film
@@ -380,29 +386,44 @@
     // (max(total, pattern), applied inside the fit) was tested in the mock study and did not improve
     // plans, so it is kept only as a comparison option; the screening log is the real fix.
     const correct = o.soldOutCorrection === true;
-    const adj = (x) => (correct && x.soldOut ? Math.max(x.tickets, F[x.f] * S[x.s] * D[x.d]) : x.tickets);
+    const adj = (x) => (correct && x.soldOut ? Math.max(x.tickets, F[x.f] * Sx(x) * D[x.d]) : x.tickets);
     // Maximum likelihood for Poisson counts with mean F*S*D: each factor = observed / expected over its rows.
     let iterations = 0;
-    for (let it = 0; it < 200; it++) {
+    for (let it = 0; it < 300; it++) {
       iterations = it + 1;
       const y = screenings.map(adj);
       const nf = new Float64Array(nF), df = new Float64Array(nF);
-      screenings.forEach((x, i) => { nf[x.f] += y[i]; df[x.f] += S[x.s] * D[x.d]; });
+      screenings.forEach((x, i) => { nf[x.f] += y[i]; df[x.f] += Sx(x) * D[x.d]; });
       const F2 = F.map((v, f) => (df[f] ? nf[f] / df[f] : 0));
-      const ns = new Float64Array(nS), ds = new Float64Array(nS);
-      screenings.forEach((x, i) => { ns[x.s] += y[i]; ds[x.s] += F2[x.f] * D[x.d]; });
-      const S2 = S.map((v, s) => (ds[s] ? ns[s] / ds[s] : 1));
+      const ns = [new Float64Array(nS), new Float64Array(nS)], ds = [new Float64Array(nS), new Float64Array(nS)];
+      const pn = new Float64Array(nS), pd = new Float64Array(nS);
+      screenings.forEach((x, i) => { const g = grp[x.f]; ns[g][x.s] += y[i]; ds[g][x.s] += F2[x.f] * D[x.d]; pn[x.s] += y[i]; pd[x.s] += F2[x.f] * D[x.d]; });
+      // a group never screened at a time takes the index of its nearest screened time (the lower one on
+      // a tie, to stay cautious); a group with no screenings at all uses the pooled index
+      const S2 = [0, 1].map((g) => {
+        const own = Array.from({ length: nS }, (v, s) => (ds[g][s] ? ns[g][s] / ds[g][s] : null));
+        return own.map((v, s) => {
+          if (v !== null) return v;
+          for (let dist = 1; dist < nS; dist++) {
+            const c = [own[s - dist], own[s + dist]].filter((x) => x !== null && x !== undefined);
+            if (c.length) return Math.min(...c);
+          }
+          return pd[s] ? pn[s] / pd[s] : 1;
+        });
+      });
       const nd = new Float64Array(7), dd = new Float64Array(7);
-      screenings.forEach((x, i) => { nd[x.d] += y[i]; dd[x.d] += F2[x.f] * S2[x.s]; });
+      screenings.forEach((x, i) => { nd[x.d] += y[i]; dd[x.d] += F2[x.f] * S2[grp[x.f]][x.s]; });
       const D2 = D.map((v, d) => (dd[d] ? nd[d] / dd[d] : 1));
-      // scale so time and weekday indices average 1; film strength carries the level
-      const ms = S2.reduce((a, b) => a + b, 0) / nS, md = D2.reduce((a, b) => a + b, 0) / 7;
+      // scale so each group's time index and the weekday index average 1; film strength carries the level
+      const ms = S2.map((a) => a.reduce((p, q) => p + q, 0) / nS), md = D2.reduce((a, b) => a + b, 0) / 7;
       let change = 0;
-      for (let f = 0; f < nF; f++) { const v = F2[f] * ms * md; change = Math.max(change, Math.abs(v - F[f])); F[f] = v; }
-      for (let s = 0; s < nS; s++) S[s] = S2[s] / ms;
+      for (let f = 0; f < nF; f++) { const v = F2[f] * ms[grp[f]] * md; change = Math.max(change, Math.abs(v - F[f])); F[f] = v; }
+      for (let g = 0; g < NG; g++) for (let s = 0; s < nS; s++) SG[g][s] = S2[g][s] / ms[g];
       for (let d = 0; d < 7; d++) D[d] = D2[d] / md;
       if (change < 1e-6) break;
     }
+    const S = SG[0];
+    const Sf = (f, s) => SG[grp[f]][s];
     // films with no rows (new release, or nothing that fitted the grid): manager's strength x average film
     const withRows = F.filter((v, f) => hasRows[f]);
     const avgF = withRows.length ? withRows.reduce((a, b) => a + b, 0) / withRows.length : 0;
@@ -414,7 +435,7 @@
     const cells = [];
     const cellIdx = (f, s, t) => (f * nS + s) * 2 + t;
     for (let f = 0; f < nF; f++) for (let s = 0; s < nS; s++) for (let t = 0; t < 2; t++) {
-      cells.push({ f, s, t, n: 0, sumY: 0, sumW: 0, soldOut: 0, raw: 0, pattern: F[f] * S[s] * typeMean[t] });
+      cells.push({ f, s, t, n: 0, sumY: 0, sumW: 0, soldOut: 0, raw: 0, pattern: F[f] * Sf(f, s) * typeMean[t] });
     }
     screenings.forEach((x) => {
       const c = cells[cellIdx(x.f, x.s, x.t)];
@@ -463,7 +484,7 @@
       const extra = (mu * mu) / r + (w(d) * w(d) * c.alpha) / (c.beta * c.beta);
       return extra > 0 ? Math.max((mu * mu) / extra, 1e-3) : 1e6;
     };
-    return { F, S, D, typeMean, w, cells, cellIdx, cellOf, demand, shape, hasRows, iterations, credibility: k, dispersion: r, dispersionN: obs.length };
+    return { F, S, SG, Sf, grp, D, typeMean, w, cells, cellIdx, cellOf, demand, shape, hasRows, iterations, credibility: k, dispersion: r, dispersionN: obs.length };
   }
   function logGamma(x) {
     // Lanczos approximation, accurate to about 1e-10 for x > 0
@@ -485,7 +506,7 @@
     const est = estimateDemand(screenings, slate, st);
     if (kind === 'blend') return est;
     const poisson = () => est.dispersion; // point estimates: only the screening spread, no estimation uncertainty
-    if (kind === 'pattern') return { ...est, demand: (f, s, d) => est.F[f] * est.S[s] * est.D[d], shape: poisson };
+    if (kind === 'pattern') return { ...est, demand: (f, s, d) => est.F[f] * est.Sf(f, s) * est.D[d], shape: poisson };
     // film average: what the rule of thumb looks at (tickets per screening, any time, any day)
     const sum = new Float64Array(slate.length), cnt = new Float64Array(slate.length);
     screenings.forEach((x) => { sum[x.f] += x.tickets; cnt[x.f]++; });
@@ -614,9 +635,11 @@
     const expected = (f, h, d, s) => sold(f, h, d, s, 1);
     // planning value (robust LP, worst case of a box): the part of each estimate that comes from the
     // pattern rather than from the film's own screenings at that time is lowered by the `caution` share.
-    // Untried combinations and films without records (all pattern or manager estimate) lose c; a cell
-    // with many own screenings loses almost nothing.
-    const factor = (f, s, d) => 1 - st.caution * est.cells[est.cellIdx(f, s, dayType(d))].priorShare;
+    // Untried combinations (all pattern) lose c; a cell with many own screenings loses almost nothing.
+    // A film without any records (new release) is planned on the manager's own estimate, uncautioned
+    // and flagged: discounting it would only shrink the manager's number, and the mock study's
+    // new-release world shows that this starves new films of shows.
+    const factor = (f, s, d) => (est.hasRows[f] ? 1 - st.caution * est.cells[est.cellIdx(f, s, dayType(d))].priorShare : 1);
     const value = (f, h, d, s) => sold(f, h, d, s, factor(f, s, d));
     return { st, slate, est, times, halls, fits, tested, untried, factor, expected, value, nD: 7, nS: times.length };
   }
@@ -652,7 +675,7 @@
       needed += need;
       if (need > 0 && !P.fits[i]) out.push(f.title + ' needs ' + (f.runtime + P.st.cleaning) + ' min (' + f.runtime + ' runtime + ' + P.st.cleaning + ' changeover) but slots are ' + P.st.slotMinutes + ' min, so its minimum of ' + f.min + ' shows cannot be met (rule slot-fit). Fix: lengthen slots to ' + (f.runtime + P.st.cleaning) + ' min or set its minimum to 0.');
       else if (need > 0) {
-        if (openHalls === 0) out.push('No hall is open, so ' + f.title + ' cannot get its ' + f.min + ' shows (rule one-film-per-hall). Fix: open a hall.');
+        if (openHalls === 0) out.push('No hall is open with seats, so ' + f.title + ' cannot get its ' + f.min + ' shows (rule one-film-per-hall). Fix: open a hall.');
         else if (f.min > nDS) out.push(f.title + ' needs ' + f.min + ' shows, but one film can play at most ' + nDS + ' times a week (one hall at a time, ' + P.nS + ' slots x 7 days; rule no-self-clash). Fix: lower its minimum to ' + nDS + ' or less.');
       }
     });
@@ -723,6 +746,58 @@
       prices: summarizePrices(rows, lp.y, P),
       pinnedValue,
     };
+  }
+
+  // What a minimum-show rule costs, by re-solving with the minimum one higher and one lower
+  // (dual prices of this degenerate LP hold in one direction only, so they are not reported as costs).
+  function ruleCosts(P, base, shows) {
+    const out = [];
+    P.slate.forEach((film, f) => {
+      if (shows[f] !== film.min || film.min === 0) return;
+      const at = (m) => {
+        const slate2 = P.slate.map((x, i) => (i === f ? { ...x, min: m } : x));
+        const P2 = { ...P, slate: slate2 };
+        const sol = solveProposed(P2);
+        if (sol.status !== 'optimal') return null;
+        return { value: sol.planValue, tickets: scorePlan(P2, sol.plan).tickets };
+      };
+      const b0 = { value: base.planValue, tickets: scorePlan(P, base.plan).tickets };
+      const up = at(film.min + 1), down = at(film.min - 1);
+      out.push({ tag: film.tag, title: film.title, min: film.min,
+        upValue: up ? b0.value - up.value : null, upTickets: up ? b0.tickets - up.tickets : null,
+        downValue: down ? down.value - b0.value : null, downTickets: down ? down.tickets - b0.tickets : null });
+    });
+    return out;
+  }
+
+  // Second reference plan built from the records alone: repeat last week's observed schedule
+  // (same films at the same weekday and time, the best-selling one in the largest hall), then
+  // meet this week's minimums with the same repair step as the rule of thumb.
+  function repeatLastWeekPlan(P, screenings) {
+    const lastWeekStart = addDays(HISTORY_END, -6);
+    const plan = emptyPlan(P);
+    const pinned = pinList(P);
+    pinned.pins.forEach((p) => { plan[p.d][p.s][p.h] = p.f; });
+    const halls = P.halls.filter((h) => h.usable).sort((a, b) => b.seats - a.seats || a.i - b.i);
+    const open = [];
+    for (let d = 0; d < 7; d++) for (let s = 0; s < P.nS; s++) {
+      const shown = screenings.filter((x) => x.date >= lastWeekStart && x.d === d && x.s === s && P.fits[x.f]).sort((a, b) => b.tickets - a.tickets);
+      let k = 0;
+      halls.forEach((h) => {
+        if (pinned.blocked.has(d + '|' + s + '|' + h.i)) return;
+        open.push({ d, s, h: h.i });
+        if (plan[d][s][h.i] !== null) return;
+        while (k < shown.length && plan[d][s].includes(shown[k].f)) k++;
+        if (k < shown.length) plan[d][s][h.i] = shown[k++].f;
+      });
+    }
+    const avg = P.slate.map((f, i) => { const xs = screenings.filter((x) => x.f === i); return xs.length ? xs.reduce((a, x) => a + x.tickets, 0) / xs.length : 0; });
+    const order = P.slate.map((f, i) => i).sort((a, b) => avg[b] - avg[a] || a - b);
+    const shows = P.slate.map(() => 0);
+    plan.forEach((day) => day.forEach((slot) => slot.forEach((f) => { if (f !== null) shows[f]++; })));
+    [...open].reverse().forEach(({ d, s, h }) => { const f = plan[d][s][h]; if (f !== null && P.slate[f].max !== null && shows[f] > P.slate[f].max) { plan[d][s][h] = null; shows[f]--; } });
+    repairMinimums(P, plan, order, open, pinned);
+    return plan;
   }
 
   function summarizePrices(rows, y, P) {
@@ -1003,6 +1078,7 @@
     out.scores = { proposed: scorePlan(P, proposed.plan, truth), baseline: scorePlan(P, baseline.plan, truth) };
     out.backtest = backtest(agg.screenings, slate, st);
     out.diagnostics = diagnostics(history, agg.screenings, est, slate, st);
+    out.ruleCosts = o.skipOracle ? [] : ruleCosts(P, proposed, out.checks.proposed.shows);
     if (!o.skipOracle) {
       const oracle = solveProposed(P, truth);
       out.oracle = oracle.status === 'optimal' ? { truth: scorePlan(P, oracle.plan, truth).truth } : null;
@@ -1059,6 +1135,9 @@
       if (sol.status === 'optimal') { const sc = scorePlan(P, sol.plan, truth); rows.push({ label: 'Blend + LP with an "at least the seats" sold-out correction', id: 'soldOutFix', truth: sc.truth, promised: sc.tickets, untested: sc.untested }); }
     }
     rows.push({ label: 'Rule of thumb (baseline)', id: 'baseline', truth: base.scores.baseline.truth, promised: base.scores.baseline.tickets, untested: base.scores.baseline.untested });
+    const rl = repeatLastWeekPlan(P0, base.screenings);
+    const rlScore = scorePlan(P0, rl, truth);
+    rows.push({ label: 'Repeat last week (second reference, from the records)', id: 'repeat', truth: rlScore.truth, promised: rlScore.tickets, untested: rlScore.untested, violations: checkPlan(P0, rl).violations.length });
     const pp = pastProgrammerPlan(P0);
     const ppScore = scorePlan(P0, pp, truth);
     rows.push({ label: 'Simulated past programmer (knows true demand up to judgement noise)', id: 'programmer', truth: ppScore.truth, promised: ppScore.tickets, untested: ppScore.untested, violations: checkPlan(P0, pp).violations.length });
@@ -1073,9 +1152,10 @@
     { id: 'sensible', label: 'Sensible past', pastNoise: 0.5, historyWeeks: 4 },
     { id: 'random', label: 'Random past', pastNoise: 3, historyWeeks: 4 },
     { id: 'sparse', label: 'Random past, 1 week', pastNoise: 3, historyWeeks: 1 },
+    { id: 'newrel', label: 'Sensible past + new release', pastNoise: 0.5, historyWeeks: 4, newRelease: true },
   ];
   const STUDY_VARIANTS = [
-    { key: 'selected', label: 'Selected: Bayes estimate, k = 1, caution 0.5', est: 'blend' },
+    { key: 'selected', label: 'Selected: Bayes estimate, k = 4, caution 0.5', est: 'blend' },
     { key: 'film average', label: 'Film average + LP', est: 'filmAverage', caution: 0 },
     { key: 'own cell average', label: 'Own cell average + LP', est: 'cellAverage', caution: 0 },
     { key: 'pattern only', label: 'Pattern only + LP', est: 'pattern', caution: 0 },
@@ -1084,18 +1164,20 @@
     { key: 'caution 0.25', label: 'Caution 0.25', est: 'blend', caution: 0.25 },
     { key: 'caution 0.75', label: 'Caution 0.75', est: 'blend', caution: 0.75 },
     { key: 'caution 1', label: 'Caution 1', est: 'blend', caution: 1 },
-    { key: 'k 0.5', label: 'k = 0.5', est: 'blend', credibility: 0.5 },
+    { key: 'k 1', label: 'k = 1', est: 'blend', credibility: 1 },
     { key: 'k 2', label: 'k = 2', est: 'blend', credibility: 2 },
-    { key: 'k 4', label: 'k = 4', est: 'blend', credibility: 4 },
+    { key: 'k 8', label: 'k = 8', est: 'blend', credibility: 8 },
+    { key: 'caution on new release', label: 'Caution also on films without records', est: 'blend', cautionNoRows: true },
   ];
   function studyOne(seed, world) {
-    const st = { ...defaultSettings(), seed, pastNoise: world.pastNoise, historyWeeks: world.historyWeeks };
+    const st = { ...defaultSettings(), seed, pastNoise: world.pastNoise, historyWeeks: world.historyWeeks, newRelease: !!world.newRelease };
     const base = run(st);
     if (base.status !== 'ok') return null;
     const truth = truthFnFor(base.problem);
     const out = {
       'rule of thumb (baseline)': base.scores.baseline.truth,
       'simulated past programmer': scorePlan(base.problem, pastProgrammerPlan(base.problem), truth).truth,
+      'repeat last week': scorePlan(base.problem, repeatLastWeekPlan(base.problem, base.screenings), truth).truth,
       'oracle (knows true demand)': base.oracle.truth,
       'fitted dispersion r': base.estimate.dispersion,
       'sold-out share': base.diagnostics.soldOutTrue / base.diagnostics.screenings,
@@ -1107,7 +1189,7 @@
       if (v.caution !== undefined) st2.caution = v.caution;
       if (v.credibility !== undefined) st2.credibility = v.credibility;
       const est = v.soldOut ? estimateDemand(base.screenings, base.slate, st2, { soldOutCorrection: true }) : estimateAlternative(v.est, base.screenings, base.slate, st2);
-      const P = buildProblem(st2, base.slate, est);
+      const P = buildProblem(st2, base.slate, v.cautionNoRows ? { ...est, hasRows: est.hasRows.map(() => true) } : est);
       const sol = solveProposed(P);
       if (sol.status === 'optimal') out[v.key] = scorePlan(P, sol.plan, truthFnFor(P)).truth;
     });
@@ -1194,9 +1276,9 @@
     {
       id: 'new-release', kind: 'Boundary', title: 'New release with no records',
       how: 'Add The Scavengers (opens in the planning week, so zero purchase rows), minimum 7 shows.',
-      expect: 'Plan found; the new film gets at least 7 shows; its demand is flagged as a manager estimate (no records) and discounted by the caution.',
+      expect: 'Plan found; the new film gets at least 7 shows; its demand is flagged as a manager estimate (no records) and planned without the caution discount.',
       apply: (st) => ({ ...st, newRelease: true }),
-      check: (r) => r.status === 'ok' && r.checks.proposed.shows[r.slate.length - 1] >= 7 && r.checks.proposed.violations.length === 0 && r.estimate.hasRows[r.slate.length - 1] === false,
+      check: (r) => r.status === 'ok' && r.checks.proposed.shows[r.slate.length - 1] >= 7 && r.checks.proposed.violations.length === 0 && r.estimate.hasRows[r.slate.length - 1] === false && r.problem.factor(r.slate.length - 1, 0, 0) === 1,
     },
     {
       id: 'hall-closed', kind: 'Boundary', title: 'Hall 3 closed next week',
@@ -1240,7 +1322,7 @@
     defaultSettings, validateSettings, slateOf, gridOf, toHHMM, toMinutes, addDays, weekdayIndex, dayType,
     mulberry32, negBinSample, expectedSoldNB, trueMean, generateHistory, parseExtraRows, aggregate,
     estimateDemand, estimateAlternative, simplex, buildProblem, solveProposed, solveBaseline, checkPlan, scorePlan,
-    truthFnFor, explainCell, backtest, run, compareMethods, pastProgrammerPlan, TEST_CASES, fnv1a,
+    truthFnFor, explainCell, backtest, run, compareMethods, pastProgrammerPlan, repeatLastWeekPlan, ruleCosts, TEST_CASES, fnv1a,
     STUDY_WORLDS, STUDY_VARIANTS, studyOne, summarizeStudy, bruteForceCheck,
   };
 });

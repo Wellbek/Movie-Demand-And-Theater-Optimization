@@ -8,7 +8,7 @@ module.exports = function numbers(E, study) {
   const r = E.run(st);
   if (r.status !== 'ok') throw new Error('default run failed: ' + r.errors.join(' | '));
   const b = r.scores.baseline, p = r.scores.proposed;
-  const S = study.results.sensible, R = study.results.random, Q = study.results.sparse;
+  const S = study.results.sensible, R = study.results.random, Q = study.results.sparse, NR = study.results.newrel;
   const cases = E.TEST_CASES.map((tc) => tc.check(E.run(tc.apply(E.defaultSettings()))));
   const prices = Object.fromEntries(r.proposed.prices.min.map((x) => [x.tag, x.price]));
   const perDay = (sc) => E.DAY_NAMES.map((n, d) => sc.perSlot.filter((x) => x.d === d).reduce((a, x) => a + x.tickets, 0));
@@ -76,10 +76,21 @@ module.exports = function numbers(E, study) {
   const add = (prefix, key, W) => { const x = st1(key, W); N[prefix] = x.d; N[prefix + 'Ci'] = x.ci; };
   add('stFilmAvg', 'film average'); add('stCellAvg', 'own cell average'); add('stPattern', 'pattern only');
   add('stNoCaution', 'caution 0'); add('stCaution025', 'caution 0.25'); add('stCaution075', 'caution 0.75'); add('stCaution1', 'caution 1');
-  add('stK05', 'k 0.5'); add('stK2', 'k 2'); add('stK4', 'k 4'); add('stSoldOutFix', 'with sold-out correction');
+  add('stK1', 'k 1'); add('stK2', 'k 2'); add('stK8', 'k 8'); add('stSoldOutFix', 'with sold-out correction');
   add('rnNoCaution', 'caution 0', R); add('rnCaution1', 'caution 1', R); add('rnSoldOutFix', 'with sold-out correction', R); add('rnCellAvg', 'own cell average', R);
+  add('nrNoCaution', 'caution 0', NR); add('nrCautionNew', 'caution on new release', NR); add('nrK1', 'k 1', NR); add('stRepeat', 'repeat last week'); add('nrRepeat', 'repeat last week', NR); add('rnSoldOutFix2', 'with sold-out correction', R);
+  N.nrSel = fmt(NR.selected.mean); N.nrOracle = fmt(NR['oracle (knows true demand)'].mean); N.nrPctOracle = ((100 * R0(NR.selected.mean)) / R0(NR['oracle (knows true demand)'].mean)).toFixed(1) + '%';
+  N.nrCautionNewAbs = fmt(Math.abs(NR['caution on new release'].diff)); N.stRepeatAbs = fmt(Math.abs(S['repeat last week'].diff)); N.stProgAbs = fmt(Math.abs(S['simulated past programmer'].diff));
+  N.seedFrom = String(study.seedFrom); N.seedTo = String(study.seedFrom + study.seeds - 1);
+  { const rl = E.repeatLastWeekPlan(r.problem, r.screenings); const sc = E.scorePlan(r.problem, rl); N.repeatPromised = fmt(sc.tickets); N.repeatGainPct = pctR(p.tickets, sc.tickets); N.repeatGain = sgn(dR(p.tickets, sc.tickets)); }
+  N.repeatTruth = fmt(E.scorePlan(r.problem, E.repeatLastWeekPlan(r.problem, r.screenings), E.truthFnFor(r.problem)).truth);
+  const rc = Object.fromEntries(r.ruleCosts.map((c) => [c.tag, c]));
+  const one = (x) => (x === null || x === undefined ? 'n/a' : (Math.round(x * 10) / 10).toFixed(1));
+  N.oppUp = one(rc.oppenhammer && rc.oppenhammer.upTickets); N.oppDown = one(rc.oppenhammer && rc.oppenhammer.downTickets);
+  N.gigUp = one(rc.gigantic && rc.gigantic.upTickets); N.gigDown = one(rc.gigantic && rc.gigantic.downTickets);
   add('spNoCaution', 'caution 0', Q); add('spCaution1', 'caution 1', Q); add('spCaution075', 'caution 0.75', Q); add('spSoldOutFix', 'with sold-out correction', Q); add('spCellAvg', 'own cell average', Q);
   N.stNoCautionAbs = fmt(Math.abs(S['caution 0'].diff));
+  N.nrNoCautionAbs = fmt(Math.abs(NR['caution 0'].diff)); N.spCaution1Abs = fmt(Math.abs(Q['caution 1'].diff));
   // where the rule of thumb's optimism comes from (mock): its untried screenings, estimated vs true
   (function untriedSplit() {
     const P = r.problem, T = E.truthFnFor(P);
@@ -104,11 +115,12 @@ module.exports = function numbers(E, study) {
   N.chartDay = dayChart(E.DAY_NAMES, perDay(b), perDay(p));
   N.chartStudy = studyChart([
     ['Rule of thumb', S['rule of thumb (baseline)'].mean, '#808080'],
-    ['Pattern only + LP', S['pattern only'].mean, '#5a5a5a'],
     ['Film average + LP', S['film average'].mean, '#5a5a5a'],
     ['No caution + LP', S['caution 0'].mean, '#5a5a5a'],
     ['Simulated programmer', S['simulated past programmer'].mean, '#5a5a5a'],
+    ['Repeat last week', S['repeat last week'].mean, '#5a5a5a'],
     ['Own average + LP', S['own cell average'].mean, '#5a5a5a'],
+    ['Pattern only + LP', S['pattern only'].mean, '#5a5a5a'],
     ['Selected', S.selected.mean, '#e50914'],
     ['Oracle', S['oracle (knows true demand)'].mean, '#46d369'],
   ]);
@@ -174,6 +186,9 @@ module.exports = function numbers(E, study) {
     return s + '</svg>';
   }
   function studyChart(rows) {
+    // ascending, with the selected method and the oracle last
+    const tail = rows.filter((x) => x[0] === 'Selected' || x[0] === 'Oracle');
+    rows = rows.filter((x) => !tail.includes(x)).sort((a, b) => a[1] - b[1]).concat(tail);
     const W = 620, rowH = 28, L = 150, H = rows.length * rowH + 10;
     const max = Math.max(...rows.map((r) => r[1])) * 1.08;
     let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Mock study: true expected tickets per week by method">';

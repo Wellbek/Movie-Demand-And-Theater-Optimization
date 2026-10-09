@@ -11,7 +11,9 @@ const path = require('node:path');
 const E = require('./engine.js');
 
 const nSeeds = +(process.argv[2] || 40);
-const seeds = Array.from({ length: nSeeds }, (_, i) => i + 1);
+// reported on seeds 41-80; the defaults were tuned on seeds 1-40 (tune.cjs)
+const seedFrom = 41;
+const seeds = Array.from({ length: nSeeds }, (_, i) => i + seedFrom);
 const results = {};
 const t0 = Date.now();
 for (const w of E.STUDY_WORLDS) {
@@ -24,4 +26,4 @@ for (const w of E.STUDY_WORLDS) {
   }
 }
 console.log('\ntime ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s');
-fs.writeFileSync(path.join(__dirname, 'study.json'), JSON.stringify({ seeds: seeds.length, worlds: E.STUDY_WORLDS, results }, null, 1) + '\n');
+fs.writeFileSync(path.join(__dirname, 'study.json'), JSON.stringify({ seeds: seeds.length, seedFrom, worlds: E.STUDY_WORLDS, results }, null, 1) + '\n');
