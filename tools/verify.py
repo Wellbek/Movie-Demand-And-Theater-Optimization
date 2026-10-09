@@ -22,6 +22,7 @@ with sync_playwright() as p:
         page.goto(demo); page.wait_for_timeout(1200)
         check(page.locator('#heroMeta .match').count() == 1, f'[{width}] demo runs on open (hero shows a result)')
         check(page.evaluate('document.documentElement.scrollWidth - document.documentElement.clientWidth') <= 0, f'[{width}] demo has no horizontal page scroll')
+        check(page.evaluate("document.getElementById('heroTitle').getBoundingClientRect().top >= document.getElementById('nav').getBoundingClientRect().bottom"), f'[{width}] demo: the title is not under the navigation bar')
         if width == 1440:
             note = page.inner_text('#runAllNote')
             check('7 of 7 cases pass' in note, 'demo: all 7 test cases pass in the page (' + note + ')')
@@ -31,15 +32,16 @@ with sync_playwright() as p:
             page.fill('#seed', '438'); page.click('#run'); page.wait_for_timeout(600)
             fp1 = page.evaluate(KEY)
             check(fp1 != fp0, 'demo: changing the seed and pressing Run changes the result')
-            check('438' in page.url, 'demo: settings are kept in the page address')
+            check('#' not in page.url and '438' not in page.url, 'demo: settings are not written into the page address')
+            page.fill('#seed', '438'); page.click('#run'); page.wait_for_timeout(600)
+            check(page.evaluate(KEY) == fp1, 'demo: the same settings run again give the same plans')
             page.reload(); page.wait_for_timeout(1000)
-            check(page.evaluate(KEY) == fp1, 'demo: reload with the same address reproduces the same plans')
-            page.click('#reset'); page.wait_for_timeout(800)
-            check(page.evaluate(KEY) == fp0, 'demo: Reset restores the default plans')
+            check(page.evaluate(KEY) == fp0 and page.input_value('#seed') == '437', 'demo: a reload starts from the default settings')
             rows0 = page.evaluate('APP.result.rowCount')
             page.fill('#slots', '4'); page.click('#run'); page.wait_for_timeout(600)
             check(page.evaluate('APP.result.rowCount') != rows0 and page.evaluate('APP.result.times.length') == 4, 'demo: fewer show-times regenerate the history and the grid')
             page.click('#reset'); page.wait_for_timeout(600)
+            check(page.evaluate(KEY) == fp0, 'demo: Reset restores the default plans')
             # failure: close halls 2 and 3 -> no plan, explanation, stale
             page.uncheck('[data-open="1"]'); page.uncheck('[data-open="2"]'); page.click('#run'); page.wait_for_timeout(500)
             txt = page.inner_text('#heroAlert')
@@ -91,6 +93,13 @@ with sync_playwright() as p:
             check(bool(m) and m.group(1) == m.group(2) and int(m.group(2)) > 30, 'demo: brute-force check agrees with the simplex in the browser (' + note[:70] + ')')
         check(not errs, f'[{width}] demo: no console errors {errs[:2]}')
         check(not reqs, f'[{width}] demo: no network requests {reqs[:2]}')
+        ctx.close()
+
+    # short windows: the billboard grows instead of pushing the title under the navigation bar
+    for (w, h) in ((1280, 720), (1366, 640), (1920, 1080)):
+        ctx = b.new_context(viewport={'width': w, 'height': h}, offline=True)
+        page = ctx.new_page(); page.goto(demo); page.wait_for_timeout(900)
+        check(page.evaluate("document.getElementById('heroTitle').getBoundingClientRect().top >= document.getElementById('nav').getBoundingClientRect().bottom"), f'[{w}x{h}] demo: the title is not under the navigation bar')
         ctx.close()
 
     # proposal

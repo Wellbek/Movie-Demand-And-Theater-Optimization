@@ -15,25 +15,12 @@
   const STUDY = /*__STUDY__*/;
   const SWEEP = /*__SWEEP__*/;
 
-  let settings = loadSettings();
+  // Settings live only in the page: the address stays clean and a reload starts from the defaults.
+  let settings = E.defaultSettings();
   let result = null; // last successful run
   const view = { dt: 1, day: 5, planMode: 'side' };
-
-  // ------------------------------------------------------------------ settings <-> address bar
-  function loadSettings() {
-    const def = E.defaultSettings();
-    try {
-      const m = /[#&]s=([^&]+)/.exec(location.hash);
-      if (!m) return def;
-      const s = JSON.parse(decodeURIComponent(m[1]));
-      return { ...def, ...s, halls: Array.isArray(s.halls) ? s.halls : def.halls, limits: s.limits || {}, pins: s.pins || {} };
-    } catch (e) {
-      return def;
-    }
-  }
-  function saveSettings() {
-    try { history.replaceState(null, '', '#s=' + encodeURIComponent(JSON.stringify(settings))); } catch (e) { /* file:// in some browsers */ }
-  }
+  // drop settings left in the address by older versions of this page
+  if (/[#&]s=/.test(location.hash)) { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* file:// in some browsers */ } }
 
   // ------------------------------------------------------------------ posters (inline SVG, no image files)
   const filmColor = (film, l) => 'hsl(' + film.hue + ',55%,' + (l || 38) + '%)';
@@ -184,7 +171,6 @@
 
   // ------------------------------------------------------------------ run
   function run() {
-    saveSettings();
     const t0 = performance.now();
     const r = E.run(settings, { trace: true });
     const ms = performance.now() - t0;
