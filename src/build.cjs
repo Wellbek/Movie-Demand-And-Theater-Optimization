@@ -39,7 +39,9 @@ function write(name, html) {
 // ---------------------------------------------------------------- demo
 const demo = withKatex(texify(read('demo.template.html')))
   .replace('/*__ENGINE__*/', () => read('engine.js'))
-  .replace('/*__APP__*/', () => read('app.js').replace('/*__STUDY__*/', () => read('study.json').trim()));
+  .replace('/*__HEROANIM__*/', () => read('heroanim.js'))
+  .replace('/*__FIGURES__*/', () => read('figures.js'))
+  .replace('/*__APP__*/', () => read('app.js').replace('/*__STUDY__*/', () => read('study.json').trim()).replace('/*__SWEEP__*/', () => read('sweep.json').trim()));
 write('demo.html', demo);
 
 // ---------------------------------------------------------------- proposal
