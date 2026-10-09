@@ -1,0 +1,11 @@
+{
+  "name": "slotwise-build",
+  "private": true,
+  "description": "Builds and tests demo.html and proposal.html (the submitted files are the built outputs)",
+  "scripts": {
+    "build": "node build.cjs",
+    "test": "node --test",
+    "study": "node study.cjs 40"
+  },
+  "devDependencies": { "katex": "^0.16.0" }
+}

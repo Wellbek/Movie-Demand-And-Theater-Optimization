@@ -1,0 +1,32 @@
+{
+ "count": 300,
+ "seed": 2026,
+ "defaults": {
+  "configs": 300,
+  "feasible": 300,
+  "valueWins": 300,
+  "estimateWins": 297,
+  "truthWins": 289,
+  "repeatWins": 287,
+  "violations": 0,
+  "meanGainPct": 12.874177214863098,
+  "worstLossPct": -16.40842129452656,
+  "smallLosses": 8,
+  "bigLossesThinOrOneHall": 3,
+  "flaggedThin": 29
+ },
+ "varied": {
+  "configs": 300,
+  "feasible": 300,
+  "valueWins": 300,
+  "estimateWins": 297,
+  "truthWins": 286,
+  "repeatWins": 273,
+  "violations": 0,
+  "meanGainPct": 13.329942390659834,
+  "worstLossPct": -8.522152207829562,
+  "smallLosses": 10,
+  "bigLossesThinOrOneHall": 4,
+  "flaggedThin": 28
+ }
+}
