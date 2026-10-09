@@ -118,6 +118,7 @@ It supplies the parameters of the components below, which remain explicit formul
 | `slot-fit` | `weekly-plan` | Constraint | Formulation | $x_{fhds} = 0$ if runtime$_f$ + changeover > slot length. Hard. |
 
 No State-transition component exists (Section 1).
+Why `expected-tickets` is Formulation and not Data-driven: its value is an explicit formula (expected sales capped by seats, summed over the plan) whose parameters, the demand means and spread, come from the supporting estimate; the reference classifies exactly this case as Formulation ("ML Usage ≠ Data-driven Evaluation" [Ref §3]). A learned estimate does enter the cost through those parameters, so its validity is checked separately (backtest, Section 5) rather than hidden in the label.
 Pinned cells are fixed before solving: their hall-time and film-time leave the problem and the film's limits shrink by one.
 
 **Hard constraints vs preferences:** all rules are hard; there are no soft constraints or penalties.
