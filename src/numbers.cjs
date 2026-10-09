@@ -19,7 +19,6 @@ module.exports = function numbers(E, study) {
   const st1 = (k, W) => { const x = (W || S)[k]; return { d: sgn(x.diff), ci: fmt(x.ci95) }; };
   const N = {
     seed: String(st.seed),
-    fingerprint: r.fingerprint,
     rows: fmt(r.rowCount),
     screenings: fmt(r.screenings.length),
     soldOutRead: fmt(r.diagnostics.detected),
@@ -101,7 +100,17 @@ module.exports = function numbers(E, study) {
   })();
   // simulated past programmer on the default week (mock)
   N.progTruth = fmt(E.scorePlan(r.problem, E.pastProgrammerPlan(r.problem), E.truthFnFor(r.problem)).truth);
-  N.seatRows = seatRows();
+  // robustness sweep (src/sweep.json) and the plan behind the title slide's background animation
+  const SW = require('./sweep.json');
+  N.swCount = String(SW.count); N.swFeasible = String(SW.defaults.feasible);
+  N.swValueWins = String(SW.defaults.valueWins); N.swEstWins = String(SW.defaults.estimateWins); N.swTruthWins = String(SW.defaults.truthWins);
+  N.swMeanGain = '+' + SW.defaults.meanGainPct.toFixed(1) + '%'; N.swSmall = String(SW.defaults.smallLosses); N.swBig = String(SW.defaults.bigLossesThinOrOneHall);
+  N.swWorst = SW.defaults.worstLossPct.toFixed(1) + '%';
+  {
+    const P = r.problem, cells = [];
+    for (let d = 0; d < 7; d++) for (let s = 0; s < P.nS; s++) r.proposed.plan[d][s].forEach((f, h) => { if (f !== null) cells.push({ d, s, h, title: r.slate[f].title, hue: r.slate[f].hue, v: Math.round(P.value(f, h, d, s) * 10) / 10 }); });
+    N.heroJson = JSON.stringify({ days: E.DAY_NAMES, times: r.times, halls: P.halls.map((h) => ({ name: h.name, seats: h.seats })), cells });
+  }
   // exhibit day: the day where the two plans differ most (weekend days differ by a few percent)
   const pb = perDay(b), pp = perDay(p);
   let ex = 0;
@@ -126,7 +135,7 @@ module.exports = function numbers(E, study) {
   ]);
   return N;
 
-  // Saturday of the plan week, rule of thumb vs SLOTWISE, as two small coloured grids
+  // exhibit day of the plan week, baseline vs optimised, as two small coloured grids
   function satGrid(d) {
     const P = r.problem;
     const grid = (plan, label, total) => {
@@ -142,7 +151,7 @@ module.exports = function numbers(E, study) {
       return h + '</tbody></table></div>';
     };
     const tot = (plan) => { let x = 0; P.times.forEach((t, s) => P.halls.forEach((h, hi) => { const f = plan[d][s][hi]; if (f !== null) x += P.expected(f, hi, d, s); })); return x; };
-    return '<div class="sgwrap">' + grid(r.baseline.plan, 'Rule of thumb', tot(r.baseline.plan)) + grid(r.proposed.plan, 'SLOTWISE', tot(r.proposed.plan)) + '</div>';
+    return '<div class="sgwrap">' + grid(r.baseline.plan, 'Baseline (greedy)', tot(r.baseline.plan)) + grid(r.proposed.plan, 'Optimised', tot(r.proposed.plan)) + '</div>';
   }
   // one demand cell, end to end, for the calculation slide
   function workedExample() {
@@ -175,7 +184,7 @@ module.exports = function numbers(E, study) {
     const max = Math.ceil((top * 1.05) / step) * step;
     const gw = (W - L - 8) / labels.length, bw = 22;
     const y = (v) => T + (H - T - B) * (1 - v / max);
-    let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Expected tickets per day, rule of thumb vs SLOTWISE">';
+    let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Expected tickets per day, baseline vs optimised">';
     for (let v = 0; v <= max + 1e-9; v += step) { s += '<line x1="' + L + '" x2="' + (W - 8) + '" y1="' + y(v).toFixed(1) + '" y2="' + y(v).toFixed(1) + '" stroke="#2a2a2a"/><text x="' + (L - 6) + '" y="' + (y(v) + 4).toFixed(1) + '" text-anchor="end">' + fmt(v) + '</text>'; }
     labels.forEach((lab, i) => {
       const x0 = L + i * gw + (gw - 2 * bw) / 2;

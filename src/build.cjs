@@ -52,6 +52,7 @@ if (fs.existsSync(path.join(here, 'proposal.template.html'))) {
     if (!(k in N)) throw new Error('proposal: unknown number {{' + k + '}}');
     return N[k];
   });
+  html = html.replace('/*__HEROANIM__*/', () => read('heroanim.js'));
   write('proposal.html', withKatex(html));
   fs.writeFileSync(path.join(here, 'numbers.json'), JSON.stringify(N, null, 1) + '\n');
   console.log('wrote src/numbers.json (numbers quoted in problem-definition.md)');
