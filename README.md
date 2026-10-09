@@ -1,4 +1,4 @@
-# Theater Optimization: weekly showtime planning (IE437 Assignment 1)
+# Theater Optimization: weekly showtime plannin
 
 The submission is exactly three files at the repository root:
 
