@@ -2,331 +2,314 @@
 
 **IE437 Assignment 1 · Movie Programming - Problem Definition and Decision-Support Design**
 
-Author / student ID or team: TBD (to be filled in before submission)  
-Date / version: 2026-10-05 · v2.0  
-Summary: A venue's programming manager decides every week which film plays in which hall at which time.
-We form a belief about demand per film, time slot and day type from purchase records (a Gaussian-process prior and Bayes' rule), value each screening cautiously where evidence is thin, and solve the week as a linear program whose dual prices prove optimality.
-Every method is taken from the IE437 lectures (Lec 1 optimization, Lec 2 Bayesian statistics, Lec 3 exact inference, Lec 4 Gaussian processes), and every step was compared with its lecture alternatives (Section 4).
-On fictional data the plan sells 825 more expected tickets per week (+11.2%) than a rule-of-thumb baseline; real-world effects are untested.  
+Author / student ID or team: Louis Wellmeyer · student ID TBD (fill in before submission)  
+Date / version: 2026-10-09 · v3.0  
+Summary: A venue's programming manager decides every week which booked film plays in which hall at which show-time.
+The purchase records cannot support the whole programming decision, so the first step is narrower: one venue, one week, films already booked, a fixed show-time grid, and an advisory plan.
+Demand per film, time and day type is estimated with a Poisson-Gamma Bayes update whose prior is a film x time x weekday pattern, and the week is planned as a cautious linear program, compared with a rule of thumb under the same inputs.
+On fictional data the plan reaches 8,211 expected tickets against 7,570 for the rule of thumb (+640, +8.5%); real-world effects are untested.  
 Files: `problem-definition.md`, `demo.html`, `proposal.html`  
-LLM tools and use: Claude Code with Claude Opus 5.5 (2026-09-29, revised 2026-10-02 and 2026-10-05): reading the brief and the lecture slides, role-played project-manager and client reviews, checking methods against the slides, looking up the current film slate, drafting, engine and UI code, tests, the mock study. See Section 7.
+LLM tools and use: Claude Code with Claude Opus 5.5, 2026-09-29 to 2026-10-09 (reading the brief and lecture slides, role-played reviews, drafting, engine and UI code, tests, the mock study, consistency checks); details and my own review in Section 7.
 
-Facts from the brief are cited as `[A §n]` (`assignment.md`, section n); lecture results as Lec n (IE437 slides 00-04 and the course script's algorithm atlas).
-Everything numeric about the cinema is fictional and produced by `demo.html` with seed 437.
+Citations: `[A §n]` = the assignment brief (`assignment.md`), section n; `[Ref §n]` = the classification reference; `Lec n, p. m` = IE437 lecture deck n (the five decks numbered 0-4 by the course), page m.
+Only methods from these five lectures are used.
+Every number about the cinema is fictional and produced by `demo.html` with its default settings (seed 437, run fingerprint `0352a4f1`).
+Film titles are invented parodies (for example *Caterpillar-Man*, *Avocado*, *Gigantic*); no data of any real film is used, as the brief asks for an "entirely fictional dataset" with invented aliases [A §2].
 
-> **Disclaimer.** The demonstration plans six films that are in Korean cinemas in early October 2026, so that the slate, runtimes and release dates are realistic.
-> Titles, runtimes and release dates are real and cited below.
-> The venue RIVERSIDE, its halls, every purchase, every account and every demand number are invented; they do not reflect how these films actually sell.
-> In the purchase records the films appear only under fictional aliases (`TT-101` ...), as the record specification requires [A §2].
+**How this definition answers the brief's six questions [A §2]** (one line each; the argument is in the referenced section):
 
-**Film slate (checked 2026-10-05):**
-
-| Film (demo label, alias) | Runtime | Opened in Korea | Source |
-|---|---|---|---|
-| The Assassin(s) (`TT-101`) | 130 min | 2026-09-23 | [Tenasia](https://www.tenasia.co.kr/article/2026091684014) |
-| The Odyssey (`TT-102`) | 172 min | before the history window (8th weekend on 25-27 Sep) | runtime: [Film Stories, citing AMC](https://filmstories.co.uk/news/the-odyssey-christopher-nolan-epic-has-a-runtime-of-172-minutes/); weekend: [Screen Daily](https://www.screendaily.com/news/the-assassins-rules-koreas-chuseok-holiday-box-office-with-40-share/5220810.article) |
-| Tazza: The Song of Beelzebub (`TT-103`) | 129 min | 2026-09-23 | [Cine21](https://cine21.com/movie/info/?movie_id=63246) |
-| Octonauts: Above & Beyond - Heart-pounding Great Nature Adventure (`TT-104`) | 57 min | 2026-09-23 | [Cine21](https://cine21.com/movie/info/?movie_id=63372) |
-| The Intern, Korean remake (`TT-105`) | 132 min | 2026-09-16 | [Geumgang Ilbo](https://www.ggilbo.com/news/articleView.html?idxno=1181861) |
-| Possible Love (`TT-106`) | 164 min | 2026-09-23 | runtime: [SBS Star](https://sbsstar.net/article/N1008618169/lee-changdongs-possible-love-rated-restricted-running-time-is-164-minutes); date: [YTN](https://www.ytn.co.kr/_ln/0106_202607281124105453) |
-| Furious (`TT-107`, boundary case only) | 113 min | 2026-10-07 | [BJJ Magazine](https://www.bjjmagazine.co.kr/archives/11357) |
-
-The six films are the top-ranked current titles of the 25-27 Sep Korean weekend chart [Screen Daily, link above], plus the family title from the same chart.
-Before a film opened, its slot in the fictional history held an outgoing title (Spider-Man: Brand New Day, Obsession; both on the same chart) whose rows the estimator ignores.
+| The brief asks | Short answer | Where |
+|---|---|---|
+| "What problem should the company address first, and what is the scope of your proposal?" | The weekly allocation of already-booked films to halls and show-times at one venue, as an advisory plan; booking, pricing, several venues and mid-week changes are excluded. | §1 |
+| "Who will use the results, and what decisions will they support?" | The venue's programming manager, before each week's schedule is published: which film in which hall at each show-time; the head of programming uses trial results for go / no-go. | §1, §6 |
+| "What can you establish from the available information, and what needs further investigation?" | Tickets per screening by film, time and weekday; not halls, seats, zero-sale screenings, prices, purchase times or current practice, so sell-outs and untried combinations hide demand. | §3 |
+| "What additional information should you request, why do you need it, and what will you do if it is unavailable?" | Data-contract confirmation, a screening log with halls, hall seats and grid, the weekly slate with show commitments, the KPI, a practice interview; each with a priority and a fallback. | §3 table |
+| "Which approach do you recommend, and how will you evaluate its validity and usefulness?" | Bayesian demand estimate + robust weekly LP, beside a rule of thumb; validity by backtest, rule and optimality checks and test cases; usefulness by offline replay and an advisory trial. | §4, §5, §6 |
+| "Under what conditions should the company test, adopt, revise, or stop the proposal?" | Gated stages with stated continue, revise and stop conditions; thresholds marked [PROPOSED] are to be agreed with the sponsor. | §6 |
 
 ## 1. Decision, Scope & Problem Structure
 
-The operator wants to use its records to understand its audience and improve movie-programming decisions, meaning which movies to screen, in which rooms, and at what times [A §1, §2].
-Its current practices and decision rules are unknown [A §2].
+The operator wants to "use its records to understand its audience and improve movie-programming decisions", where movie programming means "choosing which movies to screen, in which screening rooms, and at what times" [A §1, §2].
+Its practices, decision rules and current performance are not given [A §2].
 
-> The venue's programming manager uses demand estimates from past purchase records, hall capacities and the confirmed film slate, before next week's schedule is published, to decide which film plays in which hall at each show slot, in order to increase expected tickets sold without breaking show commitments.
+> The venue's programming manager uses demand estimated from past purchase records, the venue's hall seats and the confirmed film slate, before next week's schedule is published, to decide which film plays in which hall at each show-time, in order to increase expected admissions without breaking show commitments.
 
-**Boundary:** one venue, one planning week (7 days × 5 fixed slots × 3 halls = 105 screen-slots), decided once before the week starts.
-In the demo the records run from Mon 14 Sep to Sun 4 Oct 2026, the week of 5 Oct is already published `[ASSUMPTION]`, and the plan is for 12-18 Oct.
-**Why this narrower first step:** it is the smallest scope that still contains the full programming decision (film, room, time), and the records support it only with the additional schedule log requested in Section 3.
+**Why the records are insufficient for the full programming decision.**
+One row is one completed purchase for one screening [A §2].
+The six fields therefore show what sold, never what could have sold:
+1. There is no hall or capacity field, so a sold-out screening records its seats, not its demand, and the records cannot say which room a film used.
+2. A screening that sold nothing leaves no row, so the record of what was shown is incomplete.
+3. Only combinations someone chose to schedule are observed; a film never shown at 22:00 has no evidence for 22:00.
+4. There is no price, cost, purchase time or film information (runtime, release, genre), so revenue, booking curves, mid-week reaction and new titles are outside what the records can inform.
+5. Which films to book is decided before any record of them exists.
 
-**Exclusions and consequences:**
-- Film acquisition and run length (the upstream booking decision): the film slate and per-film show limits are inputs, so we cannot say which films to book.
-- Pricing, concessions, revenue: the objective is admissions, not money.
-- Multi-venue coordination: sister venues competing for one audience are ignored.
-- Mid-week changes: the plan cannot react to a flop inside the week.
-- External signals (weather, holidays, trailers, and social-media or review comments): not in the records and excluded from this first step.
-  The demo history includes the Chuseok holiday (24-26 Sep 2026), which the fictional generator does not model; real data would need a holiday flag (Section 3).
-  A later add-on could classify comments as positive or negative and weight them by comment count as an early demand signal for new releases (Section 4, approach G).
+**Narrower first step and the decision it supports.**
+The first step keeps the core of the programming decision (film, room, time) but only where the records plus a few weekly operating settings can carry it: one venue, one planning week (Mon-Sun), films already booked, a fixed show-time grid, decided once before sales open, as a draft the manager approves.
+Rooms enter through hall seats that the manager enters each week (an operating rule, Section 3), not through the records.
+The information plan in Sections 3 and 6 says what would extend it.
+
+**Boundary:** one decision problem = the plan for one venue and one week: every hall x show-time x day of that week receives one film or stays empty.
+In the demo: 3 halls x 5 show-times x 7 days = 105 screen-slots, 6 films (configurable), records of the 4 weeks to Sun 4 Oct 2026, plan for Mon 12 to Sun 18 Oct 2026; the week of 5 Oct is already published `[ASSUMPTION]`.
+
+**Exclusions and their consequences:**
+
+| Excluded | Consequence |
+|---|---|
+| Film booking and run length (upstream decision) | The slate and per-film show limits are inputs; the tool cannot say which films to acquire. |
+| Pricing, concessions, revenue | The objective is admissions; a ticket is not all margin, so the KPI must be confirmed (Section 3). |
+| Several venues | Sister venues sharing one audience are treated as independent. |
+| Mid-week changes | The plan cannot react to a flop inside the week; that would need purchase times and a feedback design. |
+| Holidays, film ageing, weather, competitors | Not in the records; holiday weeks should be left out of the trial. |
+| A film in two halls at the same time; after-midnight shows | Not supported; a manager who needs them must pin cells by hand. |
+| External signals (other cinemas' sales, box-office success, social media, reviews) | Could improve accuracy (Section 3) but are not in the records and their link to one venue is unproven. |
 
 **Current practice vs baseline:** current practice is unknown [A §2].
-The baseline is a proposed rule of thumb (Section 4, approach A), not an observed process.
+The baseline is a rule of thumb defined in Section 4 (approach A), labelled a proposed reference, not the operator's process.
 
 **Decisions:**
 
 | ID | What is chosen | Who uses / approves |
 |---|---|---|
-| `weekly-plan` | Film (or none) for every hall × slot × day of the planning week | Programming manager approves before publication |
+| `weekly-plan` | Film (or none) for every hall x show-time x day of the planning week | Programming manager reviews, may pin or block cells, approves before publication |
 
 Dependencies: none inside the boundary.
 The real upstream dependency `film-booking → weekly-plan: feasible region (available films, show limits)` lies outside the boundary and enters only as input.
-The demand estimate is a supporting analysis, not a decision.
+The demand estimate is a supporting analysis, not a decision [Ref §1].
 `evaluated_by`: N/A (no child decision).
 
 | Object | Property | Classification (or unresolved status) | Structural evidence or question to resolve |
 |---|---|---|---|
-| Decision dependency graph | Decision Structure | Flat | One decision in scope; the parent `film-booking` is excluded. |
-| `weekly-plan` | State Structure | Stateless | No state links decision epochs inside one week. `[ASSUMPTION]` slot demands are independent; if audience depletion across the week matters (people who saw a film Monday do not return Tuesday), a remaining-audience state would appear. Confirm with week-level repeat-viewing data (Section 3). |
-| `weekly-plan` | Information Structure | Open-loop | The whole week is fixed before tickets go on sale. Basis: `operational-requirement` `[ASSUMPTION]` (schedules are published in advance); TBD: confirm publication lead time. Re-running the plan every week does not make it Feedback. |
+| Decision dependency graph | Decision Structure | Flat | One decision in scope; the parent `film-booking` is excluded and only passes inputs. |
+| `weekly-plan` | State Structure | Stateless | No state-transition component links decision epochs inside the week: the plan is fixed once and slot demands are treated as independent `[ASSUMPTION]`. If people who saw a film on Monday do not return on Tuesday (audience depletion), a remaining-audience state would appear; check with repeat-purchase patterns of `account_tag` in Stage 0. |
+| `weekly-plan` | Information Structure | Open-loop | The whole week is fixed with information available before sales open. Basis: `operational-requirement` `[ASSUMPTION]` (a schedule is published before tickets are sold); TBD: the operator's publication lead time, asked in the practice interview. Re-planning every week does not make one week's problem Feedback [Ref §2]. |
 
-Editing inputs and re-running in the demo before approval is interface behavior and does not add future observations.
+Editing settings, pinning cells and re-running in the demo before approval is interface behaviour and adds no future observations.
+This matches the reference's monthly nurse-schedule example (Flat, Stateless, Open-loop with Formulation components) [Ref §6].
 
 ## 2. Computable Problem
 
-**Controllable variables:** $x_{fhds} \in \lbrace 0,1 \rbrace$, film $f$ in hall $h$ on day $d$ at slot $s$.
-Slots: 09:00, 12:20, 15:40, 19:00, 22:20 (200-minute slots, because The Odyssey runs 172 min and needs 192 min with cleaning); day types: weekday (Mon-Thu), weekend (Fri-Sun) `[ASSUMPTION]`.
+**Decision variables:** $x_{fhds} \in \lbrace 0,1 \rbrace$ = 1 if film $f$ plays in hall $h$ on day $d$ at show-time $s$.
 
-**Inputs and settings:** hall capacities (220 / 120 / 60 seats, fictional), slot length (200 min), cleaning time (20 min), film runtimes (real, above), per-film min/max shows per week (fictional), the slate's alias-to-film mapping, caution level κ in posterior standard deviations (default 1).
+**Inputs and settings** (operating rules, entered weekly by the manager; demo defaults are fictional `[ASSUMPTION]`): halls with seats (220 / 120 / 60) and whether each is open next week; show-time grid (first show 10:00, 5 shows per hall per day, 180-minute slots, 15 minutes changeover, so shows at 10:00, 13:00, 16:00, 19:00, 22:00); the slate with runtimes and min / max shows per film (default minimum 7, no maximum); pinned or blocked cells; caution $c$ = 0.5; pattern weight $k$ = 1.
+Inputs from the records: tickets per screening, derived in Section 3.
 
-**Objective:** maximize expected tickets sold in the week.
-The computed metric is expected admissions under our demand estimates; the business outcome it is meant to support is actual admissions, which only a trial can measure.
+**Objective:** maximise expected admissions in the planning week.
+The computed metric is expected tickets under the demand estimate; the business outcome it supports is actual admissions, which only a trial can measure (Section 6).
+There is one objective, so no priority rule between objectives is needed.
 
-**Supporting analysis (not a component):** a demand belief per film × slot × day-type cell, built in three steps (each animated in the demo's flowchart).
-1. Screening noise: tickets at one screening vary around the cell mean θ as a negative binomial with shape r, i.e. a Poisson whose rate is Gamma distributed (Lec 2 conjugate table); r̂ = 8.6 by maximum likelihood over a grid (Lec 2, MLE).
-2. Pattern prior: a Gaussian process over the 60 cells on $z = \log(1 + \text{tickets})$ (Lec 4).
-   Its kernel is a sum (Lec 4: "$k_1 + k_2$ adds independent processes") of film, slot and weekend effects with variance τ² = 1 `[ASSUMPTION]` and a film-by-slot curve that is smooth across neighbouring slots: $v\,[f{=}f']\,e^{-(s-s')^2/2\ell^2}(\rho + (1-\rho)[t{=}t'])$.
-   $\ell$, $v$, $\rho$ maximize the marginal likelihood on a grid (Lec 4); on the default data ℓ = 1.5 slots, v = 0.5, ρ = 1, from 30 tried cells.
-   Each cell's prior mean and spread are the GP prediction from all *other* cells, so its own screenings are counted only once, in step 3.
-   It gives every cell a prior, including the 30 of 60 cells never screened.
-3. Belief: Bayes' rule evaluated on a 200-point grid of θ, prior × the likelihood of every past screening (Lec 2; exact enumeration, Lec 3).
-   A sold-out screening enters through P(D ≥ seats | θ), so it raises the belief instead of capping it (53 of 212 fictional screenings).
+**Supporting analysis (not a component): the demand estimate.**
+It supplies the value of each possible screening; the components below remain explicit formulas [Ref §3, "ML Usage ≠ Data-driven Evaluation"].
+1. *Pattern by maximum likelihood* (Lec 2, p. 24): $P_{fsd} = F_f \cdot S_s \cdot D_d$ (film strength x time-of-day index x weekday index), the maximiser of the Poisson likelihood of all screening totals, computed by repeating "each factor = observed / expected tickets over its rows" until stable; $S$ and $D$ are scaled to average 1.
+   It gives every film x time x day an estimate, including combinations never screened.
+2. *Bayes update per cell* (Lec 2, Example 2.1, p. 20; posterior as a weighted average, pp. 16, 22): for film $f$, show-time $s$ and day type $t$ (Mon-Thu, Fri-Sun `[ASSUMPTION]`), demand rate $\theta \sim \text{Gamma}(kP, k)$ with mean $P$ = the pattern, worth $k$ screenings; screenings are Poisson with exposure $w_i = D_{d_i}/\bar D_t$ (the weekday's share inside its day type); posterior $\text{Gamma}(kP + \sum y_i,\ k + \sum w_i)$ with mean $\frac{k}{k+\sum w_i} P + \frac{\sum w_i}{k + \sum w_i} \bar y$.
+3. *Sold-out screenings:* records carry no hall, so a total equal to one of the venue's hall sizes is read as a sell-out `[ASSUMPTION]` and enters as $\max(y_i, \text{pattern})$ ("at least the seats").
+4. *Prediction:* the posterior predictive of a Poisson-Gamma model is negative binomial (Lec 2, p. 32), so expected sales integrate over the belief instead of plugging in its mean (Lec 2, p. 31).
+5. *Films without records* (a new release, or a film that could not fit the grid in the past): $F_f$ = the manager's strength (default 1.3 for a new release) x the average film; flagged in the plan.
 
 | Component ID | Decision ID | Role: Cost / Constraint / State-transition | Model: Formulation / Simulation / Data-driven | Definition, units, and evidence / assumption / unknown |
 |---|---|---|---|---|
-| `expected-tickets` | `weekly-plan` | Cost (maximize) | Formulation | $\sum x_{fhds}\, v_{fhds}(\kappa)$, tickets, with $v(\kappa) = \sum_j p(\theta_j \mid \text{records})\, \mathbb{E}[\min(D, \text{seats}_h) \mid \theta_j - \kappa\sigma]$: the posterior predictive at κ = 0, its worst case within ±κ posterior sds otherwise (robust LP, Lec 1). The belief supplies parameters only, so the component stays Formulation [classification reference §3]. |
-| `one-film-per-hall` | `weekly-plan` | Constraint | Formulation | $\sum_f x_{fhds} \le 1$. Hard. |
-| `show-limits` | `weekly-plan` | Constraint | Formulation | $\min_f \le \sum_{h,d,s} x_{fhds} \le \max_f$. Hard. `[ASSUMPTION]` stands in for distributor commitments (TBD). |
-| `no-self-clash` | `weekly-plan` | Constraint | Formulation | $\sum_h x_{fhds} \le 1$: a film never plays in two halls at once. Hard; keeps demand separable. |
-| `slot-fit` | `weekly-plan` | Constraint | Formulation | $x_{fhds} = 0$ if runtime + cleaning > slot length. Hard. With 3-hour slots The Odyssey (192 min) and Possible Love (184 min) could not be shown at all (demo failure case). |
+| `expected-tickets` | `weekly-plan` | Cost (maximise) | Formulation | $\sum x_{fhds}\, v_{fhds}$ in tickets, $v_{fhds} = \mathbb{E}[\min(D_{fsd}, \text{seats}_h)]$ with $D$ the negative-binomial predictive. For a film with records at a time and day type it never played (*untried*), the demand mean is multiplied by $(1-c)$ before valuing: the worst case of a box, which keeps the problem linear because $x \ge 0$ (robust LP, Lec 1, p. 25). The evaluation metric reported in Section 5 is the same sum with $c = 0$. |
+| `one-film-per-hall` | `weekly-plan` | Constraint | Formulation | $\sum_f x_{fhds} \le 1$ for every open hall-time; closed halls and blocked cells have no variables. Hard. |
+| `no-self-clash` | `weekly-plan` | Constraint | Formulation | $\sum_h x_{fhds} \le 1$: a film never plays in two halls at the same time. Hard. It also keeps the records interpretable, since two such screenings would share one `title_tag` + `venue_tag` + `play_day` + `curtain_time` key [A §2]. |
+| `show-limits` | `weekly-plan` | Constraint | Formulation | $\min_f \le \sum_{h,d,s} x_{fhds} \le \max_f$. Hard. `[ASSUMPTION]` stands in for distributor and house rules (TBD, Section 3). |
+| `slot-fit` | `weekly-plan` | Constraint | Formulation | $x_{fhds} = 0$ if runtime$_f$ + changeover > slot length. Hard. |
 
 No State-transition component exists (Section 1).
+Pinned cells are fixed before solving: their hall-time and film-time leave the problem and the film's limits shrink by one.
 
-**Invalid or infeasible input:** out-of-range numbers or malformed purchase rows block the run with a field- or line-specific message.
-If the rules cannot all be met (e.g. minimum shows exceed open screen-slots), no plan is shown; the violated constraint, the gap and a fix are reported, and earlier results are marked stale.
-Empty or partial halls are allowed (value 0).
+**Hard constraints vs preferences:** all rules are hard; there are no soft constraints or penalties.
+Caution is part of how the objective values untried combinations, not a constraint.
 
-**Follow-up (Formulation):** decision variables, objective and hard constraints are above; there are no soft constraints.
-The 0/1 requirement is relaxed to $x \ge 0$; the relaxation is exact here because every coefficient is 0 or 1 and the hall rows and the film rows each form nested groups, so every vertex is whole-numbered (as for the assignment polytope in Lec 1).
-The tool checks integrality on every run and refuses to show a fractional plan.
-Feasibility is checked before solving and verified after.
-Simulation, Feedback, Stateful and Hierarchical follow-ups: N/A for this boundary.
-The hidden generator used only to create fictional data and the mock checks is not an evaluation component.
+**Invalid or infeasible input:** malformed settings or purchase rows block the run with a field- or line-specific message (for example a non-positive `passes_bought`, an invalid date, a `curtain_time` that is not on the grid, a screening with more tickets than the largest hall, a grid whose last show starts after midnight).
+If the rules cannot all be met, a pre-check names the violated rule, the gap and a fix (for example "Minimum shows add up to 42 but only 35 screen-slots are open"); no plan is shown and earlier results are marked stale.
+Rows for another `venue_tag`, for titles not on the slate, or outside the history window are set aside with a note, not silently dropped.
+Empty hall-times are allowed (value 0).
+
+**Follow-up questions [Ref §5].**
+*Formulation:* variables, objective, hard constraints, parameters and infeasible-input handling are above.
+The 0/1 requirement is relaxed to $x \ge 0$: every coefficient is 0 or 1, and the hall-time rows and the film rows (film-time rows nested inside each film's total) form two nested families, so every vertex of the polyhedron is whole-numbered, and an LP optimum sits at a vertex (Lec 1, p. 16).
+The tool checks integrality on every run and refuses a fractional plan.
+Optimality for the stated formulation is certified on every run by LP duality: the dual bound equals the plan value and every reduced cost is $\le 0$ (KKT and duality, Lec 1, pp. 37-42).
+*Data-driven:* N/A - no evaluation component is learned; the estimate only supplies parameters.
+Its data questions (coverage, bias, validation) are answered in Section 3 and its backtest in Section 5.
+*Simulation:* N/A - the fictional generator creates data and scores the mock checks but is not part of the evaluation of a plan.
+*Stateful, Feedback, Hierarchical:* N/A for this boundary (Section 1).
 
 ## 3. Information & Uncertainty
 
 **Unit of record:** one completed purchase for one screening; date and time describe the screening, not the purchase [A §2].
-Tickets per screening = sum of `passes_bought` per (`title_tag`, `venue_tag`, `play_day`, `curtain_time`); `title_tag` is an alias that the manager's slate maps to a film.
-All inputs are available before the plan is fixed; actual admissions of the planned week are later outcomes, used only for evaluation.
+**Unit of analysis:** the screening, identified by `title_tag` + `venue_tag` + `play_day` + `curtain_time`; its tickets $y_i$ are the sum of `passes_bought` over its rows.
+**Transformations:** rows of the planned venue only; `curtain_time` mapped to a slot of the grid; `play_day` mapped to weekday and day type; aliases mapped to the slate (title, runtime).
+**Quality checks:** six fields per row, valid date and 24-hour time, positive whole `passes_bought`, non-empty aliases, times on the grid, screening totals not above the largest hall; set-aside rows are counted and reported.
+**Decision time vs later outcomes:** everything above is available before the plan is fixed; the actual admissions of the planned week are later outcomes, used only for evaluation.
 
-**Established from the records:** tickets per observed screening, weekday/weekend and time-of-day patterns for screenings that happened, group sizes, repeat buyers and shared audiences via `account_tag`.
-**Not established:** hall, capacity, runtime, price, purchase time, current practice, dataset size and quality [A §2].
-Three consequences follow from the record design itself (Lec 0: a decision "changes the world it is scored in, and you never see what the alternatives would have given"):
-1. A sold-out screening records capacity, not demand (53 of 212 fictional screenings).
-2. A screening with zero purchases leaves no row (4 fictional screenings vanish without the schedule log).
-3. Only film-time combinations someone chose to screen are observed (50% of fictional combinations were never tried).
+**What each field is used for:**
+
+| Field | Status | Used for in this step | Could support later (out of scope now, and why) |
+|---|---|---|---|
+| `title_tag` | Used | Groups purchases into screenings and screenings into film x time x day-type cells; maps to the slate | Film ageing across weeks; needs release dates and a longer history |
+| `venue_tag` | Used as a filter | Keeps the planned venue's rows; others are set aside with a note | Pooling evidence across venues, shared audiences; multi-venue is excluded |
+| `play_day` | Used | Weekday, day type, weekday index, history window, backtest cut | Holiday effects and trends; needs a holiday calendar and more weeks |
+| `curtain_time` | Used | Show-time slot (time-of-day index); off-grid times are rejected | Designing a new grid; the grid is an operating rule, not learned |
+| `account_tag` | Not used | Checked non-empty; distinct accounts are counted for information | Repeat visits, audience overlap between films (cannibalisation), audience depletion (Section 1); decision value unproven and a privacy review is needed |
+| `passes_bought` | Used | Summed per screening = tickets sold, the demand observation | Group-size mix (families vs couples) to refine time-of-day profiles |
+
+**Established from the records:** tickets per observed screening, their pattern by film, time and weekday, and how often totals hit a hall size.
+**Not established:** halls, seats, zero-sale screenings, prices, purchase times, film attributes, current practice, dataset size, period and quality [A §2]; Section 1 lists the consequences.
+
+**No additional record fields.**
+The brief says: "Label any additional fields or operating rules as your own assumptions" [A §2].
+The mechanism needs no additional record fields: it runs on the six teaching fields.
+What the business has not given is not assumed unless it is stated and tagged `[ASSUMPTION]`; the only such items are the weekly operating settings of Section 2 (halls and seats, grid, runtimes, show limits) and the interpretation rules marked in Sections 1-2.
+Because everything rests on this format, the operator must confirm that the six-field specification is the fixed and complete export (first request below): renamed or removed fields, a changed meaning (for example purchase time instead of screening time) or pre-aggregated rows would make validation reject the file or, worse, silently degrade the estimates.
+
+**Gap: there is no real dataset.**
+The brief gives a record specification, not a dataset, and asks for a small, entirely fictional one [A §2].
+The demo therefore generates the history from its settings (halls, seats, show-time grid, number of films, weeks of history, seed), so changing a setting changes the records (14,165 purchase rows for 420 screenings, 7 Sep to 4 Oct 2026, by default).
+It uses two distributions:
+1. *Demand per screening:* negative binomial with mean = film strength x time-of-day shape x weekday factor (all invented, with film-by-time differences such as family films selling poorly late at night) and dispersion $r$ = 6; sales = min(demand, seats).
+   We use it because ticket buyers form a count (Poisson) whose rate varies from screening to screening (a Gamma mixture), which is exactly the negative binomial, and it matches the Poisson-Gamma model of the estimate (Lec 2, pp. 19-20, 32).
+2. *Tickets per purchase:* categorical 1-6 with shares 30%, 45%, 10%, 10%, 3%, 2% (invented); each screening's sales are split into purchases with it.
+
+The past schedule inside the history is chosen by a fictional programmer who knows roughly what sells (log-normal judgement noise, setting "past programmer noise"), so some combinations are never tried, as in real records.
+Demand could be predicted more accurately with real records of the venue and, beyond the six fields, with sales of other cinemas showing the same film, each film's national box-office success, pre-sales and booking curves, social-media reach and audience retention (trailer views, mentions), review scores, the release and holiday calendar, weather, competitor schedules and marketing spend.
+These are out of scope for the first step because none is in the records, each needs a separate collection agreement, and their link to one venue's admissions is unproven; we simplify with the generator above, whose parameters are visible and adjustable in the demo.
+Results on generated data show that the mechanism works; they do not show that real records behave like the generator.
 
 | Fact / assumption / unknown or request | Evidence or reason for current treatment | Why it matters | How to confirm or obtain it; priority | Fallback or limit until confirmed |
 |---|---|---|---|---|
-| Request: screening log (film, hall, date, time) | Not in the record spec [A §2] | Reveals zero-sale screenings and sell-outs | Operator's scheduling system export; **high** | Demand analytics only; no hall assignment. Demo boundary case shows the bias. |
-| Request: seats per hall | Not in the spec | Sell-out detection; value of big vs small halls | Operator facility data; **high** | Operator estimate, flagged `[ASSUMPTION]` |
-| Request: runtimes, slot grid, cleaning time | Not in the spec | Feasibility (`slot-fit`); real runtimes up to 172 min break a 3-hour grid | Programming manager; **high** | Manager-supplied defaults (demo: 200-minute slots, 20 min cleaning) |
-| Request: min/max show commitments | Unknown contract terms | Hard constraints (`show-limits`) | Programming manager / distributor terms; **high** | Manager enters weekly |
-| Request: alias-to-film slate | Records carry aliases only [A §2] | Runtimes and limits attach to films | Programming manager with the weekly slate; **high** | No plan for an unmapped alias (its rows are ignored with a warning) |
-| Request: purchase time, price | Not in the spec | Booking curves, revenue objective | Ticketing export; **medium** | Stay with admissions and a fixed weekly plan |
-| Request: release dates and holiday calendar | Not in the spec; the demo history contains Chuseok (24-26 Sep) | Films age; holidays inflate demand | Manager / public calendar; **medium** | Use recent non-holiday weeks only |
-| `[ASSUMPTION]` venues are independent | Keeps the decision flat | Sister venues may split one audience | Share of `account_tag`s buying at ≥2 venues; medium | Single-venue scope only |
-| `[ASSUMPTION]` similar films do not steal each other's audience | Keeps the objective separable and exact | Plan may overstate tickets when similar films clash | Shared-audience overlap by `account_tag`; medium | Report as limitation |
-| `[ASSUMPTION]` demand stable over the 3-week history | Films are early in their run | Films in their opening week are mis-estimated | Release dates (request above); medium | Use recent weeks only |
-| TBD: refunds, walk-up sales without account, midnight `play_day` convention | Brief says "completed purchase" only [A §2] | Demand and day-type bias | Clarify with data owner; medium | Document and exclude ambiguous rows |
-| TBD: admissions vs revenue as the managed KPI | No price data | Wrong objective | Ask the sponsor; high | Admissions |
+| Request: confirm the six-field export is the fixed, complete data contract (names, meaning, one row per completed purchase) | The tool reads only these fields [A §2] | Parser, checks and estimates depend on it | Data owner, written confirmation in Stage 0; **high** | Validation rejects non-conforming files; adapt the parser before any analysis |
+| Request: screening log (every scheduled screening with hall, including zero sales) | Not in the specification [A §2] | Exact sell-outs, vanished screenings, hall effects | Operator's scheduling system export; **high** | Sell-outs read from totals equal to a hall size `[ASSUMPTION]`; vanished screenings stay an upward bias for weak slots, flagged; without any hall information the tool stops at demand analytics |
+| Request: hall seats, show-time grid, changeover time | Not in the specification | Feasibility (`slot-fit`), value of large vs small halls | Venue manager; **high** | Manager enters them weekly, as in the demo |
+| Request: weekly slate with runtimes and min / max show commitments | Contract terms unknown | Hard rules (`show-limits`, `slot-fit`) | Programming manager, distributor terms; **high** | Manager enters them; minimum 0 if unknown, and the plan is labelled advisory |
+| Request: KPI - admissions or revenue (price, film rental share) | No price field; the objective could be wrong | Wrong objective, wrong plan | Sponsor decision in Stage 0; **high** | Admissions |
+| Request: one interview on current practice and publication lead time | Practice unknown [A §2] | A fair baseline, missing rules, confirms Open-loop | Programming manager; **high** | Stated rule of thumb as reference; lead time stays TBD |
+| Request: at least 8 recent weeks of rows `[PROPOSED]`; release dates and holiday calendar | History length unknown; the demo history contains no holidays | Backtest, stability, holiday flags, film ageing | Data owner, public calendar; **medium** | Shorter history with the same caution and a flagged backtest; holiday weeks excluded |
+| Request: privacy basis for using `account_tag` | Account-level data may be personal data | Any later audience analysis | Operator's privacy function; **medium** | Not used, as now |
+| Request: purchase time and price | Not in the specification | Booking curves, revenue, mid-week reaction (later stages) | Ticketing export; **low** | Weekly plan, admissions only |
+| `[ASSUMPTION]` a screening total equal to a hall size is a sell-out | Records carry no hall | Censoring correction | Screening log (above) | A screening that sells exactly a hall size without selling out is misread (rare); the demo flags 120 of 420 screenings (29%) |
+| `[ASSUMPTION]` demand of a film-time is stable over the history window, and screenings are independent | Keeps the estimate simple and the objective separable | Opening weeks, ageing, holidays and similar films competing break it | Backtest on held-out weeks; `account_tag` overlap; release dates | Weekly backtest in Stage 1; limitation stated |
+| `[ASSUMPTION]` Mon-Thu and Fri-Sun as day types, with a weekday index inside each | Enough evidence per cell from a few weeks | Friday may behave differently from Saturday | Backtest by weekday in Stage 1 | Weekday index keeps the per-day level |
+| TBD: refunds, walk-up sales without account, the `play_day` of after-midnight shows | The brief says "completed purchase" only [A §2] | Demand and day-type bias | Data owner; medium | Document and exclude ambiguous rows; after-midnight shows are excluded |
 
-**Main uncertainty and when not to trust the plan:** beliefs for untried combinations are extrapolations, and an optimizer seeks out exactly the most optimistic of them ("the optimiser will exploit the surrogate wherever it is wrong", Lec 0; the heater-layout example in Lec 1).
-The GP makes the extrapolation as good as the data allow: for OCTONAUTS (a family film never screened after 15:40) its Mon-Thu 22:20 prior is 62 tickets, where the additive ridge pattern would say 166 because evening slots are strong for the other films.
-It cannot make the extrapolation certain.
-The caution level κ values each screening at its belief shifted down by κ posterior standard deviations, which penalizes untried combinations most (they lose 56% of their value at κ = 1, tried cells 11%).
-We examined its effect with a sweep and a 40-history study (Section 5).
-Even so, 18 planned screenings use untried combinations (4 of them in the 60-seat hall, where a miss costs least); the demo flags them for the manager.
-The rule of thumb uses 39 such combinations without noticing.
-The recommendation should not be trusted where most of the plan relies on untried combinations, when the schedule log is missing, or when any exclusion in Section 1 is active (e.g. a holiday week).
+**Main uncertainties, how they are examined, and when not to trust the plan.**
+Estimates for untried combinations are extrapolations of the pattern, and an optimiser seeks out exactly the most optimistic ones: "the optimiser will exploit the surrogate wherever it is wrong" (Lec 0, p. 25; illustrated in Lec 1, p. 31).
+This is the most important feature of the problem: the records are censored by capacity and selected by past choices, so the data are thinnest exactly where an optimiser looks for gains.
+The response is twofold: the robust value discounts untried combinations (Section 2), and the trial deliberately tests a capped number of them to learn what the records cannot show (Section 6).
+Its effect was examined with a sweep of the caution level and the pattern weight over 40 fictional histories in two worlds (Section 4): without caution the plan loses 635 ± 64 true expected tickets per week when the past programmer skipped bad combinations for a reason, and caution costs nothing measurable when every combination had been tried.
+Sold-out screenings were examined the same way; the "at least the seats" rule is part of the selected estimate that the study compares with plain averages.
+The recommendation should not be trusted when most of a plan relies on untried combinations or on films without records, when no hall information exists, in holiday or opening weeks, or when any exclusion of Section 1 is active.
 
 ## 4. Alternatives & Selected Approach
 
-Methods were chosen with the course's three questions (Lec 0): the model of the decision is known (linear rules), it is a single static decision per week, and demand is learned only from a fixed log.
-That points to Lec 1 (LP, duality, robust LP) for the decision and Lec 2-4 (Bayesian estimation, exact inference, Gaussian processes) for the belief.
-The comparison was made at two levels: whole approaches, and alternatives inside each step of the selected approach.
-
-**Whole approaches:**
+Methods were chosen by the course's criteria (Lec 0, pp. 10-12): the decision model is known and linear, it is one static decision per week, and demand must be learned from a fixed log.
+That points to linear programming with a robust value and duality (Lec 1) for the decision, and Bayesian estimation (Lec 2) for demand; Lecture 4 supplies the later exploration stage.
 
 | Approach | Mechanism and required information | Strengths, limitations, and effort | Selection and reason |
 |---|---|---|---|
-| A: Rule of thumb | Score = last history week's tickets; quota = open screen-slots × score share, rounded, clipped to min-max, leftovers to the top-scoring films below their max; fill 19:00, 22:20, 15:40, 12:20, 09:00, largest hall first, with the top-scoring film that has quota left, fits, and is not on elsewhere at that time | Transparent; blind to time-of-day fit and hall size; low effort | Baseline, labeled a proposed reference |
-| B: Belief + cautious LP | Noise by MLE (Lec 2) → GP prior (Lec 4) → Bayes on a grid (Lec 2-3) → robust value (Lec 1) → LP by two-phase simplex → duality certificate and shadow prices (Lec 1) | Exact for the stated formulation; proof of optimality; prices every limit; honest about thin data; assumes separable demand | **Selected** |
-| C: Same, full trust (κ = 0) | Plan on the posterior predictive (maximum expected utility, Lec 3) | The right choice if the belief were unbiased; promises most | Rejected: mock study −271 ± 62 tickets in the homework world, −541 ± 145 with a sensible past manager |
-| D: Bayesian optimisation of the schedule | Try whole schedules on the real cinema, GP over schedules, acquisition by EI/UCB (Lec 4) | Needs no demand model | Rejected: each "query" is a real week; 630 variables, far beyond the 10-20 parameters BO handles (Lec 4) |
-| E: Bandit testing (UCB, Thompson sampling; Lec 4 and atlas) | Spend a few slots per week testing untried combinations, update beliefs from sales | Learns exactly what the records cannot; changes the problem to Feedback and needs weekly data flow | Stage 2+ add-on for the flagged untried screenings |
-| F: MDP / reinforcement learning (course roadmap, Lec 7-8) | Sequential policy across days | Mid-week reaction; no state links decisions inside the boundary, data-hungry | Rejected for the first step |
-| G: Social-media sentiment; multi-venue coordination | Comments × count as a prior for new releases; venues coordinated by prices | External data, unproven link; only if venues share customers | Roadmap |
+| A: Rule of thumb | Score = last history week's tickets per screening; shows in proportion to the score within min / max; fill the best-selling day-times first (by average tickets in the records), biggest hall first, with the highest-scoring film that has shows left, fits the slot and is not on elsewhere at that time; a film stranded below its minimum takes the least attractive show of a film above its minimum; leftover empty slots go to the best free film | Transparent, uses only the records; blind to each film's time-of-day fit; low effort | Baseline, labelled a proposed reference |
+| B: Demand report only | Tables of tickets by film and time; the manager plans by hand | Simple; produces no plan, so the decision stays unsupported, and untried times stay invisible | Rejected for the first step; its tables are part of the demo |
+| C: Plain averages + LP | Cell or film averages feed the same LP | Simple; ignores sell-outs, cannot rank untried combinations; mock study: own averages −506 ± 59, film averages −1,135 ± 106 tickets per week vs the selection | Rejected |
+| D: Bayes estimate + robust LP | Section 2: pattern by MLE, Poisson-Gamma update, negative-binomial expected sales, robust value, LP with duality check | Exact for the stated formulation; certificate on every run; honest about thin data; assumes separable demand | **Selected** |
+| E: Gaussian-process prior or Bayesian optimisation (Lec 4) | GP over film x time cells (the v2 design), or trying whole schedules on the real venue with an acquisition function | GP: more hyperparameters and harder to explain for the same purpose; BO: each query is a real week and a schedule has hundreds of variables | Rejected for the first step (Section 7, discussion 2) |
+| F: Test-and-learn (bandit, Lec 4) | Spend a few shows per week on untried combinations and update from sales | Learns what the records cannot; turns the problem into Feedback and needs weekly data flow | Stage 2+ add-on (Section 6) |
 
-**Alternatives inside approach B, step by step.**
-For each step, the options are lecture methods; evidence marked "mock study" comes from `HW01/src/study.cjs`, which re-runs the whole pipeline with one step swapped on 40 fictional histories in each of three worlds and scores each plan against the hidden demand (Section 5).
-Differences are tickets per week versus the selected method, with 95% intervals, in the order homework world, sensible manager, random history.
+**Choices inside the selected approach** (evidence: the mock study, 40 fictional histories per world, true expected tickets per week, difference to the selection with 95% interval; "sensible" = the default generator, "random" = past schedule close to random):
 
-| Step | Option (lecture) | For | Against, with evidence | Decision |
-|---|---|---|---|---|
-| 1 Noise | Poisson (Lec 2, Example 2.1) | One parameter; the lecture's count model | Variance = mean; the data are e^213 times less likely at r = 200 (practically Poisson) than at r̂ = 8.6 | Rejected |
-| 1 Noise | Negative binomial, r by MLE (Lec 2: Poisson-Gamma predictive; MLE) | Lets screenings swing more than Poisson | One r for all films and times | **Selected** |
-| 2 Prior | None (flat) | Assumes nothing | 30 untried cells get no estimate, so they cannot be ranked; "when data is scarce the prior is doing most of the work" (Lec 2) | Rejected |
-| 2 Prior | Ridge = MAP with a Gaussian prior (Lec 2) | Simple; regularisation is a prior | Effects only add up; one spread for all cells; the cell's own data counted twice. Mock study: −308 ± 53, −224 ± 119, +81 ± 120 | Rejected (it was v1's choice) |
-| 2 Prior | Full Bayesian linear regression (Lec 2, backup 3) | Per-cell width from $\Sigma_w$ | Equals the GP with ℓ = 0: no curve over the day per film. Mock study: −216 ± 39, −22 ± 45, −38 ± 86 | Rejected |
-| 2 Prior | Gaussian process, kernel by marginal likelihood (Lec 4) | Per-cell mean and width; neighbouring times of one film inform each other; the data choose the kernel | O(n³) in tried cells (30 here, trivial) | **Selected** |
-| 3 Belief | Plain average | Simple | Sold-out screenings cap it; untried cells have none | Rejected |
-| 3 Belief | Conjugate Gamma-Poisson update (Lec 2) | Closed form | Only exact counts are conjugate; the sold-out likelihood P(D ≥ seats) leaves the family | Rejected |
-| 3 Belief | Sampling: rejection, likelihood weighting, Gibbs (Lec 3) | Any likelihood | Approximate; unnecessary for one unknown per cell | Rejected |
-| 3 Belief | Exact enumeration on a 200-point grid (Lec 2 + Lec 3) | Any likelihood, exact up to the grid | Grid resolution | **Selected** |
-| 4 Caution | Full trust, κ = 0 (Lec 2 posterior predictive, Lec 3 maximum expected utility) | Correct if the belief were unbiased | Mock study: −271 ± 62, −541 ± 145, but +313 ± 133 with a random past schedule (see below) | Rejected |
-| 4 Caution | Mean-variance LP, $\bar c^\top x + \gamma x^\top \Sigma x$ (Lec 1) | Convex for γ ≥ 0 | A risk preference, not a guard against optimistic errors; repeated screenings of one cell share θ, so Σ is not diagonal and the exact form is a QP. Mock study (diagonal version, γ = 0.03): −61 ± 35, −90 ± 62, −1 ± 96. On seed 437 alone it sells more (7,836 vs 7,768), which the study shows is not typical | Rejected |
-| 4 Caution | Chance constraint / ellipsoidal robust row (Lec 1, SOCP, η ≥ ½) | Protects the week total | Second-order cone loses the whole-numbered vertices; the risk sits in individual choices, not the total | Rejected |
-| 4 Caution | Optimism, UCB μ + κσ (Lec 4) | Learns by trying | Needs feedback across weeks | Later stage (approach E) |
-| 4 Caution | Robust box: belief − κ sd (Lec 1 robust LP) | Hits untried guesses hardest; stays an LP, since with x ≥ 0 the worst case of a box is its lower corner | κ is a policy setting, calibrated only by a trial | **Selected** |
-| 5 Solver | Enumeration (Lec 3) | Exact | About 7^105 ≈ 10^88 weeks | Rejected (used on tiny instances in the tests) |
-| 5 Solver | Greedy fill | Fast | Cannot trade one slot against another; no proof | Rejected (it is the baseline) |
-| 5 Solver | Successive convexification / trust region (Lec 1) | Non-convex problems | Not needed: the problem is already an LP | Rejected |
-| 5 Solver | LP by two-phase simplex (Lec 1, atlas) | Exact; whole-numbered vertices; dual prices for free | Assumes demand adds up across screenings | **Selected** |
-| 6 Proof | Trust the solver | No work | No evidence for the manager | Rejected |
-| 6 Proof | Duality certificate and shadow prices (Lec 1, KKT) | A proof on every run; explains each cell | Valid for the stated formulation and small changes | **Selected** |
+| Part | Options | Evidence | Decision |
+|---|---|---|---|
+| Estimate | film average; own cell average; pattern only; pattern + Bayes update | Sensible: −1,135 ± 106; −506 ± 59; −1,190 ± 113; selected. Random: −592 ± 34; −26 ± 27; −626 ± 28; selected. Backtest error (WAPE, 40 histories): 38.7%, 29.6%, 30.3%, **28.9%** | Pattern + Bayes update |
+| Pattern weight $k$ | 0, 1, 2, 4 | Sensible: +14 ± 16, selected, −37 ± 21, −74 ± 32; $k = 0$ would leave an untried cell with no prior weight at all | $k$ = 1 |
+| Caution $c$ | 0, 0.3, 0.5, 1 (exclude untried) | Sensible: −635 ± 64, −100 ± 40, selected, +0 ± 0. Random: +0 ± 1 for all | $c$ = 0.5 (allows an untried combination only when its estimate is twice as strong) |
+| Solver | enumeration; greedy fill; LP | Enumeration: about $7^{105}$ weeks; greedy cannot trade one slot against another and gives no proof (it is the baseline); LP: exact for the formulation with a certificate | LP |
 
-**Why caution is kept although full trust wins in random-history worlds:** caution helps only when the never-tried combinations were skipped for a reason.
-A real programmer skips family films at 22:20 because they sell badly, so the untried cells are worse than the pattern suggests, and the optimizer would be lured into them.
-When the past schedule was random, untried cells are no worse than tried ones, and caution only costs tickets.
-Real schedules are chosen deliberately, so the sensible-manager world is the relevant one; the trial (Section 6) checks this.
-
-**Concrete benefit of each component (fictional data, default inputs):**
-
-| Weakness | Lecture method | Benefit observed in the demo |
-|---|---|---|
-| Screening counts swing more than Poisson | Negative binomial, MLE (Lec 2) | r̂ = 8.6; Poisson would understate the spread of every screening |
-| 30 of 60 cells never screened | Gaussian process prior (Lec 4) | Every cell gets a mean and a width; OCTONAUTS Mon-Thu 22:20 starts at 62 tickets, not ridge's 166; FURIOUS (no rows) falls back to the average film |
-| Sold-out screenings cap recorded tickets | Bayes' rule with the likelihood P(D ≥ seats) (Lec 2) | THE ODYSSEY Fri-Sun 19:00: all 9 screenings sold out in the 60-seat hall; plain average 67, belief 111 ± 13 |
-| Optimizer chases untried guesses (Lec 0, Lec 1) | Robust value, κ posterior sds (Lec 1) | Mock: full trust sells 7,411, κ = 1 sells 7,768, rule of thumb 6,269 |
-| About $7^{105} \approx 10^{88}$ weeks; greedy cannot trade | LP by two-phase simplex (Lec 1) | Exact optimum in 363 pivots; +825 expected tickets (+11.2%) |
-| Is it the best? What do limits cost? | LP duality and KKT (Lec 1) | Dual bound 6,645 = plan 6,645; shadow prices below |
-
-**Formulation:** maximize $\sum v_{fhds}(\kappa) x_{fhds}$ subject to one film per hall and time, never two halls at once, $\min_f \le \sum x_{f\cdot} \le \max_f$, and $x \ge 0$ (630 variables with default inputs).
-Locked cells are fixed before solving: their hall-time and film-time are removed and the film's limits shrink by one.
-
-**Simplex (Lec 1 and atlas):** the LP optimum sits at a vertex, and the simplex method walks from vertex to neighbouring vertex.
-Phase 1 maximizes minus the sum of artificial variables until every minimum is met (168 pivots for the 41 minimum shows).
-Phase 2 enters the screening whose value most exceeds the prices of the resources it uses (its reduced cost $\bar c_j = v_j - y^\top A_j$), chooses the leaving row by the ratio test, and stops when no $\bar c_j > 0$, i.e. when no feasible direction improves the objective (Lec 1 optimality condition); 195 pivots.
-Each pivot moves to a neighbouring vertex, which here is a whole schedule: one screening in, one out.
-Dantzig's rule is used, with Bland's rule after 60 degenerate pivots to prevent cycling.
-
-**Certificate and shadow prices (duality, KKT; Lec 1):** the dual prices are read from the final tableau: one price per hall-time, per film-time and per show limit.
-No screening is worth more than the prices of the three resources it uses (all reduced costs ≤ 0), so the sum of all prices bounds every feasible week from above (weak duality).
-It equals the plan, 6,645 = 6,645, which proves optimality for the stated formulation.
-Scheduled screenings pay their prices exactly (complementary slackness), which is how the demo explains each cell.
-Shadow prices with default inputs: each required POSSIBLE LOVE show costs 4.3 cautious tickets; a second 220-seat hall on Fri 19:00 would add about 135; no show maximum binds, so all other limits are slack and free.
-They are valid for small changes only.
-
-All steps and the baseline can be replayed step by step in `demo.html` (clickable flowchart, Section 5).
-
-**Selected flow:** validate inputs → map aliases to films and sum purchases per screening → screening noise → GP prior per cell → Bayes belief per cell → robust value of each (film, hall, slot) → solve the LP by simplex → verify integrality, constraints and the duality certificate → compare with approach A on the same inputs and the same value function.
-The simplex optimum was checked against brute-force enumeration on 200 random small instances, and the duality certificate is checked on every run.
-It is not optimal with respect to anything the formulation omits, and its value depends on the beliefs.
-The simplex is deterministic (fixed pivot rules) and the GP kernel search is a fixed grid, so results are reproducible.
-Randomness only generates the fictional history (seeded PRNG, seed 437).
-Actual calculations: all of the above.
-Mock: the hidden generator used to score the caution sweep, the alternatives scoreboard and the study.
-Not implemented: approaches C-G as production features (C and the step alternatives run only inside the comparison), pricing, holidays, film ageing, mid-week changes, two halls showing one film at once.
+**Selected flow:** validate settings and rows → sum purchases per screening → read sell-outs → fit the pattern → Bayes update per cell → expected sales per (film, hall, time) with caution → LP → integrality and duality checks → rule-of-thumb plan on the same inputs → score both with the same function and the same rules.
+**Tie-breaking and randomness:** the simplex uses fixed pivot rules (largest gain first, Bland's rule after a run of degenerate pivots), so equal-value plans are always broken the same way; randomness exists only in the fictional generator, through a seeded generator.
+**Actual calculations:** everything above runs live in `demo.html`.
+**Mock:** the hidden demand of the generator, used only by the panels marked MOCK and by the study.
+**Not implemented:** approaches B, E and F as features, booking, pricing, several venues, mid-week changes, holidays, ageing, a film in two halls at once, after-midnight shows, the exploration policy.
+**Optimality claim:** the plan is optimal for the stated formulation and estimates; it is not optimal with respect to anything the formulation omits, and its value is only as good as the estimates.
 
 ## 5. Demonstration & Evaluation
 
-**How to use `demo.html`:** open it in a desktop browser (no server or internet).
-It loads the fictional data and runs once.
-"Watch the week" plays both plans side by side on a clock with day and time: every expected ticket is a person who walks in, takes a seat, watches and leaves, and people turned away from a full hall walk back out; counters fill as people sit down.
-"Why this is an optimization" shows the biggest win, an accepted loss, week totals and the untried screenings ("calculated bets").
-Click any schedule cell to see the ranked alternatives; for the optimized plan the drawer shows each film's value against the dual prices of hall, film-time and show.
-"How the plan is found" is a clickable flowchart: the rule of thumb in its own lane, and SLOTWISE's six steps in the other, joined by the input and a comparison box.
-Each box opens an animation on the current data (purchase rows summed into a screening, the likelihood curve over r, the GP conditioned cell by cell with its marginal-likelihood grid, the belief updated screening by screening, κ pulling untried cells down, the greedy fill, every simplex pivot as a schedule, the duality check slot by slot), the lecture result it uses quoted as taught, how it was applied, and its alternatives with evidence.
-The comparison box re-runs every alternative on the current inputs against the hidden truth and shows the 40-history study; one column can be re-run in the browser.
-Change hall seats, slot length, cleaning time, film limits, the schedule-log switch, κ, the pattern prior (GP, full Bayesian regression, ridge), the caution rule (robust, mean-variance), extra purchase rows or the seed, press Run, and compare again.
-The run fingerprint (default `98822f30`) is identical for identical inputs; "Reset" restores the defaults.
-Checked in Chromium (Playwright, offline context): no network requests, no console errors, no horizontal overflow at 1440, 1024 and 390 px; all seven test cases pass in the page.
-Firefox: Not run.
+**How to use `demo.html`:** open it in a desktop browser (no server, internet or installation); it generates the fictional history from the default settings and runs once.
+1. *Settings:* halls (seats, open next week), show-time grid, slate and min / max shows, a new release, caution and $k$, generator settings (seed, weeks of history, dispersion, past programmer noise), and optional extra purchase rows in the six-field format.
+2. *Run:* records (first 200 rows, CSV download, field-usage table, data-gap and data-contract notes) → demand map per film, time and day type (click a cell for prior, own evidence, posterior) → both plans side by side per day or as a week overview (click a cell for the ranked alternatives, then pin or block it, which re-runs) → comparison, certificate, rule prices, backtest and mock scoring.
+3. *Modify and repeat:* change a setting, press Run; the page marks results stale while settings differ, and shows no plan with an explanation when the rules cannot be met.
+Settings are kept in the page address; "Reset to defaults" restores the defaults; the run fingerprint is identical for identical settings (default `0352a4f1`).
+Checked offline in Chromium (Playwright with network disabled: no requests, no console errors, no horizontal overflow at 1440, 1024 and 390 px; all seven test cases pass in the page) and in Firefox 149 (headless render of both files).
+The core behaviour maps to Section 2: `expected-tickets` is the score shown per cell and per plan, and the four constraints are checked for both plans.
 
-**Baseline, metrics, conditions:** approach A and B use the same inputs and the same value function.
-Metric: expected tickets per week (posterior predictive, κ = 0).
-Secondary: expected turned-away customers and empty seats, the decision value the optimizer maximizes (κ = 1), and the number of untried combinations each plan relies on.
-The mock checks score plans against the fictional generator and are kept apart from the belief that drives the decision.
+**Baseline, metrics, conditions:** approach A and the selected approach use the same settings, records, estimate and expected-sales function, and are checked against the same rules.
+Primary metric: expected tickets per week (caution 0).
+Secondary: untried combinations used, expected turned-away demand, expected empty seats, rule violations, the planning value (caution applied).
+Separate from the information used to decide, the MOCK panels score both plans against the generator's hidden demand, which real records never reveal.
 
-**Default result (fictional):** optimized 8,209 vs rule of thumb 7,384 expected tickets (+825, +11.2%).
-Decision value 6,645 vs 5,327; expected turned away 1,133 → 774; expected empty seats 6,616 → 5,791; 0 rules broken in both.
-Biggest single change: Fri 09:00 (+94).
-Accepted loss: Fri 22:20 (−22), traded for larger gains elsewhere under the shared show limits.
+**Default result (fictional):** SLOTWISE 8,211 vs rule of thumb 7,570 expected tickets (+640, +8.5%); untried combinations 0 vs 14; expected turned away 662 vs 1,033; expected empty seats 5,789 vs 6,430; 0 rule violations in both.
+LP: 630 variables, 321 rules, 430 simplex pivots; plan value 8,210.5 = dual bound 8,210.5.
+Dual prices: each required show of Oppenhammer costs 12.1 expected tickets and of Gigantic 2.2 (valid for one show more or less).
+MOCK: against the hidden demand 6,506 → 8,099 true expected tickets (+24.5%), 97.8% of an oracle that plans with the true demand (8,284).
+Backtest on the records (learn from three weeks, predict the 105 screenings of the fourth; a sold-out screening counts only when predicted below its seats): selected 26.3%, pattern only 25.8%, own averages 28.6%, film averages 39.0% on this seed; over 40 histories the selection is best (28.9%, Section 4).
 
-**Caution sweep (mock, seed 437):** at κ = 0 the model promises 8,316 tickets, but the simulated cinema sells 7,411.
-At κ = 0.5 and κ = 1 it sells 7,768, at κ = 2 7,464, at κ = 3 7,437; the rule of thumb sells 6,269.
-This shows the mechanism (an optimizer exploiting guesses about untried combinations) in a world where the truth is known; it does not calibrate κ for a real venue, which is a Stage 1-2 task.
-
-**Mock study of the alternatives (`node HW01/src/study.cjs`, 40 histories per world):** expected tickets sold, mean, with the gap to the oracle that plans with the true demand in brackets.
-
-| Method | Homework world | Sensible manager | Random history |
-|---|---|---|---|
-| Rule of thumb | 6,429 (19.9%) | 7,545 (20.8%) | 7,030 (26.2%) |
-| Ridge prior + robust κ = 1 | 7,512 (6.4%) | 8,814 (7.4%) | 7,969 (16.3%) |
-| Full Bayesian regression + robust κ = 1 | 7,603 (5.3%) | 9,015 (5.3%) | 7,850 (17.5%) |
-| GP prior, full trust κ = 0 | 7,548 (6.0%) | 8,497 (10.7%) | 8,201 (13.9%) |
-| GP prior + mean-variance γ = 0.03 | 7,758 (3.4%) | 8,948 (6.0%) | 7,888 (17.1%) |
-| **GP prior + robust κ = 1 (selected)** | **7,820 (2.6%)** | **9,038 (5.1%)** | 7,888 (17.1%) |
-| Oracle (true demand known) | 8,028 | 9,520 | 9,520 |
-
-Homework world: the demo's hidden demand, data seeds 1-40.
-Sensible manager: random hidden demand per world, past schedule chosen by a noisy but sensible programmer.
-Random history: the same demand, random past schedule.
-The selected method is best or tied-best in the first two worlds; in the third, full trust is better (+313 ± 133), for the reason given in Section 4.
+**Mock study (`src/study.cjs` in the repository, not part of the submission; its table is embedded in the demo's Compare section):** mean true expected tickets per week over 40 histories: sensible past - selected 8,125, rule of thumb 6,388, oracle 8,284 (selected reaches 98.1%); random past - selected 8,054, rule of thumb 6,655, oracle 8,284.
+The study compares methods inside a world we built; it does not measure a real venue.
 
 | Case | Inputs / reproduction steps | Expected result / pass criterion | Observed result and supported conclusion |
 |---|---|---|---|
-| Normal | Defaults (Test cases: "Default week") | Feasible; 0 violations in both plans; proposed ≥ baseline on the decision value | Pass: decision value 6,645 vs 5,327 (+1,318), 0 violations; dual bound equals the plan |
-| Boundary | Add FURIOUS, which opened 7 Oct after the records end (zero purchase rows), 5-21 shows | Valid plan; ≥ 5 shows; its demand is prior-only and flagged | Pass: 5 shows, no evidence cells, prior-only warning shown |
-| Boundary | Hall 3 capacity 0 | Valid plan without Hall 3 | Pass: 0 screenings in Hall 3 |
-| Boundary | Schedule log not provided | Plan with fallback warning; no sell-outs detected | Pass: 208 of 212 slate screenings visible, 0 sell-outs detected, warning shown |
-| Failure | Hall 2 and Hall 3 closed | No plan; reports the `one-film-per-hall` capacity gap (41 vs 35) | Pass: "Minimum shows add up to 41 but only 35 screen-slots are open", fix suggested, results marked stale |
-| Failure | Slot length 180 min (a 3-hour grid) | No plan; explains `slot-fit` for the two long films | Pass: "THE ODYSSEY needs 192 min (172 runtime + 20 changeover) but slots are 180 min ..." and the same for POSSIBLE LOVE (184 min) |
-| Failure | Purchase row `TT-106,RIVERSIDE,2026-10-03,19:00,AC-0042,0` | No plan; line-numbered validation error | Pass: "Extra row 1: passes_bought "0" must be a positive whole number of tickets" (engine test and demo test case) |
+| Normal | Defaults, seed 437 (demo: Test cases → "Default week") | Plan found; 0 violations in both plans; certificate holds; proposed ≥ baseline on the planning value | Pass: 8,211 vs 7,570 expected tickets; 0 / 0 violations; 8,210.5 = 8,210.5 |
+| Boundary | Add the new release *The Scavengers* (zero purchase rows), minimum 7 | Plan found; ≥ 7 shows; demand flagged as manager estimate (no records) | Pass: 32 shows, flagged "No records: manager estimate"; 0 violations in both plans |
+| Boundary | Hall 3 closed next week (its past shows stay in the records) | Plan found with no screening in Hall 3; minimums met | Pass: 0 screenings in Hall 3; 6,119 vs 5,670 expected tickets |
+| Boundary | Weeks of history = 1 | Plan found; backtest reported as not available instead of a misleading score | Pass: plan found, "Needs at least 2 weeks of records" |
+| Failure | Hall 2 and Hall 3 closed (6 films x 7 minimum = 42 > 35 open slots) | No plan; names `one-film-per-hall`, the gap and a fix; earlier results stale | Pass: "Minimum shows add up to 42 but only 35 screen-slots are open (rule one-film-per-hall). Fix: reopen a hall, add show times, or lower minimums by 7 in total." |
+| Failure | Slot length 170 min | No plan; names each film that no longer fits, `slot-fit`, the minutes needed and a fix | Pass: Avocado needs 177 min, Oppenhammer 173 min, Gigantic 180 min, each with a fix |
+| Failure | Extra row `caterpillar-man,RIVERSIDE,2026-10-03,19:00,AC-00042,0` | No plan; line-specific validation message | Pass: "Extra row 1: passes_bought "0" must be a positive whole number of tickets." |
 
-**Established:** the mechanism works end to end on fictional data, the plan is optimal for the stated formulation (duality certificate), constraints and failures are handled, results are reproducible, and in simulated cinemas with known demand the selected combination beats each lecture alternative on average where the past schedule was chosen sensibly.
-Automated tests (20, `node --test`) cover a textbook LP with known duals, brute-force optimality, the certificate, integral vertices, the sold-out likelihood, the GP's kernel choice and leave-own-cell-out prior, aliases-only records, the caution effect and the alternatives scoreboard.
-**Not established:** any effect on real admissions, the right caution level, or whether the assumptions hold for the operator.
+**Hand-checkable arithmetic (worked example, demo cell *Gigantic*, 10:00, Fri-Sun):** pattern 45.4 tickets; two screenings with exposure 2.1 and own average 19.4; with $k$ = 1 the posterior mean is $(1 \cdot 45.4 + 2.1 \cdot 19.4) / (1 + 2.1) = 27.9$, 67% from its own evidence; clicking that cell in the demo shows the same numbers.
+The simplex result was also compared with brute-force enumeration on 150 random tiny instances (repository tests), and the certificate is checked on every run.
+
+**Established:** the mechanism works end to end offline; settings change the history and the plan through the stated calculations; the plan is optimal for the stated formulation; rules and failures are handled; results reproduce; in fictional worlds with known demand the selected combination beats each simpler alternative on average where the past schedule was chosen sensibly.
+Repository tests (13, `node --test`) cover the shared cases, determinism, the six-field records, settings-driven history, fictional titles, brute-force optimality, sold-out reading, caution, the backtest, extra rows, pins and a rule-abiding baseline.
+**Not established:** any effect on real admissions, that real records behave like the generator, the right caution level for a real venue, the operator's real rules and current performance, planning-time savings.
 
 ## 6. Client Proposal
 
-1. **Stage 0 · data audit (one venue).** Operator provides the high-priority requests of Section 3 and one interview with the programming manager; we report sell-out share, zero-sale share and coverage.
-Continue if the screening log with halls and seats exists; otherwise stop and fall back to demand analytics.
-2. **Stage 1 · offline replay.** Rebuild past weeks and compare tool plans with actual screenings on the slots both chose, and check estimates against held-out weeks.
-Continue if estimates beat simple averages and overlap is large enough to judge; otherwise revise the model or stop.
-3. **Stage 2 · advisory trial.** Alternate weeks between the manager's own plan and the tool-assisted plan; track admissions per show, sell-outs and overrides.
-Adopt if tool weeks beat own weeks by a margin agreed before the trial; revise or stop otherwise.
+1. **Stage 0 · data audit (one venue).** The operator provides the high-priority requests of Section 3 and one interview with the programming manager; we report the data contract, sell-out share, zero-sale share, coverage of film-time combinations and week-to-week variability of admissions.
+   *Continue* if a screening log with halls and seats exists and at least 8 recent weeks are usable `[PROPOSED]`; *otherwise stop* at demand analytics, or wait for the log.
+2. **Stage 1 · offline replay.** Rebuild past weeks; backtest the estimate on held-out weeks against film and slot averages; the manager judges the tool's plans for operability.
+   *Continue* if the estimate's error is at least 10% lower than the film-average error and the manager rates at least 8 of 10 replayed weeks operable with minor edits `[PROPOSED]`; *revise* once if not, then stop.
+3. **Stage 2 · advisory trial.** Alternate weeks (switchback) between the manager's own plan and the tool-assisted plan at the same venue, excluding holiday weeks, with a capped number of flagged test screenings of untried combinations (exploration, Lec 4, pp. 20-29) whose results calibrate the caution level.
+   *Adopt* if tool weeks beat own weeks on admissions per available seat by a margin agreed before the trial, with the interval above zero and no operational incidents; trial length follows from the variability measured in Stage 0 (TBD).
 
-These real-world criteria are separate from the functional checks in Section 5.
-Thresholds and trial length are TBD: they depend on week-to-week variability, which Stage 0 measures.
-Cost, timeline and benefit estimates are not justified yet and follow the audit.
+| Condition | When |
+|---|---|
+| Test | Stage 0 and Stage 1 gates pass; KPI and thresholds signed off by the sponsor before the first trial week |
+| Adopt | Trial margin met; manager override rate below an agreed level; export stable for the whole trial |
+| Revise | Frequent overrides (a missing rule such as staffing or distributor terms); flagged test screenings underperform (raise caution); estimate drifts (holidays, ageing) |
+| Stop | No halls or seats obtainable; estimate not better than averages after one revision; trial shows no gain or a loss; the data contract keeps changing |
 
-**Responsibilities:** operator provides data extracts, a data contact, a manager interview and a sponsor; we deliver the audit report, the replay study and a go/no-go recommendation.
+These real-world criteria are separate from the functional checks of Section 5.
+Metrics: admissions per week and per available seat (primary), sell-outs and turned-away estimates, empty seats in large halls, test-screening results, weekly forecast error against film averages, override share and planning time.
+Thresholds marked `[PROPOSED]` are our suggestion for the sponsor to accept or change; the trial margin and length are TBD because they depend on variability not yet seen.
 
-**Decision requested:** approve the data audit and offline replay for one venue, with a named data contact and one manager interview (not production adoption).
+**Responsibilities:** the head of programming sponsors and signs off the KPI, thresholds and each gate; the data owner provides exports and confirms the data contract; the programming manager gives the interview, enters weekly settings, judges replayed plans and runs the trial; the venue manager confirms halls, closures, grid and changeover; we deliver the audit report, the replay study, the tool, the trial analysis and a go / no-go recommendation.
+**Cost, timeline and benefit:** not estimated yet; they depend on export speed and quality, which Stage 0 establishes, and a benefit can only be measured in Stage 2.
+The +8.5% of the demo is a property of invented data and is not an estimate for the operator.
+
+**Decision requested:** approve Stage 0 and Stage 1 at one venue, with a named sponsor and data contact, the six-field export for at least 8 recent weeks, the screening log with halls and hall seats, and one interview with the programming manager; not production use or a trial budget, which are decided at the Stage 1 gate.
 
 ## 7. LLM Review & Key Revisions
 
-| Discussion / purpose | LLM suggestion | Your assessment and verification evidence | Final decision or revision; location in the deliverables |
-|---|---|---|---|
-| 1: Make the caution level meaningful | First model: Gamma-Poisson posterior with the prior worth k pseudo-screenings | Rejected after a test run: untried cells got tiny spreads, so caution changed almost nothing and the plan kept a family film late at night. v1 then measured one prior spread by leaving each tried cell out. | Superseded by discussion 2: the GP gives each cell its own spread from the marginal likelihood. Section 2; demo caution step; proposal caution slide |
-| 2: Methods must come from the course, and be the best the course offers | v1: EM imputation, min-cost flow and a subgradient check, then (after review) ridge = MAP. On 2026-10-05, after re-reading slides 00-04: replace the ridge prior by a Gaussian process (Lec 4) and compare every step with its lecture alternatives | EM, flows and subgradients were rejected as not taught. For the GP: checked each formula against the Lec 4 slides; ran the 40-history study in three worlds (Section 5: +308 ± 53 tickets over ridge in the homework world, +224 ± 119 with a sensible manager, not significant with a random history); tests for the kernel choice and the leave-own-cell-out prior. The same review found that v1's showcase cell (belief 102 against a hidden truth of 70) was misleading | GP prior selected; ridge and full Bayesian regression kept as switchable alternatives; per-step alternatives in Section 4, the demo flowchart and proposal slides 10 and 19 |
-| 3: Use real films | Replace the invented titles with films now showing (CGV / Korean box office) | Accepted with limits: the brief requires fictional aliases in `title_tag` and an invented dataset [A §2]. Titles, runtimes and dates verified against the cited pages; real titles appear only in the manager's slate, demand stays invented, disclaimer in all three files. A test asserts no real title appears in the records. Introducing aliases broke the rule of thumb (all scores became 1); it was found because the study's baseline numbers were identical across two worlds, fixed, and covered by a test | Slate table above; Section 2 slot grid (The Odyssey's 172 min forced 200-minute slots, which became a failure case); demo and proposal disclaimers |
-| 4: Classifying the ticket objective and wording the baseline | Classify `expected-tickets` as Formulation because the forecast only supplies a parameter; describe the rule of thumb as the operator's current practice | First accepted after checking the classification reference §3; second rejected because current practice is unspecified [A §2] | Section 2 component table; baseline labeled "proposed reference" in Sections 1 and 4, demo and proposal |
+Tool: Claude Code with Claude Opus 5.5, in sessions on 2026-09-29 (v1), 2026-10-02 and 2026-10-05 (v2) and 2026-10-09 (v3, this version).
+It read the brief and the lecture slides, role-played project-manager and client reviews, proposed methods, wrote the engine, UI, tests and the mock study, and checked consistency across the three files.
+I set the direction, rejected or narrowed suggestions, and verified them as recorded below; LLM output was never used as evidence for an external fact.
 
-Other LLM-assisted reviews (a project-manager scope review and role-played client questions) informed Sections 1, 3 and 6 but are not part of the submission.
+| Discussion / purpose | LLM suggestion | My assessment and verification evidence | Final decision or revision; location in the deliverables |
+|---|---|---|---|
+| 1: Fictional vs real films (v2 → v3) | v2: plan six films currently in Korean cinemas, real titles and runtimes from press sources, invented demand | I reversed it in v3: the brief asks for an "entirely fictional dataset ... inventing its aliases and values" [A §2], and real titles invite reading invented sales as facts about real films. A test now asserts that no real title appears in the slate | Invented parody titles (*Caterpillar-Man*, *Avocado*, *Gigantic*, ...); the real-film citations were removed. Header, demo, proposal |
+| 2: Method complexity (v1 → v2 → v3) | v1: EM imputation, min-cost flow, subgradient check; v2: negative-binomial MLE, a Gaussian-process prior with kernel search, Bayes on a grid with a censored likelihood, and per-step alternatives | v1 methods were rejected as not taught; in v3 I judged v2 over-engineered for the brief ("A justified simple method can receive full base credit" [A §1]; "complexity earns no credit by itself" [Ref §7]) and restricted methods to Lectures 0-4. Checked by re-running every alternative on 40 fictional histories in two worlds: the simpler Poisson-Gamma estimate with a pattern prior reaches 98.1% of an oracle and has the lowest backtest error | Pattern + Poisson-Gamma update + negative-binomial expected sales + robust LP (Sections 2, 4); GP listed as rejected approach E |
+| 3: Caution level and pattern weight | Default caution 0.3 and $k$ = 2 as "moderate" values | Not accepted on intuition: the study showed caution 0.5 better than 0.3 (+100 ± 40 tickets) and $k$ = 1 better than 2 (+37 ± 21), and caution costs nothing when every combination was tried | Defaults $c$ = 0.5, $k$ = 1 (Sections 2, 4; demo Method settings) |
+| 4: Information requests vs the six fields | v2 treated a screening log and hall seats as required inputs | Restricted: the mechanism must run on the six fields only, with halls and grid as labelled operating settings, and the operator must confirm the data contract. The demo was rebuilt so the generator follows the settings and the field-usage table shows what is used | "No additional record fields" and the data-contract request (Section 3); demo Records; proposal E4 |
+| 5: Baseline robustness and backtest fairness (found by checks, v3) | The first v3 rule of thumb filled slots greedily; the first backtest scored only screenings not read as sold out | A sweep of 120 runs showed the baseline breaking a minimum in 59 of them once a new release joined; the backtest excluded exactly the high-demand screenings that the sold-out rule corrects. Fixed with a repair step and a censoring-aware error; a test now runs the baseline on 24 settings | Section 4 approach A; Section 5 backtest; demo |
+| 6: Classification and baseline wording (v1, kept) | Classify `expected-tickets` as Formulation because the estimate only supplies a parameter; call the rule of thumb the operator's current practice | First accepted after checking [Ref §3]; second rejected because current practice is unspecified [A §2] | Section 2 component table; "proposed reference" in Sections 1, 4, demo and proposal |
+
+Earlier LLM-assisted role-plays (a project-manager scope review and client questions such as "Will it suggest things we have never tried?" and "What happens if we cannot provide the schedule log?") shaped Sections 1, 3 and 6; they are working notes, not part of the submission.

@@ -532,6 +532,10 @@
 
   // ------------------------------------------------------------------ boot
   window.addEventListener('scroll', () => $('nav').classList.toggle('solid', window.scrollY > 40), { passive: true });
+  document.querySelectorAll('[data-scroll]').forEach((btn) => btn.addEventListener('click', () => {
+    const row = $(btn.dataset.scroll);
+    row.scrollBy({ left: +btn.dataset.dir * row.clientWidth * 0.8, behavior: 'smooth' });
+  }));
   $('heroArt').innerHTML = heroArt();
   $('fpDefault').textContent = E.run(E.defaultSettings(), { skipOracle: true }).fingerprint;
   bindForm();

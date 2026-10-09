@@ -1011,10 +1011,10 @@
     },
     {
       id: 'slot-too-short', kind: 'Failure', title: 'Slots too short for the longest film',
-      how: 'Slot length 170 min (and first show 10:00): Avocado needs 162 + 15 = 177 min, Gigantic 165 + 15 = 180 min.',
-      expect: 'No plan; the message names both films, rule slot-fit, the minutes each needs and a fix.',
+      how: 'Slot length 170 min: Avocado needs 162 + 15 = 177 min, Oppenhammer 158 + 15 = 173 min, Gigantic 165 + 15 = 180 min.',
+      expect: 'No plan; the message names each film that no longer fits, rule slot-fit, the minutes it needs and a fix.',
       apply: (st) => ({ ...st, slotMinutes: 170 }),
-      check: (r) => r.status === 'infeasible' && r.errors.some((e) => /Gigantic needs 180 min/.test(e)) && r.errors.some((e) => /Avocado needs 177 min/.test(e)),
+      check: (r) => r.status === 'infeasible' && ['Avocado needs 177 min', 'Oppenhammer needs 173 min', 'Gigantic needs 180 min'].every((m) => r.errors.some((e) => e.includes(m))),
     },
     {
       id: 'bad-row', kind: 'Failure', title: 'Malformed purchase row',
