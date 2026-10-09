@@ -1,4 +1,4 @@
-// SLOTWISE engine: every calculation behind demo.html and the numbers in proposal.html.
+// Theater Optimization engine: every calculation behind demo.html and the numbers in proposal.html.
 // Runs unchanged in the browser (window.Engine) and in Node (require('./engine.js')).
 //
 // Pipeline (problem-definition.md, Sections 2 and 4):
@@ -53,7 +53,7 @@
     return {
       seed: 437,
       historyWeeks: 4,
-      venue: 'RIVERSIDE',
+      venue: 'VENUE-01', // alias only: the brief gives no venue name
       halls: [
         { name: 'Hall 1', seats: 220, open: true },
         { name: 'Hall 2', seats: 120, open: true },
@@ -156,11 +156,6 @@
     }
     return points[points.length - 1][1];
   }
-  function fnv1a(str) {
-    let h = 0x811c9dc5;
-    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
-    return (h >>> 0).toString(16).padStart(8, '0');
-  }
 
   // ---------------------------------------------------------------------------
   // Settings -> problem frame (slate, grid, halls). Settings errors block the run.
@@ -198,7 +193,7 @@
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(st.firstStart)) errors.push('First show time must be HH:mm on a 24-hour clock (got "' + st.firstStart + '").');
     else if (!errors.length) {
       const last = toMinutes(st.firstStart) + (st.slots - 1) * st.slotMinutes;
-      if (last > 23 * 60 + 59) errors.push('The last show would start at ' + toHHMM(last % 1440) + ' on the next day. This first step keeps every show on its calendar day [ASSUMPTION]; use fewer shows, shorter slots or an earlier first show.');
+      if (last > 23 * 60 + 59) errors.push('The last show would start at ' + toHHMM(last % 1440) + ' on the next day. This first step keeps every show on its calendar day (our assumption); use fewer shows, shorter slots or an earlier first show.');
     }
     if (!(st.caution >= 0 && st.caution <= 1)) errors.push('Caution must be between 0 and 1.');
     if (!(st.credibility >= 0.5 && st.credibility <= 20)) errors.push('Pattern weight k must be between 0.5 and 20 (at 0 an untried combination would have no prior at all).');
@@ -389,6 +384,15 @@
     const adj = (x) => (correct && x.soldOut ? Math.max(x.tickets, F[x.f] * Sx(x) * D[x.d]) : x.tickets);
     // Maximum likelihood for Poisson counts with mean F*S*D: each factor = observed / expected over its rows.
     let iterations = 0;
+    // optional trace for the demo's animation: indices and Poisson log-likelihood after each pass
+    const trace = o.trace ? [] : null;
+    const snap = () => {
+      if (!trace) return;
+      let ll = 0;
+      screenings.forEach((x) => { const mu = Math.max(F[x.f] * Sx(x) * D[x.d], 1e-9); ll += x.tickets * Math.log(mu) - mu - logGamma(x.tickets + 1); });
+      trace.push({ S: SG.map((a) => Array.from(a)), D: Array.from(D), ll });
+    };
+    snap();
     for (let it = 0; it < 300; it++) {
       iterations = it + 1;
       const y = screenings.map(adj);
@@ -420,6 +424,7 @@
       for (let f = 0; f < nF; f++) { const v = F2[f] * ms[grp[f]] * md; change = Math.max(change, Math.abs(v - F[f])); F[f] = v; }
       for (let g = 0; g < NG; g++) for (let s = 0; s < nS; s++) SG[g][s] = S2[g][s] / ms[g];
       for (let d = 0; d < 7; d++) D[d] = D2[d] / md;
+      snap();
       if (change < 1e-6) break;
     }
     const S = SG[0];
@@ -484,7 +489,7 @@
       const extra = (mu * mu) / r + (w(d) * w(d) * c.alpha) / (c.beta * c.beta);
       return extra > 0 ? Math.max((mu * mu) / extra, 1e-3) : 1e6;
     };
-    return { F, S, SG, Sf, grp, D, typeMean, w, cells, cellIdx, cellOf, demand, shape, hasRows, iterations, credibility: k, dispersion: r, dispersionN: obs.length };
+    return { F, S, SG, Sf, grp, D, typeMean, w, cells, cellIdx, cellOf, demand, shape, hasRows, iterations, credibility: k, dispersion: r, dispersionN: obs.length, trace };
   }
   function logGamma(x) {
     // Lanczos approximation, accurate to about 1e-10 for x > 0
@@ -498,6 +503,13 @@
   }
   function logNegBin(y, mu, r) {
     return logGamma(y + r) - logGamma(r) - logGamma(y + 1) + r * Math.log(r / (r + mu)) + y * Math.log(mu / (r + mu));
+  }
+
+  // The demand cell used as the hand-checkable worked example (demo figure, deck, definition): a cell with
+  // 2-4 own screenings whose own average differs most from the pattern, so both weights are visible.
+  function workedCell(est) {
+    const c = est.cells.filter((x) => x.n >= 2 && x.n <= 4).sort((a, b) => Math.abs(b.own - b.pattern) / b.pattern - Math.abs(a.own - a.pattern) / a.pattern)[0];
+    return c || est.cells.filter((x) => x.n > 0)[0] || est.cells[0];
   }
 
   // Simple alternatives used by the comparison (Section 4): same interface as the selected estimate.
@@ -544,6 +556,7 @@
     const EPS = 1e-9;
     let d = new Float64Array(N);
     let z = 0, pivots = 0;
+    const zTrace = []; // planning value after each phase-2 pivot (demo animation)
 
     function pivot(r, e) {
       const pr = T[r];
@@ -584,6 +597,7 @@
         if (r < 0) throw new Error('LP unbounded'); // cannot happen: every variable sits in a <= 1 row
         pivot(r, e);
         pivots++;
+        if (phase === 2) zTrace.push(z);
         if (ratio < 1e-12) { if (++stall > 50) bland = true; } else { stall = 0; bland = false; }
       }
       throw new Error('simplex did not terminate');
@@ -607,12 +621,13 @@
       for (let j = 0; j < N; j++) if (ti[j] !== 0) d[j] -= cb * ti[j];
       z += cb * rhs[i];
     }
+    zTrace.push(z);
     phaseLoop(2);
     const x = new Float64Array(nVars);
     for (let i = 0; i < m; i++) if (basis[i] < nVars) x[basis[i]] = rhs[i];
     // dual prices y = c_B B^-1, read from the reduced costs of the slack / surplus columns
     const y = rows.map((r, i) => (r.sense === '<=' ? -d[nVars + i] : d[nVars + i]));
-    return { status: 'optimal', x, y, z, pivots };
+    return { status: 'optimal', x, y, z, pivots, zTrace };
   }
 
   // ---------------------------------------------------------------------------
@@ -623,8 +638,10 @@
     const halls = st.halls.map((h, i) => ({ ...h, i, usable: h.open && h.seats > 0 }));
     const fits = slate.map((f) => f.runtime + st.cleaning <= st.slotMinutes);
     const tested = (f, s, d) => est.cells[est.cellIdx(f, s, dayType(d))].tested;
-    // a never-screened time for a film that does have records: its number is an extrapolation
-    const untried = (f, s, d) => est.hasRows[f] && !tested(f, s, d);
+    // a never-screened film x time x day type: its number is an extrapolation of the pattern.
+    // Only a new release (opens in the planning week) is exempt: its number is the manager's estimate.
+    const isNew = (f) => !!slate[f].isNew && !est.hasRows[f];
+    const untried = (f, s, d) => !isNew(f) && !tested(f, s, d);
     const memo = new Map();
     const sold = (f, h, d, s, factor) => {
       const key = f + '|' + h + '|' + d + '|' + s + '|' + factor;
@@ -636,12 +653,15 @@
     // planning value (robust LP, worst case of a box): the part of each estimate that comes from the
     // pattern rather than from the film's own screenings at that time is lowered by the `caution` share.
     // Untried combinations (all pattern) lose c; a cell with many own screenings loses almost nothing.
-    // A film without any records (new release) is planned on the manager's own estimate, uncautioned
-    // and flagged: discounting it would only shrink the manager's number, and the mock study's
-    // new-release world shows that this starves new films of shows.
-    const factor = (f, s, d) => (est.hasRows[f] ? 1 - st.caution * est.cells[est.cellIdx(f, s, dayType(d))].priorShare : 1);
+    // A new release (no records because it opens in the planning week) is planned on the manager's own
+    // estimate, uncautioned and flagged: discounting it would only shrink the manager's number, and the
+    // mock study's new-release world shows that this starves new films of shows. A film that was
+    // available but never scheduled has no records for a reason (it was judged weaker), so it is
+    // cautioned like any untried combination; the robustness sweep found that exempting it lets the
+    // optimiser fill the week with it.
+    const factor = (f, s, d) => (isNew(f) ? 1 : 1 - st.caution * est.cells[est.cellIdx(f, s, dayType(d))].priorShare);
     const value = (f, h, d, s) => sold(f, h, d, s, factor(f, s, d));
-    return { st, slate, est, times, halls, fits, tested, untried, factor, expected, value, nD: 7, nS: times.length };
+    return { st, slate, est, times, halls, fits, tested, untried, isNew, factor, expected, value, nD: 7, nS: times.length };
   }
 
   function pinList(P) {
@@ -740,7 +760,7 @@
       status: 'optimal',
       plan,
       pins: pinned.pins,
-      lp: { vars: vars.length, rows: rows.length, pivots: lp.pivots, objective: lp.z, dualBound: bound, maxReducedCost: worst },
+      lp: { vars: vars.length, rows: rows.length, pivots: lp.pivots, objective: lp.z, dualBound: bound, maxReducedCost: worst, zTrace: lp.zTrace },
       certificateOk: Math.abs(lp.z - bound) < 1e-6 * Math.max(1, Math.abs(lp.z)) && worst < 1e-7,
       planValue: lp.z + pinned.pins.reduce((a, p) => a + val(p.f, p.h, p.d, p.s), 0),
       prices: summarizePrices(rows, lp.y, P),
@@ -959,7 +979,7 @@
   }
 
   function scorePlan(P, plan, truthFn) {
-    let tickets = 0, value = 0, away = 0, empty = 0, untested = 0, screenings = 0, truth = 0;
+    let tickets = 0, value = 0, away = 0, empty = 0, untested = 0, screenings = 0, truth = 0, thin = 0;
     const perSlot = [];
     for (let d = 0; d < 7; d++) for (let s = 0; s < P.nS; s++) {
       let slotT = 0;
@@ -975,11 +995,12 @@
         away += Math.max(0, dem - t); // expected demand that finds the hall full
         empty += P.halls[h].seats - t;
         if (P.untried(f, s, d)) untested++;
+        if (P.untried(f, s, d) || (P.isNew && P.isNew(f))) thin += t; // tickets resting on no own evidence
         if (truthFn) truth += truthFn(f, h, d, s);
       });
       perSlot.push({ d, s, tickets: slotT });
     }
-    return { tickets, value, away, empty, untested, screenings, truth: truthFn ? truth : null, perSlot };
+    return { tickets, value, away, empty, untested, screenings, truth: truthFn ? truth : null, perSlot, thinShare: tickets ? thin / tickets : 0 };
   }
 
   // Mock evaluation only: expected sales under the generator's hidden demand.
@@ -1064,7 +1085,7 @@
     out.notes = agg.notes;
     if (agg.errors.length) { out.errors = agg.errors; out.status = 'invalid'; return out; }
     out.screenings = agg.screenings;
-    const est = estimateDemand(agg.screenings, slate, st);
+    const est = estimateDemand(agg.screenings, slate, st, { trace: !!o.trace });
     out.estimate = est;
     const P = buildProblem(st, slate, est);
     out.problem = P;
@@ -1083,7 +1104,6 @@
       const oracle = solveProposed(P, truth);
       out.oracle = oracle.status === 'optimal' ? { truth: scorePlan(P, oracle.plan, truth).truth } : null;
     }
-    out.fingerprint = fnv1a(JSON.stringify({ st, p: proposed.plan, b: baseline.plan, t: Math.round(out.scores.proposed.tickets * 100) }));
     out.status = 'ok';
     return out;
   }
@@ -1189,7 +1209,7 @@
       if (v.caution !== undefined) st2.caution = v.caution;
       if (v.credibility !== undefined) st2.credibility = v.credibility;
       const est = v.soldOut ? estimateDemand(base.screenings, base.slate, st2, { soldOutCorrection: true }) : estimateAlternative(v.est, base.screenings, base.slate, st2);
-      const P = buildProblem(st2, base.slate, v.cautionNoRows ? { ...est, hasRows: est.hasRows.map(() => true) } : est);
+      const P = buildProblem(st2, v.cautionNoRows ? base.slate.map((f) => ({ ...f, isNew: false })) : base.slate, est);
       const sol = solveProposed(P);
       if (sol.status === 'optimal') out[v.key] = scorePlan(P, sol.plan, truthFnFor(P)).truth;
     });
@@ -1213,6 +1233,57 @@
       res[k] = row;
     });
     return res;
+  }
+
+  // Robustness sweep: random configurations (venue, grid, slate, history, method settings); for each
+  // feasible one the selected plan is compared with the rule of thumb on the tool's estimate, on the
+  // planning value (guaranteed by optimality) and against the generator's hidden demand (mock).
+  function randomConfig(rng, i, varyMethod) {
+    const pick = (a) => a[Math.floor(rng() * a.length)];
+    const nH = 1 + Math.floor(rng() * 4);
+    const slotMinutes = pick([150, 160, 170, 180, 190, 200]);
+    // every show starts between 08:00 and 23:30 on its calendar day
+    const slots = Math.min(3 + Math.floor(rng() * 4), 1 + Math.floor((23 * 60 + 30 - 8 * 60) / slotMinutes));
+    const first = 9 * 60 + 30 * Math.floor(rng() * 7);
+    const firstStart = Math.min(first, 23 * 60 + 30 - (slots - 1) * slotMinutes);
+    const filmCount = 3 + Math.floor(rng() * 6);
+    const st = {
+      ...defaultSettings(),
+      seed: 1000 + i,
+      historyWeeks: 1 + Math.floor(rng() * 8),
+      halls: Array.from({ length: nH }, (_, k) => ({ name: 'Hall ' + (k + 1), seats: 40 + 10 * Math.floor(rng() * 27), open: true })),
+      firstStart: toHHMM(Math.max(8 * 60, firstStart)),
+      slots, slotMinutes,
+      cleaning: 5 * Math.floor(rng() * 7),
+      filmCount,
+      newRelease: rng() < 0.3,
+      caution: varyMethod ? pick([0, 0.25, 0.5, 0.75, 1]) : defaultSettings().caution,
+      credibility: varyMethod ? pick([1, 2, 4, 8]) : defaultSettings().credibility,
+      nbShape: pick([2, 4, 6, 10, 20]),
+      pastNoise: pick([0, 0.25, 0.5, 1, 2, 3]),
+      limits: {},
+    };
+    // minimums low enough to be feasible: a film that does not fit the slot gets none
+    const cap = Math.floor((nH * slots * 7) / (filmCount + (st.newRelease ? 1 : 0)));
+    CATALOG.slice(0, filmCount).concat(st.newRelease ? [NEW_RELEASE] : []).forEach((f) => {
+      const fits = f.runtime + st.cleaning <= slotMinutes;
+      st.limits[f.tag] = { min: fits ? Math.floor(rng() * Math.min(8, cap + 1)) : 0, max: null };
+    });
+    return st;
+  }
+  function sweep(count, seed, varyMethod) {
+    const rng = mulberry32(seed || 2026);
+    const rows = [];
+    for (let i = 0; i < count; i++) {
+      const st = randomConfig(rng, i, varyMethod);
+      const r = run(st, { skipOracle: true });
+      if (r.status !== 'ok') { rows.push({ i, status: r.status }); continue; }
+      const b = r.scores.baseline, p = r.scores.proposed;
+      const rl = scorePlan(r.problem, repeatLastWeekPlan(r.problem, r.screenings), truthFnFor(r.problem));
+      rows.push({ i, status: 'ok', halls: st.halls.length, slots: st.slots, films: r.slate.length, weeks: st.historyWeeks, caution: st.caution, k: st.credibility,
+        value: [b.value, p.value], tickets: [b.tickets, p.tickets], truth: [b.truth, p.truth], repeatTruth: rl.truth, thinShare: p.thinShare, violations: r.checks.proposed.violations.length + r.checks.baseline.violations.length });
+    }
+    return rows;
   }
 
   // Brute-force check of the LP: random tiny instances (one day, up to 2 slots, 2 halls, 3 films),
@@ -1310,9 +1381,9 @@
     },
     {
       id: 'bad-row', kind: 'Failure', title: 'Malformed purchase row',
-      how: 'Extra row: caterpillar-man,RIVERSIDE,2026-10-03,19:00,AC-00042,0',
+      how: 'Extra row: caterpillar-man,VENUE-01,2026-10-03,19:00,AC-00042,0',
       expect: 'No plan; line-specific message that passes_bought must be a positive whole number.',
-      apply: (st) => ({ ...st, extraRows: 'caterpillar-man,RIVERSIDE,2026-10-03,19:00,AC-00042,0' }),
+      apply: (st) => ({ ...st, extraRows: 'caterpillar-man,VENUE-01,2026-10-03,19:00,AC-00042,0' }),
       check: (r) => r.status === 'invalid' && r.errors.some((e) => /Extra row 1: passes_bought "0"/.test(e)),
     },
   ];
@@ -1322,7 +1393,7 @@
     defaultSettings, validateSettings, slateOf, gridOf, toHHMM, toMinutes, addDays, weekdayIndex, dayType,
     mulberry32, negBinSample, expectedSoldNB, trueMean, generateHistory, parseExtraRows, aggregate,
     estimateDemand, estimateAlternative, simplex, buildProblem, solveProposed, solveBaseline, checkPlan, scorePlan,
-    truthFnFor, explainCell, backtest, run, compareMethods, pastProgrammerPlan, repeatLastWeekPlan, ruleCosts, TEST_CASES, fnv1a,
-    STUDY_WORLDS, STUDY_VARIANTS, studyOne, summarizeStudy, bruteForceCheck,
+    truthFnFor, explainCell, backtest, run, compareMethods, pastProgrammerPlan, repeatLastWeekPlan, ruleCosts, TEST_CASES,
+    STUDY_WORLDS, STUDY_VARIANTS, studyOne, summarizeStudy, bruteForceCheck, randomConfig, sweep, workedCell, logGamma, logNegBin,
   };
 });

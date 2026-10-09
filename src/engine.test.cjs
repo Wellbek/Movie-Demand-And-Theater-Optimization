@@ -14,9 +14,10 @@ test('every shared test case (normal, boundary, failure) passes', () => {
 
 test('same settings give the same result; another seed gives another history', () => {
   const a = E.run(def()), b = E.run(def());
-  assert.equal(a.fingerprint, b.fingerprint);
+  const key = (r) => JSON.stringify([r.proposed.plan, r.baseline.plan, r.history.rows.length, r.scores.proposed.tickets]);
+  assert.equal(key(a), key(b));
   const c = E.run({ ...def(), seed: 438 });
-  assert.notEqual(a.fingerprint, c.fingerprint);
+  assert.notEqual(key(a), key(c));
   assert.notEqual(a.history.rows.length, c.history.rows.length);
 });
 
@@ -126,17 +127,17 @@ test('sold-out screenings are detected from totals equal to a hall size and corr
   if (cell) assert.ok(cell.estimate >= Math.min(...r.screenings.filter((s) => s.f === cell.f && s.s === cell.s && s.t === cell.t).map((s) => s.tickets)) - 1e-9);
 });
 
-test('caution: only the pattern part of an estimate is discounted; films without records are exempt', () => {
+test('caution: only the pattern part of an estimate is discounted; only a new release is exempt', () => {
   const r = E.run({ ...def(), newRelease: true });
   const P = r.problem;
   let checked = 0;
   for (let f = 0; f < P.slate.length; f++) for (let s = 0; s < P.nS; s++) for (let d = 0; d < 7; d++) {
     const c = P.est.cellOf(f, s, d);
-    const want = P.est.hasRows[f] ? 1 - r.settings.caution * c.priorShare : 1;
+    const want = P.isNew(f) ? 1 : 1 - r.settings.caution * c.priorShare;
     assert.ok(Math.abs(P.factor(f, s, d) - want) < 1e-12);
     assert.ok(P.value(f, 0, d, s) <= P.expected(f, 0, d, s) + 1e-9);
     if (!c.tested) { assert.equal(c.priorShare, 1); checked++; }
-    if (!P.est.hasRows[f]) assert.equal(P.value(f, 0, d, s), P.expected(f, 0, d, s));
+    if (P.isNew(f)) assert.equal(P.value(f, 0, d, s), P.expected(f, 0, d, s));
   }
   assert.ok(checked > 0);
   // more own screenings -> smaller discount
@@ -159,10 +160,10 @@ test('backtest: selected estimate beats the film average used by the rule of thu
 });
 
 test('extra rows: wrong venue and unknown titles are set aside with a note; off-grid times fail', () => {
-  const ok = E.run({ ...def(), extraRows: 'title_tag,venue_tag,play_day,curtain_time,account_tag,passes_bought\nunknown-film,RIVERSIDE,2026-10-03,19:00,AC-1,2\ncaterpillar-man,HARBOUR,2026-10-03,19:00,AC-1,2' });
+  const ok = E.run({ ...def(), extraRows: 'title_tag,venue_tag,play_day,curtain_time,account_tag,passes_bought\nunknown-film,VENUE-01,2026-10-03,19:00,AC-1,2\ncaterpillar-man,VENUE-02,2026-10-03,19:00,AC-1,2' });
   assert.equal(ok.status, 'ok');
   assert.equal(ok.notes.length, 2);
-  const bad = E.run({ ...def(), extraRows: 'caterpillar-man,RIVERSIDE,2026-10-03,19:05,AC-1,2' });
+  const bad = E.run({ ...def(), extraRows: 'caterpillar-man,VENUE-01,2026-10-03,19:05,AC-1,2' });
   assert.equal(bad.status, 'invalid');
   assert.match(bad.errors[0], /not on the show-time grid/);
   const late = E.run({ ...def(), slots: 6 });
@@ -201,4 +202,34 @@ test('rule costs come from re-solving, and the repeat-last-week reference keeps 
     const rr = E.run({ ...def(), seed, newRelease }, { skipOracle: true });
     assert.deepEqual(E.checkPlan(rr.problem, E.repeatLastWeekPlan(rr.problem, rr.screenings)).violations, []);
   }
+});
+
+test('a film that was available but never scheduled is cautioned like an untried combination', () => {
+  // one hall and no judgement noise: the past schedule only ever showed the best film per show-time
+  const st = { ...def(), halls: [{ name: 'Hall 1', seats: 210, open: true }], historyWeeks: 1, pastNoise: 0, limits: Object.fromEntries(E.CATALOG.map((f) => [f.tag, { min: 0 }])) };
+  const r = E.run(st, { skipOracle: true });
+  assert.equal(r.status, 'ok');
+  const P = r.problem;
+  const unseen = P.slate.map((f, i) => i).filter((i) => !P.est.hasRows[i]);
+  assert.ok(unseen.length > 0, 'setting should leave a film without records');
+  for (const f of unseen) {
+    assert.equal(P.isNew(f), false);
+    assert.ok(P.untried(f, 0, 0));
+    assert.ok(Math.abs(P.factor(f, 0, 0) - (1 - st.caution)) < 1e-12);
+  }
+});
+
+test('robustness sweep: 80 random configurations against the rule of thumb', () => {
+  const rows = E.sweep(80, 2026, false);
+  const ok = rows.filter((x) => x.status === 'ok');
+  assert.equal(ok.length, rows.length, 'every generated configuration is feasible');
+  const n = (f) => ok.filter(f).length;
+  // guaranteed by LP optimality: the baseline is a feasible week, so it cannot score higher on the planning value
+  assert.equal(n((x) => x.value[1] >= x.value[0] - 1e-6), ok.length);
+  assert.equal(n((x) => x.violations === 0), ok.length);
+  // not guaranteed (the optimiser maximises the cautious value, and true demand is unknown): measured
+  assert.ok(n((x) => x.tickets[1] >= x.tickets[0] - 1e-6) >= 0.95 * ok.length);
+  assert.ok(n((x) => x.truth[1] >= x.truth[0] - 1e-6) >= 0.9 * ok.length);
+  const meanGain = ok.reduce((a, x) => a + (x.truth[1] - x.truth[0]) / x.truth[0], 0) / ok.length;
+  assert.ok(meanGain > 0.05, 'mean true gain ' + meanGain);
 });

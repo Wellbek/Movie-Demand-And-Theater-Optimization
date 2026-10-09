@@ -147,7 +147,7 @@ module.exports = function numbers(E, study) {
   // one demand cell, end to end, for the calculation slide
   function workedExample() {
     const est = r.estimate;
-    const c = est.cells.filter((x) => x.n >= 2 && x.n <= 4).sort((a, b) => Math.abs(b.own - b.pattern) / b.pattern - Math.abs(a.own - a.pattern) / a.pattern)[0];
+    const c = E.workedCell(est);
     const film = r.slate[c.f];
     const two = (x) => (Math.round(x * 100) / 100).toFixed(2);
     // the posterior mean is recomputed from the two-decimal figures shown, so it can be checked by hand
