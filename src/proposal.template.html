@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SLOTWISE Proposal</title>
+<style>
+:root{
+  --bg:#141414; --bg2:#181818; --bg3:#232323; --line:#333; --line2:#4d4d4d;
+  --text:#fff; --text2:#e5e5e5; --muted:#b3b3b3; --dim:#808080;
+  --red:#e50914; --red2:#c11119; --green:#46d369; --amber:#f5c518; --blue:#54b9ff;
+  --font:"Netflix Sans","Helvetica Neue",Helvetica,Arial,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;overflow:hidden}
+a{color:var(--text)}
+:focus-visible{outline:2px solid #fff;outline-offset:2px}
+/* Fixed 1600 x 900 canvas, scaled to the window: every slide fits any screen without scrolling. */
+.stage{position:fixed;left:50%;top:50%;width:1600px;height:900px;transform-origin:center center}
+.slide{position:absolute;inset:0;background:var(--bg);padding:74px 80px 70px;overflow:hidden;opacity:0;visibility:hidden;transition:opacity .45s ease,visibility 0s .45s;display:flex;flex-direction:column}
+.slide.on{opacity:1;visibility:visible;transition:opacity .45s ease}
+.slide .top{position:absolute;left:80px;right:80px;top:26px;display:flex;align-items:center;gap:18px;font-size:14px;color:var(--muted)}
+.wm{color:var(--red);font-weight:900;font-size:24px;letter-spacing:-.02em;transform:scaleY(1.25);display:inline-block}
+.ep{margin-left:auto;font-weight:700;color:var(--text2)}
+.chip{border:1px solid rgba(255,255,255,.45);padding:0 7px;font-size:12px;color:var(--text2);white-space:nowrap}
+.kicker{color:var(--red);font-weight:800;letter-spacing:.2em;font-size:14px;text-transform:uppercase;margin:14px 0 6px}
+h1{font-size:76px;line-height:.98;margin:0;font-weight:900;letter-spacing:-.02em}
+h2{font-size:40px;line-height:1.08;margin:0 0 14px;font-weight:800;letter-spacing:-.01em}
+h3{font-size:21px;margin:0 0 8px;color:var(--text2)}
+p,li{font-size:19px;line-height:1.42;color:var(--text2);margin:0 0 7px}
+.small,.small p,.small li,.small td{font-size:16.5px}
+.small th{font-size:13.5px}
+.tiny{font-size:14px;color:var(--dim)}
+.muted{color:var(--muted)} .up{color:var(--green)} .red{color:var(--red)} .amber{color:var(--amber)}
+ul{margin:4px 0 0;padding-left:20px}
+code,.mono{font-family:var(--mono);font-size:.88em}
+.cols{display:grid;gap:22px;flex:1;min-height:0}
+.c2{grid-template-columns:1fr 1fr} .c3{grid-template-columns:repeat(3,1fr)} .c21{grid-template-columns:1.25fr 1fr} .c12{grid-template-columns:1fr 1.25fr}
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:14px 16px;min-height:0}
+.card.red{border-color:rgba(229,9,20,.55);background:linear-gradient(180deg,rgba(229,9,20,.12),var(--bg2))}
+.card.green{border-color:rgba(70,211,105,.5)}
+.card.amber{border-color:rgba(245,197,24,.55)}
+table{border-collapse:collapse;width:100%}
+th,td{padding:6px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-size:16.5px;color:var(--text2);line-height:1.34}
+th{color:var(--muted);font-weight:700;font-size:13.5px;text-transform:uppercase;letter-spacing:.05em}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;padding:1px 7px;border-radius:2px;font-size:11.5px;font-weight:800;letter-spacing:.04em;white-space:nowrap}
+.pill.used{background:var(--green);color:#000}.pill.filter{background:var(--blue);color:#000}.pill.notused{background:#5a5a5a;color:#fff}
+.pill.high{background:var(--red);color:#fff}.pill.med{background:var(--amber);color:#000}.pill.low{background:#5a5a5a;color:#fff}
+.pill.mock{background:var(--amber);color:#000}.pill.real{background:#fff;color:#000}.pill.sel{background:var(--red);color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.kpi{background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.kpi .l{color:var(--muted);font-size:12.5px;text-transform:uppercase;letter-spacing:.05em}
+.kpi .v{font-size:34px;font-weight:900;line-height:1.1}
+.kpi .s{font-size:13.5px;color:var(--muted)}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:12px;font-family:var(--font)}
+.btn{display:inline-flex;align-items:center;gap:10px;border:0;border-radius:4px;padding:12px 30px;font-size:21px;font-weight:700;cursor:pointer;text-decoration:none}
+.btn svg{width:26px;height:26px}
+.btn.play{background:#fff;color:#000}.btn.play:hover{background:rgba(255,255,255,.75)}
+.btn.info{background:rgba(109,109,110,.7);color:#fff}.btn.info:hover{background:rgba(109,109,110,.4)}
+.match{color:var(--green);font-weight:800}
+.meta{display:flex;flex-wrap:wrap;gap:14px;align-items:center;font-size:19px;margin:16px 0}
+.q{border-left:4px solid var(--red);padding:2px 0 2px 12px;margin:0 0 4px}
+.q b{color:#fff}
+.flow{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:stretch}
+.flow .box{background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:9px 10px;position:relative}
+.flow .box b{display:block;font-size:17px;color:#fff;margin-bottom:3px}
+.flow .box span{font-size:14.5px;color:var(--muted);line-height:1.3;display:block}
+.flow .box .n{position:absolute;right:8px;top:4px;font-weight:900;color:var(--red);font-size:20px}
+.flow .box:not(:last-child)::after{content:"";position:absolute;right:-8px;top:50%;border:5px solid transparent;border-left-color:var(--red);transform:translate(50%,-50%)}
+.flow .box.io{border-color:#fff}
+.stages{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.stage-card{background:var(--bg2);border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.stage-card .hd{padding:10px 14px;background:linear-gradient(90deg,#2a0a0c,#181818);display:flex;justify-content:space-between;align-items:center}
+.stage-card .hd b{font-size:19px}
+.stage-card .bar{height:4px;background:#333}.stage-card .bar i{display:block;height:100%;background:var(--red)}
+.stage-card .bd{padding:10px 14px}
+.katex{font-size:1.05em}
+.katex-display{margin:6px 0}
+/* small coloured week grids (Saturday comparison) */
+.sgwrap{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}
+.sg-h{font-weight:800;font-size:16px;margin-bottom:4px}.sg-h span{font-weight:400;color:var(--muted);font-size:14px}
+table.sg{border-collapse:separate;border-spacing:2px;table-layout:fixed}
+table.sg th{font-size:11.5px;padding:2px 3px;border:0;text-transform:none;letter-spacing:0}
+table.sg td{font-size:13px;padding:3px 5px;border:0;border-radius:2px;color:#fff;line-height:1.15;white-space:nowrap;overflow:hidden}
+table.sg td span{display:block;opacity:.85;font-size:12px}
+table.sg td.e{background:#222;color:var(--dim)}
+.illus svg{width:100%;height:auto;display:block;margin:6px 0 8px}
+.illus text{fill:var(--muted);font-size:12px;font-family:var(--font)}
+.timeline{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:14px;position:relative}
+.timeline div{border-top:4px solid #444;padding:8px 8px 0 0;font-size:15px;color:var(--text2);position:relative}
+.timeline div::before{content:'';position:absolute;top:-10px;left:0;width:16px;height:16px;border-radius:50%;background:#444}
+.timeline div.now{border-top-color:var(--red)}.timeline div.now::before{background:var(--red)}
+.timeline b{display:block;color:#fff}
+/* billboard */
+.bill{padding:0}
+.bill .art{position:absolute;inset:0}
+.bill .art svg{width:100%;height:100%;display:block}
+.bill::after{content:"";position:absolute;inset:0;background:linear-gradient(77deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.45) 48%,transparent 80%),linear-gradient(180deg,transparent 65%,var(--bg) 100%)}
+.bill .content{position:absolute;left:80px;bottom:120px;width:900px;z-index:2}
+.bill .top{z-index:3}
+/* player chrome */
+.chrome{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;align-items:center;gap:14px;padding:10px 18px;background:linear-gradient(0deg,rgba(0,0,0,.85),transparent);opacity:.15;transition:opacity .3s}
+.chrome:hover,.chrome:focus-within,body.chrome-on .chrome{opacity:1}
+.chrome button,.chrome a{background:transparent;border:0;color:#fff;font-size:15px;cursor:pointer;padding:6px 10px;border-radius:4px;text-decoration:none}
+.chrome button:hover,.chrome a:hover{background:rgba(255,255,255,.12)}
+.progress{flex:1;height:5px;background:rgba(255,255,255,.25);border-radius:3px;position:relative;cursor:pointer}
+.progress i{position:absolute;left:0;top:0;bottom:0;background:var(--red);border-radius:3px}
+.progress b{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:var(--red);transform:translate(-50%,-50%)}
+.count{font-variant-numeric:tabular-nums;color:var(--muted);font-size:14px;min-width:60px;text-align:right}
+.episodes{position:fixed;right:18px;bottom:60px;z-index:30;width:420px;max-height:70vh;overflow:auto;background:#181818;border-radius:6px;box-shadow:0 10px 30px rgba(0,0,0,.8);display:none}
+.episodes.on{display:block}
+.episodes h4{margin:0;padding:14px 16px;font-size:18px;border-bottom:1px solid var(--line)}
+.episodes button{display:flex;gap:12px;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid #222;color:var(--text2);padding:10px 16px;cursor:pointer;font-size:14px}
+.episodes button:hover,.episodes button.on{background:#2a2a2a;color:#fff}
+.episodes button span{color:var(--dim);font-weight:900;min-width:26px}
+@media (prefers-reduced-motion:reduce){.slide{transition:none}}
+@media print{
+  @page{size:1600px 900px;margin:0}
+  html,body{overflow:visible;height:auto;background:var(--bg)}
+  .stage{position:static;transform:none!important;width:1600px;height:auto}
+  .slide{position:relative;opacity:1;visibility:visible;height:900px;page-break-after:always;break-after:page}
+  .chrome,.episodes{display:none}
+}
+</style>
+</head>
+<body>
+<main class="stage" id="stage">
+
+<!-- 1 ---------------------------------------------------------------- -->
+<section class="slide bill" data-title="Fill the right seats">
+  <div class="art" aria-hidden="true">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="hg" cx="0.75" cy="0.2" r="0.9"><stop offset="0" stop-color="#6b0b10"/><stop offset=".45" stop-color="#220607"/><stop offset="1" stop-color="#141414"/></radialGradient><linearGradient id="beam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".2"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><rect width="1600" height="900" fill="url(#hg)"/><rect x="560" y="70" width="900" height="360" rx="8" fill="#200a0c" stroke="#3a0a0d" stroke-width="3"/><g opacity=".5"><rect x="640" y="130" width="120" height="60" rx="4" fill="#9b2335"/><rect x="770" y="130" width="120" height="60" rx="4" fill="#2c6e8f"/><rect x="900" y="130" width="120" height="60" rx="4" fill="#8f7a2c"/><rect x="640" y="200" width="120" height="60" rx="4" fill="#2c6e8f"/><rect x="770" y="200" width="120" height="60" rx="4" fill="#9b2335"/><rect x="900" y="200" width="120" height="60" rx="4" fill="#2f8f5b"/><rect x="640" y="270" width="120" height="60" rx="4" fill="#9b2335"/><rect x="770" y="270" width="120" height="60" rx="4" fill="#8f4a2c"/><rect x="900" y="270" width="120" height="60" rx="4" fill="#2c6e8f"/><rect x="1060" y="130" width="330" height="200" rx="4" fill="none" stroke="#fff" stroke-opacity=".3" stroke-dasharray="6 6"/><g font-family="Helvetica Neue,Arial,sans-serif" font-size="34" font-weight="900" fill="#fff" fill-opacity=".38" text-anchor="middle"><text x="1225" y="195">WHICH FILM?</text><text x="1225" y="240">WHICH HALL?</text><text x="1225" y="285">WHEN?</text></g></g><path d="M1250 900L1000 430h420z" fill="url(#beam)" opacity=".5"/>{{seatRows}}</svg>
+  </div>
+  <div class="top"><span class="wm">SLOTWISE</span><span>Proposal to the programming team of a fictional cinema operator · 9 Oct 2026</span><span class="ep">S1:E1</span><span class="chip">FICTIONAL DATA</span></div>
+  <div class="content">
+    <div class="kicker">Decision support for weekly showtime planning</div>
+    <h1>Fill the right seats.</h1>
+    <div class="meta"><span class="match">{{gainPct}} expected tickets in the demo week</span><span class="chip">1 VENUE</span><span class="chip">1 WEEK</span><span>advisory</span><span class="chip">FICTIONAL</span></div>
+    <p style="font-size:21px;max-width:860px">Every week your programming manager decides which film plays in which hall at what time. We propose a small, testable tool that learns demand from your purchase records and drafts that week for one venue, with reasons for every cell. The manager stays in charge. Today we ask only for a data audit and an offline replay, not for adoption.</p>
+    <div style="display:flex;gap:14px;margin-top:22px">
+      <a class="btn play" href="demo.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 4v16a1 1 0 0 0 1.5.86l13-8a1 1 0 0 0 0-1.72l-13-8A1 1 0 0 0 6 4Z"/></svg>Open the demo</a>
+      <button class="btn info" type="button" data-go="12"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path fill="currentColor" d="M11 10h2v7h-2zM11 6.5h2v2h-2z"/></svg>The decision we ask for</button>
+    </div>
+    <p class="tiny" style="margin-top:16px">All titles, the venue, halls and purchases are invented; figures illustrate the mechanism and are not forecasts for your venues. Use &larr; &rarr;, space, or the bar at the bottom (E = episode list).</p>
+  </div>
+</section>
+
+<!-- 2 ---------------------------------------------------------------- -->
+<section class="slide" data-title="Your six questions, answered">
+  <div class="top"><span class="wm">SLOTWISE</span><span class="ep">S1:E2</span><span class="chip">FICTIONAL DATA</span></div>
+  <div class="kicker">Executive summary</div>
+  <h2>Your six questions, answered in one page.</h2>
+  <table class="small">
+    <thead><tr><th style="width:31%">The question</th><th>Our answer</th><th style="width:8%">Detail</th></tr></thead>
+    <tbody>
+      <tr><td class="q"><b>"What problem should the company address first, and what is the scope of your proposal?"</b></td><td>The weekly allocation of <b>already-booked films</b> to <b>halls and show-times</b> at <b>one venue</b>: the most frequent programming decision and the one the records can inform. Excluded for now: film booking, pricing, several venues, mid-week changes.</td><td>E3, E5</td></tr>
+      <tr><td class="q"><b>"Who will use the results, and what decisions will they support?"</b></td><td>The venue's <b>programming manager</b>, each week before the schedule is published: which film in which hall at each time. The head of programming uses the trial results to decide go / no-go.</td><td>E3</td></tr>
+      <tr><td class="q"><b>"What can you establish from the available information, and what needs further investigation?"</b></td><td>From the six fields: tickets per screening by film, time and weekday. Not: halls, seats, screenings that sold nothing, prices, purchase times, current practice. So sell-outs and never-tried combinations <b>hide demand</b>, and the records alone cannot decide halls. A real dataset does not exist yet; we demonstrate on generated data.</td><td>E4, E9</td></tr>
+      <tr><td class="q"><b>"What additional information should you request, why do you need it, and what will you do if it is unavailable?"</b></td><td>Confirmation of the six-field data contract; a screening log with halls; hall seats and the show-time grid; the weekly slate with show commitments; the KPI (admissions or revenue). Each has a fallback, e.g. sell-outs read from totals equal to a hall size, manager-entered settings, admissions as KPI; without halls at all we stop at demand analytics.</td><td>E11</td></tr>
+      <tr><td class="q"><b>"Which approach do you recommend, and how will you evaluate its validity and usefulness?"</b></td><td>A Bayesian demand estimate per film, time and day type feeding a <b>cautious weekly linear program</b>, always shown next to a rule of thumb. Validity: backtest against simple averages, rule and optimality checks, test cases. Usefulness: offline replay, then an advisory trial measured in admissions.</td><td>E6-E8, E10</td></tr>
+      <tr><td class="q"><b>"Under what conditions should the company test, adopt, revise, or stop the proposal?"</b></td><td><b>Test</b> when the audit finds a usable screening log and the replay beats simple averages. <b>Adopt</b> when trial weeks beat manager-only weeks by a margin agreed in advance. <b>Revise</b> when plans are often overridden or untried bets fail. <b>Stop</b> when halls cannot be obtained, the estimate is no better than averages, or the trial shows no gain.</td><td>E10, E12</td></tr>
+    </tbody>
+  </table>
+  <div class="card red" style="margin-top:14px;display:flex;gap:24px;align-items:center"><div class="kicker" style="margin:0;white-space:nowrap">Bottom line</div><p style="margin:0">The records support a narrower first step, not the full programming decision. We show the mechanism works on generated data ({{gainPct}} in the demo week, fictional) and ask you to approve a data audit and an offline replay at one venue (E12).</p></div>
+</section>
+
+<!-- 3 ---------------------------------------------------------------- -->
+<section class="slide" data-title="The problem, the users, the value">
+  <div class="top"><span class="wm">SLOTWISE</span><span class="ep">S1:E3</span><span class="chip">FICTIONAL DATA</span></div>
+  <div class="kicker">The problem</div>
+  <h2>Same films, halls and hours: the arrangement decides how many seats fill.</h2>
+  <div class="cols c3" style="flex:0 0 auto;align-items:stretch">
+    <div class="card small"><h3>The decision, every week</h3><p>"Movie programming means choosing which movies to screen, in which screening rooms, and at what times" (brief). For one venue and week: about 105 hall-times (3 halls x 5 shows x 7 days in the demo) for 6-8 films.</p><p>A family film at 22:00, or a sell-out film in the smallest hall on Saturday evening, loses tickets the same slate could have sold.</p><p class="muted">Your current practice is unknown to us (brief); we compare with a stated rule of thumb, not with your team.</p></div>
+    <div class="card small"><h3>Who uses it, for what</h3><table><tbody>
+      <tr><td><b>Programming manager</b></td><td>Primary user: enters slate and limits, reviews reasons, pins, approves.</td></tr>
+      <tr><td><b>Venue manager</b></td><td>Halls, closures, grid, changeover.</td></tr>
+      <tr><td><b>Head of programming</b></td><td>Sponsor: KPI, thresholds, go / no-go at each gate.</td></tr>
+      <tr><td><b>Data owner</b></td><td>Exports; data contract.</td></tr>
+    </tbody></table></div>
+    <div class="card red small"><h3>Expected value, honestly stated</h3><ul><li>More admissions from the same slate, halls and hours.</li><li>Fewer turned-away customers at peak, fewer near-empty large halls.</li><li>A defensible plan: numbers and runner-up for every cell.</li></ul><p style="margin-top:6px"><b>Fictional demo week:</b> {{propTickets}} vs {{baseTickets}} expected tickets ({{gainTickets}}, {{gainPct}}).</p><p class="muted">A property of invented data. A real uplift is estimated after the audit and measured in a trial; no money figure before that.</p></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>What the decision looks like: Saturday 17 Oct in the demo <span class="tiny">film, expected tickets; ? = untried combination</span></h3>{{satGrid}}</div>
+</section>
+
+<!-- 4 ---------------------------------------------------------------- -->
+<section class="slide" data-title="What the records can and cannot tell">
+  <div class="top"><span class="wm">SLOTWISE</span><span class="ep">S1:E4</span><span class="chip">FICTIONAL DATA</span></div>
+  <div class="kicker">Available information</div>
+  <h2>Six fields tell us what sold. They do not tell us what could have sold.</h2>
+  <div class="cols c21">
+    <div class="card"><table class="small">
+      <thead><tr><th>Field</th><th>Status</th><th>Used for</th><th>Possible later (out of scope now)</th></tr></thead>
+      <tbody>
+        <tr><td><code>title_tag</code></td><td><span class="pill used">USED</span></td><td>Film of each screening; demand cell</td><td>Film ageing (needs release dates)</td></tr>
+        <tr><td><code>venue_tag</code></td><td><span class="pill filter">FILTER</span></td><td>Keeps one venue's rows</td><td>Pooling across venues, shared audiences</td></tr>
+        <tr><td><code>play_day</code></td><td><span class="pill used">USED</span></td><td>Weekday, day type, history window</td><td>Holidays, trends (calendar, longer history)</td></tr>
+        <tr><td><code>curtain_time</code></td><td><span class="pill used">USED</span></td><td>Show-time slot of the screening</td><td>Designing a new grid</td></tr>
+        <tr><td><code>account_tag</code></td><td><span class="pill notused">NOT USED</span></td><td>Checked non-empty only</td><td>Repeat visits, audience overlap; needs privacy review</td></tr>
+        <tr><td><code>passes_bought</code></td><td><span class="pill used">USED</span></td><td>Summed per screening = tickets sold</td><td>Group-size mix (families vs couples)</td></tr>
+      </tbody></table>
+      <p class="small" style="margin-top:8px">"Label any additional fields or operating rules as your own assumptions" (brief). <b>We need no additional record fields</b>; the tool runs on these six. Halls, seats, show-times, runtimes and show limits are weekly operating settings, tagged as assumptions until you confirm them. <b>Please confirm this six-field format is the fixed and complete export</b>: a change of fields or meaning makes the tool reject the file or, worse, silently degrades its estimates.</p>
+    </div>
+    <div style="display:grid;gap:14px;align-content:start">
+      <div class="card amber"><h3>Why the records are insufficient for the full decision</h3><ul class="small">
+        <li><b>No hall, no seats:</b> a sold-out show records the seats, not the demand.</li>
+        <li><b>Only purchases:</b> a screening that sold nothing leaves no row at all.</li>
+        <li><b>Only what was scheduled:</b> a film never shown at 22:00 has no evidence for 22:00.</li>
+        <li><b>No price, cost or purchase time:</b> no revenue objective, no booking curves, no mid-week reaction.</li>
+        <li><b>No film data:</b> runtimes, releases and new titles come from the manager.</li></ul>
+        <p class="small">Hence a narrower first step (E5) plus an information plan (E11).</p></div>
+      <div class="card red"><h3>Gap: there is no real dataset</h3><p class="small">Size, period, quality and current practice are unspecified (brief), so the demo generates {{rows}} purchase rows ({{historyFirst}} to {{historyLast}}) from your settings with <b>two distributions</b>: negative-binomial demand per screening (a Poisson count whose rate varies by screening) and a categorical 1-6 tickets per purchase. Accuracy would improve with real records and, beyond them, other cinemas' sales, national box-office success, pre-sales, social-media reach and retention, reviews, holidays and weather. Those are out of scope for step one: not in the records and unproven for one venue.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 ---------------------------------------------------------------- -->
+<section class="slide" data-title="Scope of the first step">
+  <div class="top"><span class="wm">SLOTWISE</span><span class="ep">S1:E5</span><span class="chip">FICTIONAL DATA</span></div>
+  <div class="kicker">Scope</div>
+  <h2>A narrower first step that still makes the real decision.</h2>
+  <div class="card red" style="margin-bottom:16px"><p style="font-size:20px;margin:0">The <b>programming manager</b> uses <b>demand estimated from purchase records</b>, hall seats and the confirmed slate, <b>before next week's schedule is published</b>, to decide <b>which film plays in which hall at each show-time</b>, in order to <b>increase expected admissions</b> without breaking show commitments.</p></div>
+  <div class="cols c2">
+    <div class="card"><h3>In scope</h3><ul class="small"><li>One venue, one week (Mon-Sun), a fixed show-time grid; decided once, before sales open.</li><li>Films already booked, with min / max shows per film (distributor and house rules, values TBD).</li><li>Rules: one film per hall-time; a film not in two halls at once (records could not tell them apart); runtime + changeover fits the slot.</li><li>Advisory: the manager can pin, block and re-run; nothing is published automatically.</li></ul>
+      <h3 style="margin-top:12px">Structure (course classification)</h3><p class="small">One decision, <code>weekly-plan</code>: <b>Flat</b> (booking is upstream and only an input), <b>Stateless</b> (no state links days inside the week; audience depletion is an assumption to check), <b>Open-loop</b> (the week is fixed before sales; a schedule must be published in advance). Objective and rules are <b>Formulation</b> components; the demand estimate is a supporting analysis that supplies their parameters.</p></div>
+    <div class="card"><h3>Excluded, and what that costs</h3><table class="small"><tbody>
+      <tr><td><b>Film booking</b></td><td>We cannot say which films to acquire; the slate is an input.</td></tr>
+      <tr><td><b>Pricing, concessions, revenue</b></td><td>Objective is admissions; a ticket is not all margin (KPI to confirm).</td></tr>
+      <tr><td><b>Several venues</b></td><td>Sister venues sharing an audience are ignored.</td></tr>
+      <tr><td><b>Mid-week changes</b></td><td>No reaction to a flop inside the week (needs purchase times; becomes a feedback problem).</td></tr>
+      <tr><td><b>Holidays, film ageing, weather</b></td><td>Not in the records; holiday weeks should be excluded from the trial.</td></tr>
+      <tr><td><b>A film in two halls at once, after-midnight shows</b></td><td>Not supported in step one.</td></tr>
+    </tbody></table></div>
+  </div>
+</section>
+
+<!-- 6 ---------------------------------------------------------------- -->
+<section class="slide" data-title="Alternatives and our recommendation">
+  <div class="top"><span class="wm">SLOTWISE</span><span class="ep">S1:E6</span><span class="chip">FICTIONAL DATA</span></div>
+  <div class="kicker">Alternatives</div>
+  <h2>Six options compared; we recommend the simplest one that handles the blind spots.</h2>
+  <div class="cols c21">
+    <div class="card"><table class="small">
+      <thead><tr><th>Approach</th><th>What it needs and does</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><b>A Rule of thumb</b></td><td>Shows in proportion to last week's tickets per show; best films to the best times and largest halls.</td><td>Baseline (a stated reference, not your practice)</td></tr>
+        <tr><td><b>B Demand report only</b></td><td>Tables of tickets by film and time; the manager plans by hand.</td><td>Not enough: no plan, untried times invisible</td></tr>
+        <tr><td><b>C Averages + optimiser</b></td><td>Plain averages feed the weekly LP.</td><td>Rejected: averages ignore sell-outs and untried times (mock: {{stCellAvg}} tickets/week)</td></tr>
+        <tr><td><b>D Bayes estimate + cautious LP</b></td><td>Pattern + per-cell Bayes update (Lecture 2), robust LP with duality check (Lecture 1).</td><td><span class="pill sel">RECOMMENDED</span></td></tr>
+        <tr><td><b>E Gaussian-process surrogate / Bayesian optimisation</b></td><td>Smooth prior over cells, or trying whole schedules on the real venue (Lecture 4).</td><td>Not now: more to tune and explain; each "trial" is a real week</td></tr>
+        <tr><td><b>F Test-and-learn (bandit)</b></td><td>Spend a few shows per week on untried combinations; learn from sales (Lecture 4).</td><td>Later stage, once data flows weekly</td></tr>
+      </tbody></table></div>
+    <div class="card"><h3>Evidence from {{studySeeds}} fictional histories <span class="pill mock">MOCK</span></h3><div class="chart">{{chartStudy}}</div><p class="small">True expected tickets per week (hidden demand of the generator). The selected method reaches {{stSelPctOracle}} of a planner that knows the truth. Swapping one part at a time: no caution {{stNoCaution}} &plusmn; {{stNoCautionCi}}, own averages {{stCellAvg}} &plusmn; {{stCellAvgCi}}, pattern only {{stPattern}} &plusmn; {{stPatternCi}}, film averages {{stFilmAvg}} &plusmn; {{stFilmAvgCi}} (95% intervals).</p><p class="tiny">Why simple suffices: every part is one formula a manager can follow, all from the course's Lectures 0-4; the more complex Gaussian process was the previous design and was dropped as unnecessary for step one.</p></div>
+  </div>
+</section>
+
+<!-- 7 ---------------------------------------------------------------- -->
+<section class="slide" data-title="How it works">
+  <div class="top"><span class="wm">SLOTWISE</span><span class="ep">S1:E7</span><span class="chip">FICTIONAL DATA</span></div>
+  <div class="kicker">Inputs, processing, outputs, workflow</div>
+  <h2>From purchase rows to a week the manager can defend.</h2>
+  <div class="flow">
+    <div class="box io"><b>Inputs</b><span>Six-field purchase rows; weekly settings: halls and seats, show-times, slate, runtimes, min / max shows, caution.</span></div>
+    <div class="box"><span class="n">1</span><b>Screenings</b><span>Sum tickets per film, venue, date, time. A total equal to a hall size = sold out ("at least").</span></div>
+    <div class="box"><span class="n">2</span><b>Pattern</b><span>Film strength x time-of-day x weekday, maximum likelihood.</span></div>
+    <div class="box"><span class="n">3</span><b>Bayes update</b><span>Per film, time, day type: pattern as prior, own screenings as evidence.</span></div>
+    <div class="box"><span class="n">4</span><b>Value</b><span>Expected tickets in each hall; untried times discounted (caution).</span></div>
+    <div class="box"><span class="n">5</span><b>Weekly LP</b><span>Best week under the rules; certified by duality.</span></div>
+    <div class="box io"><b>Outputs</b><span>Week grid, reasons and runner-up per cell, flags for untried bets, cost of each rule, baseline next to it.</span></div>
+  </div>
+  <div class="cols c2" style="margin-top:16px">
+    <div class="card small"><h3>The calculation</h3>
+      <p>\(P_{fsd} = F_f\,S_s\,D_d\) &nbsp; pattern by maximum likelihood (Lecture 2)</p>
+      <p>\(\mathbb{E}[\theta\mid y] = \dfrac{k}{k+n}\,P + \dfrac{n}{k+n}\,\bar y\) &nbsp; Poisson-Gamma posterior mean: a weighted average of pattern and own average, \(k = 1\) (Lecture 2, Example 2.1)</p>
+      <p>\(v_{fhds} = \mathbb{E}[\min(D,\ \text{seats}_h)]\), \(D\) negative binomial (posterior predictive; "integrate, don't plug in", Lecture 2); untried: demand x \((1-c)\), \(c = 0.5\) (robust LP, Lecture 1)</p>
+      <p>\(\max \sum v\,x\) s.t. one film per hall-time, no film in two halls at once, \(\min_f \le \text{shows}_f \le \max_f\), slot fit; \(x \ge 0\) gives whole schedules (vertex property, Lecture 1)</p>
+      <div class="card" style="margin-top:8px;background:#121212"><b style="color:#fff">Worked example from the demo:</b> {{exFilm}}, {{exTime}}, {{exType}}. Pattern {{exPattern}}; own average {{exOwn}} over {{exN}} screenings (exposure {{exW}}); with k = {{exK}} the estimate is <b>{{exPost}}</b> tickets per screening, {{exWeight}} from its own evidence. Click that cell in the demo's demand map to see the same numbers.</div></div>
+    <div class="card small"><h3>The weekly workflow (proposed)</h3><ol style="margin:0;padding-left:20px"><li>Data owner exports last weeks' rows (six fields) for the venue.</li><li>Manager confirms halls, closures, show-times, slate, runtimes and min / max shows.</li><li>Run: the draft appears next to the rule of thumb, with flags for untried combinations and for films without records.</li><li>Manager inspects cells, pins or blocks, re-runs; the plan stays optimal around the pins.</li><li>Manager approves and publishes as today; the tool never publishes.</li><li>After the week, sales flow back into the records for the next run.</li></ol><p class="tiny" style="margin-top:6px">All of this runs in the demo ({{lpVars}} variables, {{lpRows}} rules, solved in the browser in well under a second).</p></div>
+  </div>
+</section>
+
+<!-- 8 ---------------------------------------------------------------- -->
+<section class="slide" data-title="What the demonstration established">
+  <div class="top"><span class="wm">SLOTWISE</span><span class="ep">S1:E8</span><span class="chip">FICTIONAL DATA</span></div>
+  <div class="kicker">Demonstration and baseline comparison</div>
+  <h2>Same inputs, same rules: {{gainTickets}} expected tickets in the demo week.</h2>
+  <div class="kpis">
+    <div class="kpi"><div class="l">Expected tickets</div><div class="v"><span class="muted">{{baseTickets}}</span> &rarr; <span class="up">{{propTickets}}</span></div><div class="s">rule of thumb &rarr; SLOTWISE ({{gainPct}}), same estimate</div></div>
+    <div class="kpi"><div class="l">Untried combinations used</div><div class="v">{{baseUntried}} &rarr; {{propUntried}}</div><div class="s">screenings that rest on extrapolation</div></div>
+    <div class="kpi"><div class="l">Expected turned away</div><div class="v">{{baseAway}} &rarr; {{propAway}}</div><div class="s">demand that finds the hall full</div></div>
+    <div class="kpi"><div class="l">Optimality certificate</div><div class="v">{{objective}} = {{dualBound}}</div><div class="s">plan value = dual bound; 0 rule violations</div></div>
+  </div>
+  <div class="cols c12" style="margin-top:16px">
+    <div class="card"><h3>Expected tickets per day <span class="tiny">grey = rule of thumb, red = SLOTWISE</span></h3><div class="chart">{{chartDay}}</div><p class="small">Gains come from matching films to their times and to hall sizes: family films earlier, large halls for films that sell out, small films at quiet times. Each required show of Oppenhammer costs {{priceOpp}} expected tickets (dual price), a number to bring to distributor talks.</p></div>
+    <div class="cols c2" style="gap:14px">
+      <div class="card green"><h3>Established (on fictional data)</h3><ul class="small"><li>The full input &rarr; run &rarr; inspect &rarr; change &rarr; re-run loop works offline in a browser.</li><li>The plan is optimal for the stated formulation (duality certificate, brute-force tests).</li><li>Rules hold; infeasible settings are explained, not shown as a plan.</li><li>{{casesPass}} of {{casesTotal}} normal, boundary and failure cases pass; results reproduce (seed {{seed}}, fingerprint {{fingerprint}}).</li><li><span class="pill mock">MOCK</span> Against the hidden demand: {{truthBase}} &rarr; {{truthProp}} ({{truthPct}}), {{oraclePct}} of the best possible.</li></ul></div>
+      <div class="card amber"><h3>Not established</h3><ul class="small"><li>Any effect on your real admissions or revenue.</li><li>That your records behave like the generator (distributions, stable demand).</li><li>The right caution level for your venue.</li><li>Your real show rules, grid and current performance.</li><li>Planning-time savings.</li></ul><p class="small">These need the audit, the replay and a trial (E10).</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 9 ---------------------------------------------------------------- -->
+<section class="slide" data-title="The key insight: records hide demand">
+  <div class="top"><span class="wm">SLOTWISE</span><span class="ep">S1:E9</span><span class="chip">FICTIONAL DATA</span></div>
+  <div class="kicker">The key insight</div>
+  <h2>The records only show what was scheduled, and an optimiser hunts for whatever they leave out.</h2>
+  <div class="cols c3">
+    <div class="card"><h3>1 · Sell-outs cap the evidence</h3><div class="illus"><svg viewBox="0 0 440 120" role="img" aria-label="Demand above the seat line is not recorded"><line x1="20" y1="40" x2="430" y2="40" stroke="#fff" stroke-dasharray="5 4" opacity=".7"/><text x="430" y="34" text-anchor="end">seats = what the record shows</text><rect x="60" y="62" width="44" height="48" fill="#808080"/><rect x="130" y="40" width="44" height="70" fill="#e50914"/><rect x="130" y="8" width="44" height="32" fill="none" stroke="#e50914" stroke-dasharray="4 3"/><rect x="200" y="40" width="44" height="70" fill="#e50914"/><rect x="200" y="20" width="44" height="20" fill="none" stroke="#e50914" stroke-dasharray="4 3"/><rect x="270" y="74" width="44" height="36" fill="#808080"/><text x="152" y="118" text-anchor="middle">sold out</text><text x="222" y="118" text-anchor="middle">sold out</text><text x="430" y="12" text-anchor="end">dashed = demand never recorded</text></svg></div><p class="small">A full house records its seats, not its demand. In the demo history {{soldOutRead}} of {{screenings}} screenings ({{soldOutPct}}) are read as sold out. Plain averages therefore understate the films that most need a bigger hall.</p><p class="small"><b>Response:</b> a sold-out show counts as "at least the seats" (the pattern's value if higher). <b>Request:</b> the screening log with halls makes this exact.</p></div>
+    <div class="card"><h3>2 · Empty screenings vanish</h3><div class="illus"><svg viewBox="0 0 440 120" role="img" aria-label="A screening with zero purchases leaves no row"><g font-family="Helvetica Neue,Arial,sans-serif"><rect x="20" y="20" width="90" height="34" rx="3" fill="#2c6e8f"/><text x="65" y="42" text-anchor="middle" fill="#fff">10:00 · 14</text><rect x="120" y="20" width="90" height="34" rx="3" fill="#2c6e8f"/><text x="165" y="42" text-anchor="middle" fill="#fff">13:00 · 41</text><rect x="220" y="20" width="90" height="34" rx="3" fill="none" stroke="#808080" stroke-dasharray="5 4"/><text x="265" y="42" text-anchor="middle">22:00 · 0</text><rect x="320" y="20" width="90" height="34" rx="3" fill="#2c6e8f"/><text x="365" y="42" text-anchor="middle" fill="#fff">19:00 · 63</text></g><text x="20" y="80">records: 3 rows of screenings; the 22:00 show</text><text x="20" y="98">is missing, so its film-time looks untried or better</text></svg></div><p class="small">A screening with no purchase leaves no row, so weak slots look better than they are and the record of what was shown is incomplete.</p><p class="small"><b>Response:</b> flagged as a limitation; it cannot be repaired from purchases alone. <b>Request:</b> the same screening log (top priority).</p></div>
+    <div class="card"><h3>3 · Untried combinations are guesses</h3><div class="illus"><svg viewBox="0 0 440 120" role="img" aria-label="Hatched cells have no evidence"><defs><pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#5a0a0f"/><line x1="0" y1="0" x2="0" y2="8" stroke="#fff" stroke-opacity=".35" stroke-width="3"/></pattern></defs><g><rect x="20" y="4" width="78" height="27" rx="2" fill="#7a0a10"/><rect x="102" y="4" width="78" height="27" rx="2" fill="#a10d16"/><rect x="184" y="4" width="78" height="27" rx="2" fill="#c40f1a"/><rect x="266" y="4" width="78" height="27" rx="2" fill="#e50914"/><rect x="348" y="4" width="78" height="27" rx="2" fill="url(#hatch)"/><rect x="20" y="34" width="78" height="27" rx="2" fill="#c40f1a"/><rect x="102" y="34" width="78" height="27" rx="2" fill="#e50914"/><rect x="184" y="34" width="78" height="27" rx="2" fill="#b30e18"/><rect x="266" y="34" width="78" height="27" rx="2" fill="#7a0a10"/><rect x="348" y="34" width="78" height="27" rx="2" fill="url(#hatch)"/><rect x="20" y="64" width="78" height="27" rx="2" fill="#b30e18"/><rect x="102" y="64" width="78" height="27" rx="2" fill="#7a0a10"/><rect x="184" y="64" width="78" height="27" rx="2" fill="#a10d16"/><rect x="266" y="64" width="78" height="27" rx="2" fill="url(#hatch)"/><rect x="348" y="64" width="78" height="27" rx="2" fill="#e50914"/></g><text x="20" y="118">hatched = never scheduled; the estimate there is the pattern only</text></svg></div><p class="small">Only {{cellsTested}} of {{cellsTotal}} film x time x day-type combinations were ever tried. For the rest the estimate is an extrapolation, and an optimiser picks exactly the most optimistic ones ("the optimiser will exploit the surrogate wherever it is wrong", Lecture 0).</p><p class="small"><b>Response:</b> untried combinations are valued at the low end, (1 - c) x estimate, and flagged as calculated bets.</p></div>
+  </div>
+  <div class="cols c2" style="margin-top:14px;flex:0 0 auto">
+    <div class="card red"><h3>What caution is worth <span class="pill mock">MOCK</span></h3><p class="small">Over {{studySeeds}} fictional histories where the past programmer skipped bad combinations for a reason, removing the caution costs <b>{{stNoCaution}} &plusmn; {{stNoCautionCi}}</b> tickets a week. Where the past schedule was random (everything tried), caution costs nothing ({{rnNoCaution}} &plusmn; {{rnNoCautionCi}}). Real schedules are chosen deliberately, so the first case is the relevant one.</p></div>
+    <div class="card"><h3>What it means for the trial</h3><p class="small">The backtest can only check combinations that were scheduled. So the trial deliberately includes a few flagged test screenings per week (exploration, Lecture 4) to learn what the records cannot show, with a cap agreed with the manager; their results calibrate the caution level.</p></div>
+  </div>
+</section>
+
+<!-- 10 --------------------------------------------------------------- -->
+<section class="slide" data-title="Evaluation: test, adopt, revise, stop">
+  <div class="top"><span class="wm">SLOTWISE</span><span class="ep">S1:E10</span><span class="chip">FICTIONAL DATA</span></div>
+  <div class="kicker">Real-world evaluation plan</div>
+  <h2>Three gated stages; each one must earn the next.</h2>
+  <div class="stages">
+    <div class="stage-card"><div class="hd"><b>Stage 0 · Data audit</b><span class="pill high">ASK NOW</span></div><div class="bar"><i style="width:33%"></i></div><div class="bd small"><p>One venue. Confirm the data contract; measure sell-out share, zero-sale share (with the log), combination coverage and week-to-week variability of admissions.</p><p><b>Continue if</b> a screening log with halls and seats exists and at least 8 recent weeks are usable [PROPOSED]. <b>Else</b> stop at demand analytics, or wait for the log.</p></div></div>
+    <div class="stage-card"><div class="hd"><b>Stage 1 · Offline replay</b><span class="pill high">ASK NOW</span></div><div class="bar"><i style="width:66%"></i></div><div class="bd small"><p>Rebuild past weeks. Backtest the estimate on held-out weeks against film and slot averages; let the manager judge the tool's plans for operability.</p><p><b>Continue if</b> the estimate's error is at least 10% lower than the film-average error and the manager rates at least 8 of 10 replayed weeks operable with minor edits [PROPOSED]. <b>Revise</b> once if not; then stop.</p></div></div>
+    <div class="stage-card"><div class="hd"><b>Stage 2 · Advisory trial</b><span class="pill med">DECIDE LATER</span></div><div class="bar"><i style="width:100%"></i></div><div class="bd small"><p>Alternate weeks (switchback) between the manager's own plan and the tool-assisted plan at the same venue, excluding holiday weeks; a capped number of flagged test screenings.</p><p><b>Adopt if</b> tool weeks beat own weeks on admissions per available seat by the margin agreed before the trial, with the interval above zero, and no operational incidents. Length: from the variability measured in Stage 0 (TBD).</p></div></div>
+  </div>
+  <div class="cols c2" style="margin-top:16px">
+    <div class="card"><table class="small"><thead><tr><th>Condition</th><th>When</th></tr></thead><tbody>
+      <tr><td><b class="up">Test</b></td><td>Stage 0 and Stage 1 gates pass; KPI and thresholds signed off by the sponsor before the first trial week.</td></tr>
+      <tr><td><b class="up">Adopt</b></td><td>Trial margin met; manager override rate falls below an agreed level; data export stable for the trial.</td></tr>
+      <tr><td><b class="amber">Revise</b></td><td>Frequent overrides (a missing rule, e.g. staffing or distributor terms); flagged test screenings underperform (raise caution); estimate drifts (holidays, ageing).</td></tr>
+      <tr><td><b class="red">Stop</b></td><td>No halls or seats obtainable; estimate not better than averages after one revision; trial shows no gain or a loss; the data contract keeps changing.</td></tr>
+    </tbody></table></div>
+    <div class="card small"><h3>Metrics</h3><ul><li><b>Primary:</b> admissions per week and per available seat, paired tool vs own weeks.</li><li><b>Secondary:</b> sell-outs and estimated turned-away demand, empty seats in large halls, results of flagged test screenings.</li><li><b>Model health:</b> forecast error (WAPE) against film averages, every week.</li><li><b>Adoption:</b> share of cells overridden, planning time.</li></ul><p class="tiny" style="margin-top:6px">These real-world criteria are separate from the demo's functional checks. Thresholds marked [PROPOSED] are our suggestion to be agreed with the sponsor; the trial margin and length are TBD because they depend on variability we have not seen.</p></div>
+  </div>
+</section>
+
+<!-- 11 --------------------------------------------------------------- -->
+<section class="slide" data-title="Information, stages, responsibilities">
+  <div class="top"><span class="wm">SLOTWISE</span><span class="ep">S1:E11</span><span class="chip">FICTIONAL DATA</span></div>
+  <div class="kicker">What we need from you</div>
+  <h2>Information requests, each with a purpose and a fallback.</h2>
+  <div class="cols c21">
+    <div class="card"><table class="small">
+      <thead><tr><th>Request</th><th>Why</th><th>Priority</th><th>If unavailable</th></tr></thead>
+      <tbody>
+        <tr><td>Confirm the six-field export is the fixed, complete data contract</td><td>Parser and checks depend on it</td><td><span class="pill high">HIGH</span></td><td>Validator rejects changed files; adapt before analysis</td></tr>
+        <tr><td>Screening log: every scheduled show with hall, incl. zero sales</td><td>Exact sell-outs, vanished shows, hall effects</td><td><span class="pill high">HIGH</span></td><td>Sell-out = total equals a hall size; empty shows stay a flagged bias</td></tr>
+        <tr><td>Hall seats, show-time grid, changeover</td><td>Feasibility and hall value</td><td><span class="pill high">HIGH</span></td><td>Manager enters weekly (as in the demo)</td></tr>
+        <tr><td>Weekly slate: runtimes, min / max show commitments</td><td>Hard rules of the plan</td><td><span class="pill high">HIGH</span></td><td>Manager enters; min 0 if unknown</td></tr>
+        <tr><td>KPI: admissions or revenue (price, film rental)</td><td>Right objective</td><td><span class="pill high">HIGH</span></td><td>Admissions</td></tr>
+        <tr><td>One interview on current practice</td><td>Real rules, a fair baseline</td><td><span class="pill high">HIGH</span></td><td>Stated rule of thumb as reference</td></tr>
+        <tr><td>At least 8 recent weeks of rows; release and holiday calendar</td><td>Backtest, stability, holiday flags</td><td><span class="pill med">MED</span></td><td>Shorter history, more caution; exclude holiday weeks</td></tr>
+        <tr><td>Privacy basis for <code>account_tag</code></td><td>Any later audience analysis</td><td><span class="pill med">MED</span></td><td>Not used (as now)</td></tr>
+        <tr><td>Purchase time and price</td><td>Booking curves, revenue (later stages)</td><td><span class="pill low">LOW</span></td><td>Weekly plan, admissions only</td></tr>
+      </tbody></table></div>
+    <div style="display:grid;gap:14px;align-content:start">
+      <div class="card"><h3>Responsibilities</h3><table class="small"><tbody>
+        <tr><td><b>Head of programming</b></td><td>Sponsor; signs off KPI, thresholds and each gate.</td></tr>
+        <tr><td><b>Data owner</b></td><td>Exports; confirms the data contract.</td></tr>
+        <tr><td><b>Programming manager</b></td><td>Interview; weekly settings; judges replayed plans; runs the trial.</td></tr>
+        <tr><td><b>Venue manager</b></td><td>Halls, closures, grid, changeover.</td></tr>
+        <tr><td><b>Our team</b></td><td>Audit report, replay study, tool, trial analysis, go / no-go recommendation.</td></tr>
+      </tbody></table></div>
+      <div class="card amber"><h3>Cost and timeline</h3><p class="small">Not estimated yet, deliberately: both depend on how quickly the exports arrive and on their quality, which Stage 0 establishes. After the audit we will quote Stage 1 effort and a trial length derived from the measured week-to-week variability.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 12 --------------------------------------------------------------- -->
+<section class="slide" data-title="Risks, limitations and the decision">
+  <div class="top"><span class="wm">SLOTWISE</span><span class="ep">S1:E12</span><span class="chip">FICTIONAL DATA</span></div>
+  <div class="kicker">Limitations, risks and the next decision</div>
+  <h2>What could go wrong, and the one decision we ask for today.</h2>
+  <div class="cols c2">
+    <div class="card"><table class="small"><thead><tr><th>Risk or limitation</th><th>Mitigation</th></tr></thead><tbody>
+      <tr><td>Demo figures are read as a forecast</td><td>Fictional label on every page; no money claim before the trial.</td></tr>
+      <tr><td>Hidden demand (sell-outs, empty shows, untried times)</td><td>Screening log request; caution; flagged test screenings.</td></tr>
+      <tr><td>Export format changes</td><td>Data contract; validation blocks the run with a line number.</td></tr>
+      <tr><td>Rules we do not know (staffing, distributor terms, a film in two halls)</td><td>Interview; pins; revise gate.</td></tr>
+      <tr><td>Demand shifts (holidays, film ageing, competitor openings)</td><td>Exclude holiday weeks; weekly backtest; ageing is a later extension.</td></tr>
+      <tr><td>One venue may not represent others</td><td>Roll out venue by venue, each with its own replay.</td></tr>
+      <tr><td>Manager distrust</td><td>Advisory only; reasons and runner-up for every cell; the manager approves.</td></tr>
+    </tbody></table></div>
+    <div class="card red" style="display:flex;flex-direction:column"><div class="kicker" style="margin-top:0">The decision requested</div><p style="font-size:24px;line-height:1.3;color:#fff;margin:4px 0 12px"><b>Approve Stage 0 (data audit) and Stage 1 (offline replay) at one venue.</b></p><ul><li>Name a sponsor and a data contact.</li><li>Provide the six-field export for at least 8 recent weeks, the screening log with halls, and hall seats.</li><li>Give us one interview with the programming manager.</li></ul><p class="small" style="margin-top:10px"><b>Not requested now:</b> production use, a trial budget, or any change to how schedules are published. The trial is decided at the Stage 1 gate, with KPI and thresholds agreed first.</p><div class="timeline"><div class="now"><b>Today</b>approve Stage 0 + 1</div><div><b>Stage 0 gate</b>data usable? log with halls?</div><div><b>Stage 1 gate</b>replay report: trial or stop</div><div><b>Stage 2 gate</b>trial result: adopt, revise or stop</div></div><div style="margin-top:auto;display:flex;gap:12px;align-items:center"><a class="btn play" href="demo.html" style="font-size:18px;padding:10px 22px"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 4v16a1 1 0 0 0 1.5.86l13-8a1 1 0 0 0 0-1.72l-13-8A1 1 0 0 0 6 4Z"/></svg>Try the demo</a><span class="tiny">demo.html must sit in the same folder as this file.</span></div></div>
+  </div>
+</section>
+
+</main>
+
+<div class="chrome" id="chrome" role="toolbar" aria-label="Slide controls">
+  <button type="button" id="prev" aria-label="Previous slide">&#9664;</button>
+  <button type="button" id="next" aria-label="Next slide">&#9654;</button>
+  <div class="progress" id="progress" aria-hidden="true"><i id="bar"></i><b id="knob"></b></div>
+  <span class="count" id="count"></span>
+  <button type="button" id="epBtn" aria-expanded="false" aria-controls="episodes">Episodes</button>
+  <a href="demo.html">Demo</a>
+</div>
+<div class="episodes" id="episodes"><h4>SLOTWISE · Season 1</h4><div id="epList"></div></div>
+
+<script>
+// Minimal presenter: scale the 1600x900 stage, keyboard / wheel / touch / hash navigation.
+(function () {
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const stage = document.getElementById('stage');
+  let cur = 0, lastWheel = 0;
+  function fit() {
+    const s = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
+    stage.style.transform = 'translate(-50%,-50%) scale(' + s + ')';
+  }
+  function go(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((el, k) => { el.classList.toggle('on', k === cur); el.setAttribute('aria-hidden', k === cur ? 'false' : 'true'); });
+    const p = slides.length > 1 ? (cur / (slides.length - 1)) * 100 : 100;
+    document.getElementById('bar').style.width = p + '%';
+    document.getElementById('knob').style.left = p + '%';
+    document.getElementById('count').textContent = (cur + 1) + ' / ' + slides.length;
+    document.querySelectorAll('#epList button').forEach((b, k) => b.classList.toggle('on', k === cur));
+    try { history.replaceState(null, '', '#' + (cur + 1)); } catch (e) { /* ignore */ }
+  }
+  document.getElementById('epList').innerHTML = slides.map((s, k) => '<button type="button" data-k="' + k + '"><span>' + (k + 1) + '</span>' + s.dataset.title + '</button>').join('');
+  document.querySelectorAll('#epList button').forEach((b) => b.addEventListener('click', () => { go(+b.dataset.k); toggleEp(false); }));
+  function toggleEp(on) {
+    const el = document.getElementById('episodes');
+    const v = on === undefined ? !el.classList.contains('on') : on;
+    el.classList.toggle('on', v);
+    document.getElementById('epBtn').setAttribute('aria-expanded', String(v));
+  }
+  document.getElementById('epBtn').addEventListener('click', () => toggleEp());
+  document.getElementById('prev').addEventListener('click', () => go(cur - 1));
+  document.getElementById('next').addEventListener('click', () => go(cur + 1));
+  document.getElementById('progress').addEventListener('click', (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    go(Math.round(((e.clientX - r.left) / r.width) * (slides.length - 1)));
+  });
+  document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(+b.dataset.go - 1)));
+  document.addEventListener('keydown', (e) => {
+    const onControl = e.target.closest && e.target.closest('a,button');
+    if (['ArrowRight', 'PageDown'].includes(e.key) || ((e.key === ' ' || e.key === 'Enter') && !onControl)) { e.preventDefault(); go(cur + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(slides.length - 1);
+    else if (e.key === 'e' || e.key === 'E') toggleEp();
+    else if (e.key === 'Escape') toggleEp(false);
+  });
+  window.addEventListener('wheel', (e) => {
+    const now = Date.now();
+    if (now - lastWheel < 700 || Math.abs(e.deltaY) < 30) return;
+    lastWheel = now;
+    go(cur + (e.deltaY > 0 ? 1 : -1));
+  }, { passive: true });
+  let tx = null;
+  window.addEventListener('touchstart', (e) => { tx = e.touches[0].clientX; }, { passive: true });
+  window.addEventListener('touchend', (e) => { if (tx === null) return; const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) go(cur + (dx < 0 ? 1 : -1)); tx = null; }, { passive: true });
+  window.addEventListener('resize', fit);
+  let t;
+  window.addEventListener('mousemove', () => { document.body.classList.add('chrome-on'); clearTimeout(t); t = setTimeout(() => document.body.classList.remove('chrome-on'), 2000); });
+  fit();
+  const h = parseInt((location.hash || '').slice(1), 10);
+  go(Number.isFinite(h) ? h - 1 : 0);
+})();
+</script>
+</body>
+</html>
