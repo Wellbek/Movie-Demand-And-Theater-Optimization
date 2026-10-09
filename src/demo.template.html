@@ -192,6 +192,14 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .fig{margin:.6rem 0 .2rem;min-width:0}
 .fig canvas{display:block;max-width:100%}
 .figcap{font-size:.8rem;color:var(--muted);margin:.25rem 0 0}
+.narr{display:flex;align-items:flex-start;gap:.6rem;min-height:2.9em;margin:.2rem 0 .4rem;font-size:.92rem;color:#fff;line-height:1.4}
+.narr .nbtn{flex:0 0 auto;width:1.9rem;height:1.9rem;border-radius:50%;border:2px solid rgba(255,255,255,.5);background:rgba(42,42,42,.6);color:#fff;cursor:pointer;font-size:.7rem;display:grid;place-items:center}
+.narr .nbtn:hover{border-color:#fff}
+.narr .nstep{flex:0 0 auto;color:var(--red);font-weight:800;font-variant-numeric:tabular-nums;padding-top:.2rem;min-width:3.2em}
+.narr .ntext{padding-top:.2rem}
+@media (max-width:600px){.narr{min-height:8.6em;font-size:.88rem}}
+@media (min-width:601px) and (max-width:1100px){.narr{min-height:4.3em}}
+.fig canvas{cursor:pointer}
 .sim{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1fr);gap:1rem;align-items:start}
 @media (max-width:900px){.sim{grid-template-columns:minmax(0,1fr)}}
 .simctl{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin-top:.6rem}
@@ -223,6 +231,7 @@ table.moscow td:first-child{white-space:nowrap}
 .katex-display{margin:.5rem 0;overflow-x:auto;overflow-y:hidden}
 footer{padding:3rem 4% 4rem;color:var(--dim);font-size:.8rem}
 footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;max-width:1000px}
+footer .byline{margin:2.2rem 0 0;color:var(--muted);font-size:.85rem;letter-spacing:.02em}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 @media print{.nav,.modal-back{display:none}}
 </style>
@@ -315,10 +324,12 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
   </div>
   <div class="actions">
     <button class="btn red" type="button" id="run">&#9654; Run</button>
+    <button class="btn info sm" type="button" id="randomize" title="Random halls (1-4, 40-300 seats), show times (3-6 a day, 150-200-min slots, first show 09:00-12:00), cleaning time (0-30 min), films (3-8, new release in 30%), minimum shows, weeks of history (1-8), demand spread and past-scheduler noise; caution and k stay at their values">&#127922; Randomize</button>
     <button class="btn info sm" type="button" id="reset">Reset to defaults</button>
     <button class="btn ghost sm" type="button" id="clearPins">Clear pins</button>
     <span class="small muted" id="pinCount"></span>
   </div>
+  <p class="tiny dim">Randomize draws: 1-4 halls of 40-300 seats, 3-6 shows a day (150-200-min slots, first show 09:00-12:00), cleaning 0-30 min, 3-8 films (new release in 30% of draws), minimum shows that fit, 1-8 weeks of history, demand spread 2-20, past-scheduler noise 0-3. Caution and k are kept.</p>
   <div id="settingsAlert"></div>
 </section>
 
@@ -428,31 +439,31 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
   <div class="steps">
     <div class="step"><h3>Sum purchases into screenings</h3>
       <p>\(y_i = \sum \text{passes\_bought}\) over the rows of screening \(i\). A total equal to a hall's seats is read as sold out <span class="tag" title="Our own assumption: records carry no hall">assumed</span>: demand was at least \(y_i\). Used as recorded (cautious); an "at least the seats" correction did not improve plans.</p>
-      <div class="fig"><canvas id="figAgg" role="img" aria-label="Purchase rows adding up to one screening total"></canvas><p class="figcap" id="figAggCap"></p></div>
+      <div class="fig"><div class="narr" id="figAggNarr"></div><canvas id="figAgg" role="img" aria-label="Purchase rows adding up to one screening total"></canvas><p class="figcap" id="figAggCap"></p></div>
     </div>
     <div class="step"><h3>Fit the pattern by maximum likelihood</h3>
       <p>\[\mu^{\text{pattern}}_{f,s,d} = F_f \cdot S_{g(f),s} \cdot D_d\] Film strength x time-of-day index of the film's audience group (family / other, marked on the slate <span class="tag" title="Our own assumption: the operator marks family films">assumed</span>) x weekday index. Poisson likelihood of all screening totals; each factor = observed / expected tickets over its rows, repeated until stable. Gives an estimate for every film-time-day, also never-shown ones. <span class="src">Lecture 2, MLE (p. 24).</span></p>
-      <div class="fig"><canvas id="figMle" role="img" aria-label="Time-of-day indices and log-likelihood over the fitting passes"></canvas><p class="figcap" id="figMleCap"></p></div>
+      <div class="fig"><div class="narr" id="figMleNarr"></div><canvas id="figMle" role="img" aria-label="Time-of-day indices and log-likelihood over the fitting passes"></canvas><p class="figcap" id="figMleCap"></p></div>
     </div>
     <div class="step"><h3>Update each cell with Bayes' rule</h3>
       <p>Prior \(\theta \sim \text{Gamma}(kP,\ k)\): mean = pattern \(P\), worth \(k\) screenings. Poisson likelihood of the cell's screenings (exposure \(w_i\) = weekday weight). \[\theta \mid y \sim \text{Gamma}\Big(kP + \textstyle\sum_i y_i,\ \ k + \sum_i w_i\Big),\qquad \mathbb{E}[\theta \mid y] = \frac{k}{k+\sum_i w_i}\,P + \frac{\sum_i w_i}{k+\sum_i w_i}\,\bar y\] A weighted average of pattern and own average. <span class="src">Lecture 2, Example 2.1 (p. 20); weighted average (pp. 16, 22); belief sharpening (p. 11).</span></p>
-      <div class="fig"><canvas id="figBayes" role="img" aria-label="Prior and posterior Gamma densities of the worked example as screenings are added"></canvas><p class="figcap" id="figBayesCap"></p></div>
+      <div class="fig"><div class="narr" id="figBayesNarr"></div><canvas id="figBayes" role="img" aria-label="Prior and posterior Gamma densities of the worked example as screenings are added"></canvas><p class="figcap" id="figBayesCap"></p></div>
     </div>
     <div class="step"><h3>Expected tickets in a given hall</h3>
       <p>Integrate, do not plug in. One screening's demand: mean \(\mu = \mathbb{E}[\theta \mid y]\,w_d\), variance \(\mu + \mu^2/r + w_d^2\,\text{Var}(\theta \mid y)\) (Poisson count, screening spread \(r\) by maximum likelihood, estimation uncertainty), as a negative binomial with that mean and variance. \[v_{f h d s} = \mathbb{E}\big[\min(D_{f s d},\ \text{seats}_h)\big]\] A bigger hall is worth more only when demand can exceed the smaller one. <span class="src">Lecture 2, pp. 31-32; MLE p. 24.</span></p>
-      <div class="fig"><canvas id="figPred" role="img" aria-label="Predictive demand distribution with the seat line of each hall"></canvas><p class="figcap" id="figPredCap"></p></div>
+      <div class="fig"><div class="narr" id="figPredNarr"></div><canvas id="figPred" role="img" aria-label="Predictive demand distribution with the seat line of each hall"></canvas><p class="figcap" id="figPredCap"></p></div>
     </div>
     <div class="step"><h3>Be cautious where the records are silent</h3>
       <p>Planning value = \(\mathbb{E}[\min(D', \text{seats}_h)]\), mean of \(D'\) = \(\mu\,(1 - c \cdot \text{pattern share})\), pattern share \(= k/(k+\sum w_i)\). Untried = all pattern = full cut \(c\); well-observed = small cut. Only a new release (no records yet) is exempt and flagged: cutting it only shrinks a manual guess and starves new films of shows. A film that was available but never shown is cut like any untried cell. Worst case of a box around each value: still a linear program. Why: an optimiser seeks out the most optimistic extrapolations. <span class="src">Lecture 1, robust LP (p. 25), epigraph (p. 18); Lecture 0, p. 25; Lecture 1, p. 31.</span></p>
-      <div class="fig"><canvas id="figCaution" role="img" aria-label="Estimates and their cautious planning values as the caution level changes"></canvas></div>
+      <div class="fig"><div class="narr" id="figCautionNarr"></div><canvas id="figCaution" role="img" aria-label="Estimates and their cautious planning values as the caution level changes"></canvas></div>
     </div>
     <div class="step"><h3>Plan the week as a linear program</h3>
       <p>\(x_{f h d s} \in \{0,1\}\): film \(f\) in hall \(h\), day \(d\), slot \(s\). \[\max \sum v_{fhds}\,x_{fhds}\ \ \text{s.t.}\ \sum_f x_{fhds} \le 1,\ \ \sum_h x_{fhds} \le 1,\ \ \text{min}_f \le \sum_{h,d,s} x_{fhds} \le \text{max}_f,\ \ x_{fhds}=0 \text{ if runtime}_f + \text{cleaning} > \text{slot}\] Relaxed to \(x \ge 0\). The optimum sits at a vertex (Lecture 1, p. 16); here every vertex is a whole schedule (hall rows and film rows form two nested families with 0/1 coefficients; a standard LP result, not on the slides). Solved by the simplex method; a fractional result would be refused.</p>
-      <div class="fig"><canvas id="figLp" role="img" aria-label="Two-variable slice of the real linear program with the feasible region and objective line"></canvas><p class="figcap" id="figLpCap"></p></div>
+      <div class="fig"><div class="narr" id="figLpNarr"></div><canvas id="figLp" role="img" aria-label="Two-variable slice of the real linear program with the feasible region and objective line"></canvas><p class="figcap" id="figLpCap"></p></div>
     </div>
     <div class="step"><h3>Certify the plan</h3>
       <p>Weak duality: the dual prices give an upper bound on every feasible week. Bound = plan value, and every reduced cost \(\le 0\), so no better week exists for the stated model (planning value, caution applied). Cost of a minimum-show rule: re-solved with the minimum one higher and one lower. <span class="src">Lecture 1, KKT and duality (pp. 37-42).</span></p>
-      <div class="fig"><canvas id="figDual" role="img" aria-label="Simplex planning value per pivot rising to the dual bound"></canvas><p class="figcap" id="figDualCap"></p></div>
+      <div class="fig"><div class="narr" id="figDualNarr"></div><canvas id="figDual" role="img" aria-label="Simplex planning value per pivot rising to the dual bound"></canvas><p class="figcap" id="figDualCap"></p></div>
     </div>
   </div>
 </section>
@@ -471,7 +482,23 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
       <tr><td><b class="up">Must have</b></td><td>One venue, one week, booked films; film x hall x show time; one film per hall-time; no film in two halls at once; min / max shows; runtime + cleaning fits the slot; demand learned from the six fields; comparison with a baseline.</td></tr>
       <tr><td><b class="up">Should have</b></td><td>Caution on untried combinations; optimality check; pins and blocks; reasons per cell; clear failure messages.</td></tr>
       <tr><td><b style="color:var(--amber)">Could have</b></td><td>Test screenings of untried combinations (exploration); revenue objective once prices exist; holiday calendar.</td></tr>
-      <tr><td><b style="color:#ff6b72">Won't have now</b></td><td>Film booking, pricing, several venues, mid-week changes, shows starting whenever a hall is free (flexible times), a film in two halls at once, after-midnight shows, staff rosters.</td></tr>
+      <tr><td><b style="color:#ff6b72">Won't have now</b></td><td>Everything in the list on the right: common in practice, left out of step one.</td></tr>
+    </tbody></table></div></div>
+    <div class="panel"><h3>Won't have now: done in practice, not here</h3><div class="tablewrap"><table class="small"><thead><tr><th>In practice</th><th>Why not in step one</th></tr></thead><tbody>
+      <tr><td>Film booking, run length and distributor terms</td><td>Upstream decision; the film list is an input</td></tr>
+      <tr><td>Ticket and dynamic pricing, concessions and ad revenue</td><td>No price, cost or sales-mix data</td></tr>
+      <tr><td>Social-media buzz and audience retention (trailer views, watch-through, mentions), reviews, search trends</td><td>Not in the records; needs data agreements; effect on one venue unproven</td></tr>
+      <tr><td>National box office, pre-sales and booking curves</td><td>Not in the records; booking curves need purchase times</td></tr>
+      <tr><td>Location: proximity of other cinemas, catchment and travel time, competitor schedules and openings</td><td>One venue, no location or competitor data</td></tr>
+      <tr><td>Weather, holidays, school calendar, local events (matches, festivals)</td><td>Not in the records; holiday weeks are left out of a trial</td></tr>
+      <tr><td>Several venues sharing one audience</td><td>Single venue in step one</td></tr>
+      <tr><td>Mid-week reprogramming from early sales</td><td>Needs purchase times; becomes a feedback problem</td></tr>
+      <tr><td>Flexible start times (a show whenever a hall is free), staggered starts against lobby crowding</td><td>Records only cover the fixed grid; certified LP would be lost</td></tr>
+      <tr><td>A film in two halls at once, after-midnight shows</td><td>Records cannot tell such screenings apart; calendar-day rule</td></tr>
+      <tr><td>Premium formats (large-screen, 3D), dubbed vs subtitled versions, accessible screenings</td><td>No format or version field</td></tr>
+      <tr><td>Event cinema (concerts, sport), private hire, festivals</td><td>Different demand and contracts</td></tr>
+      <tr><td>Staff and cleaning rosters, projection maintenance</td><td>Operational data not given</td></tr>
+      <tr><td>Personalised offers via loyalty accounts</td><td><code>account_tag</code> not used; privacy review needed</td></tr>
     </tbody></table></div></div>
     <div class="panel"><h3>Labels</h3><ul class="notes small">
       <li><span class="tag" title="Our own assumption: not given in the brief, to be confirmed by the operator">assumed</span> = our own operating rule or reading, not in the brief; to be confirmed.</li>
@@ -495,9 +522,9 @@ footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr
 <footer>
   <div class="cols">
     <div><b class="up">Theater Optimization</b><br>IE437 Assignment 1 demonstration. Fictional data.</div>
-    <div>Companion files: <code>problem-definition.md</code>, <a href="proposal.html">proposal.html</a></div>
     <div>Layout inspired by streaming-service interfaces; no third-party logo, font or image is used.</div>
   </div>
+  <p class="byline">Louis Wellmeyer - 20264059</p>
 </footer>
 
 <div class="modal-back" id="modalBack" role="dialog" aria-modal="true" aria-labelledby="modalTitle">

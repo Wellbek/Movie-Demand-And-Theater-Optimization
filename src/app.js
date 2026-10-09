@@ -162,7 +162,20 @@
     $('addHall').addEventListener('click', () => { if (settings.halls.length < 6) { settings.halls.push({ name: 'Hall ' + (settings.halls.length + 1), seats: 80, open: true }); renderHallRows(); changed('halls'); } });
     $('delHall').addEventListener('click', () => { if (settings.halls.length > 1) { settings.halls.pop(); renderHallRows(); changed('halls'); } });
     $('run').addEventListener('click', run);
-    $('runTop').addEventListener('click', () => { run(); $('slate').scrollIntoView(); });
+    // "Run plan": run, jump to the comparison and play the week at the cinema
+    $('runTop').addEventListener('click', () => {
+      run();
+      if (!result || document.body.classList.contains('stale')) return;
+      $('compare').scrollIntoView({ behavior: 'smooth' });
+      if (window.Figures) setTimeout(() => Figures.playWeek(), 600);
+    });
+    $('randomize').addEventListener('click', () => {
+      const rng = E.mulberry32((Date.now() ^ Math.floor(Math.random() * 2 ** 31)) >>> 0);
+      const keep = { caution: settings.caution, credibility: settings.credibility, newReleaseStrength: settings.newReleaseStrength };
+      settings = { ...E.randomConfig(rng, Math.floor(rng() * 1e6), false), ...keep, extraRows: '', pins: {} };
+      fillForm();
+      run();
+    });
     $('reset').addEventListener('click', () => { settings = E.defaultSettings(); fillForm(); run(); });
     $('clearPins').addEventListener('click', () => { settings.pins = {}; pinCount(); run(); });
     $('dlCsv').addEventListener('click', downloadCsv);
@@ -214,7 +227,7 @@
     const b = r.scores.baseline, p = r.scores.proposed;
     HeroAnim.start($('heroArt'), heroData(r));
     const open = r.problem.halls.filter((h) => h.usable).length;
-    $('heroTop').innerHTML = '<span class="b">TOP<b>' + (p.tickets >= b.tickets ? '1' : '2') + '</b></span><span>' + pctR(p.tickets, b.tickets) + ' expected tickets vs the greedy baseline</span>';
+    $('heroTop').innerHTML = '<span>' + pctR(p.tickets, b.tickets) + ' expected tickets for the whole week vs the greedy baseline</span>';
     $('heroMeta').innerHTML = '<span class="match">' + fmt(p.tickets) + ' vs ' + fmt(b.tickets) + '</span><span class="chip">12-18 OCT 2026</span><span>' + open + ' hall' + (open === 1 ? '' : 's') + '</span><span>' + r.times.length * 7 + ' show times</span><span class="chip">' + r.slate.length + ' FILMS</span>';
     $('heroDesc').textContent = 'Same films, halls and rules; ' + sgn(dR(p.tickets, b.tickets)) + ' expected tickets from a better arrangement. Optimal for the stated model (duality check ' + (r.proposed.certificateOk ? 'passed' : 'FAILED') + '). Fictional data.';
     $('heroAlert').innerHTML = p.thinShare > 0.4 ? '<div class="alert warn small"><b>Thin evidence:</b> ' + Math.round(100 * p.thinShare) + '% of planned tickets rest on untried combinations or a new release. Treat this plan as a draft.</div>' : '';

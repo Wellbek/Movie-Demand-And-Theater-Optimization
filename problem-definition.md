@@ -2,8 +2,8 @@
 
 **IE437 Assignment 1 · Movie Programming - Problem Definition and Decision-Support Design**
 
-Author / student ID or team: Louis Wellmeyer · student ID TBD (fill in before submission)  
-Date / version: 2026-10-09 · v4.0  
+Author / student ID or team: Louis Wellmeyer · 20264059  
+Date / version: 2026-10-09 · v4.1  
 Summary: The purchase records cannot support the whole programming decision, so the first step is narrower: for one venue and one week, assign already-booked films to halls and show-times as an advisory plan.
 Demand per film, time and day type is estimated by a Poisson-Gamma Bayes update on a film x time x weekday pattern, and the week is planned as a cautious linear program next to two reference plans under the same inputs.
 On fictional data and on its own estimate the plan reaches 7,385 expected tickets against 6,469 for a rule of thumb (+14.2%) and 7,009 for repeating last week (+5.4%); real-world effects are untested.  
@@ -76,7 +76,10 @@ In the demo: 3 halls x 5 show-times x 7 days = 105 screen-slots, 6 films (config
 | Holidays, film ageing, weather, competitors | Not in the records; holiday and opening weeks should be left out of the trial. |
 | A film in two halls at the same time; after-midnight shows | Not supported; such cells must be pinned by hand. |
 | Flexible start times (a show whenever a hall is free) | Idle hall minutes after short films; the reason for fixed times is given above. |
-| External signals (other cinemas' sales, box-office success, social media, reviews) | Could improve accuracy (Section 3) but are not in the records and their link to one venue is unproven. |
+| External demand signals (social-media buzz and audience retention such as trailer watch-through, reviews, search trends, other cinemas' sales, national box office, pre-sales) | Could improve accuracy (Section 3) but are not in the records, need data agreements, and their link to one venue is unproven. |
+| Location (proximity of other cinemas, catchment and travel time, competitor schedules and openings) | Competing venues are invisible; one venue and no location data in step one. |
+| Premium formats (large-screen, 3D), dubbed vs subtitled versions, accessible screenings; event cinema and private hire | No format or version field; different demand and contracts. |
+| Staff and cleaning rosters, projection maintenance; personalised offers via loyalty accounts | Operational data not given; `account_tag` is not used and would need a privacy review. |
 
 **Current practice vs baseline:** current practice is unknown [A §2].
 The baseline is a rule of thumb defined in Section 4 (approach A), labelled a proposed reference, not the operator's process.
@@ -270,6 +273,9 @@ The selected approach beats repeating last week by 497 ± 38 and a simulated exp
 1. *Settings:* halls (seats, open next week), show-time grid with cleaning time, slate and min / max shows, a new release, caution and $k$, generator settings (seed, weeks of history, dispersion, past scheduler noise), and optional extra purchase rows in the six-field format.
 2. *Run:* records (first 200 rows, CSV download, field-usage table, data-gap and data-contract notes) → demand map per film, time and day type (click a cell for prior, own evidence and posterior with checkable arithmetic) → both plans side by side per day or as a week overview (click a cell for the ranked alternatives, then pin or block it, which re-runs) → comparison: the greedy baseline explained, a week-at-the-cinema animation of both plans with a cumulative-tickets chart and a step control, certificate, rule prices, backtest, the robustness sweep and mock scoring, with buttons that re-run the 40-history study and a brute-force optimality check in the browser → "How it works": one animated figure per step, drawn from the current run (purchase sums, maximum-likelihood passes, Gamma prior to posterior with its weighted-average bar, predictive demand against each hall size, caution, a two-variable slice of the real LP, simplex value against the dual bound).
    Each film card shows its expected tickets gained or lost against the baseline.
+   The "Run plan" button runs, jumps to the comparison and plays the week at the cinema: on a running clock the doors open, people walk in and sit, the lights dim during the film, the audience leaves, and people turned away by a full hall walk back out; a slider and a step field move through the 35 show-times while a small chart shows both plans' tickets so far.
+   Each "How it works" figure is a narrated sequence (step counter, pause button) drawn from the current run.
+   A "Randomize" button draws venue, grid, cleaning time, slate, minimums, history and generator settings at random (keeping caution and $k$) and runs again.
 3. *Modify and repeat:* change a setting, press Run; while settings differ from the last run the results are dimmed and the headline says so, and when the rules cannot be met no plan is shown, with an explanation (the headline is replaced and older results are dimmed and labelled stale).
 Settings are kept in the page address; "Reset to defaults" restores the defaults; identical settings give an identical plan.
 Checked offline in Chromium (Playwright with network disabled: no requests, no console errors, no horizontal overflow at 1440, 1024 and 390 px; all seven test cases pass in the page; the deck's controls appear on mouse movement and hide when idle) and in Firefox 149 (headless render of both files).

@@ -73,6 +73,15 @@ with sync_playwright() as p:
             check(not blank, 'demo: every animated figure draws something ' + str(blank))
             page.fill('#simStep', '20'); page.press('#simStep', 'Enter'); page.wait_for_timeout(400)
             check('step 20 of 35' in page.inner_text('#simWhen') and page.input_value('#simSlider') == '20', 'demo: typing step 20 moves the cinema animation and the slider')
+            check('Now showing' in page.inner_text('#simWhen'), 'demo: a chosen step shows the screening in progress')
+            check(page.locator('.narr .ntext').count() == 7 and all(t.strip() for t in page.locator('.narr .ntext').all_inner_texts()), 'demo: every How-it-works figure has a narration line')
+            check('TOP' not in page.inner_text('#heroTop') and 'whole week' in page.inner_text('#heroTop'), 'demo: headline states the whole-week gain, no rank badge')
+            check(page.inner_text('footer .byline') == 'Louis Wellmeyer - 20264059' and 'Companion files' not in page.inner_text('footer'), 'demo: footer shows name and student number only')
+            page.evaluate('window.scrollTo(0, 0)'); page.click('#runTop'); page.wait_for_timeout(1500)
+            check(page.evaluate("Math.abs(document.getElementById('compare').getBoundingClientRect().top) < 140") and page.evaluate('Figures.sim.playing'), 'demo: Run plan jumps to the comparison and plays the week')
+            page.click('#randomize'); page.wait_for_timeout(1200)
+            check(page.evaluate('APP.result.status') == 'ok' and page.evaluate('APP.settings.caution') == 0.5, 'demo: Randomize draws new settings, keeps caution, and runs')
+            page.click('#reset'); page.wait_for_timeout(800)
             # mock comparison button
             page.click('#scoreAlt'); page.wait_for_timeout(1500)
             check('Rule of thumb' in page.inner_text('#altTable'), 'demo: alternatives can be re-scored in the browser')
@@ -114,6 +123,7 @@ with sync_playwright() as p:
             page.wait_for_timeout(2900)
             check(not page.evaluate("document.body.classList.contains('chrome-on')"), 'deck: controls fade out when the mouse is still')
             check(page.evaluate("document.querySelectorAll('.slide .sn').length") == n and page.inner_text('.slide.on .sn') == 'Slide 1', 'deck: slides are numbered "Slide n"')
+            check(page.evaluate("document.querySelectorAll('.slide .byl').length") == n and page.inner_text('.slide.on .byl') == 'Louis Wellmeyer - 20264059' and page.locator('.slide.on .keys kbd').count() == 2, 'deck: every slide shows the name and student number and the arrow keys')
         ctx.close()
     b.close()
 

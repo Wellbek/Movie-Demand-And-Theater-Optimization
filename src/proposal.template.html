@@ -48,6 +48,11 @@ th,td{padding:6px 9px;border-bottom:1px solid var(--line);text-align:left;vertic
 th{color:var(--muted);font-weight:700;font-size:13.5px;text-transform:uppercase;letter-spacing:.05em}
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 td.nw{white-space:nowrap}
+table.calc td{font-size:17px;padding:7px 8px;line-height:1.35}
+table.calc td b{color:var(--red)}
+table.calc td.src{font-size:12.5px;color:var(--dim);white-space:nowrap}
+table.calc .katex{font-size:1.06em}
+ul.wont li{font-size:15.5px;line-height:1.33;margin:0 0 4px}
 table.moscow td{font-size:18.5px;padding:12px 10px;line-height:1.4}
 .pill{display:inline-block;padding:1px 7px;border-radius:2px;font-size:11.5px;font-weight:800;letter-spacing:.04em;white-space:nowrap}
 .pill.used{background:var(--green);color:#000}.pill.filter{background:var(--blue);color:#000}.pill.notused{background:#5a5a5a;color:#fff}
@@ -106,6 +111,9 @@ table.sg td.e{background:#222;color:var(--dim)}
 .bill::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 62%,var(--bg) 100%),linear-gradient(77deg,rgba(0,0,0,.88) 0%,rgba(0,0,0,.55) 40%,rgba(0,0,0,.1) 72%,transparent 85%)}
 .bill .content{position:absolute;left:80px;bottom:130px;width:860px;z-index:2}
 .bill .top{z-index:3}
+.byl{position:absolute;left:80px;bottom:20px;font-size:13px;color:var(--dim);letter-spacing:.03em;z-index:3}
+.keys{position:absolute;right:80px;bottom:16px;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--dim);z-index:3}
+.keys kbd{display:inline-grid;place-items:center;min-width:26px;height:22px;padding:0 6px;border:1px solid #555;border-bottom-width:2px;border-radius:4px;color:var(--muted);font-family:var(--font);font-size:13px;background:#1c1c1c}
 .bill .rating{position:absolute;right:0;bottom:150px;z-index:2;background:rgba(51,51,51,.6);border-left:3px solid #dcdcdc;padding:8px 60px 8px 14px;font-size:17px;letter-spacing:.04em}
 /* ---------- streaming player chrome: shown on mouse movement only ---------- */
 .vig{position:fixed;left:0;right:0;z-index:15;pointer-events:none;opacity:0;transition:opacity .35s}
@@ -158,7 +166,7 @@ body.chrome-on .vig{pointer-events:none}
   <div class="content">
     <div class="kicker">Decision support for the weekly schedule</div>
     <h1>Fill the right seats.</h1>
-    <div class="top10"><span class="b">TOP<b>1</b></span>{{gainPct}} expected tickets vs a greedy baseline</div>
+    <div class="top10">{{gainPct}} expected tickets for the whole week vs a greedy baseline</div>
     <div class="meta"><span class="match">demo week, tool's own estimate</span><span class="chip">1 VENUE</span><span class="chip">1 WEEK</span><span>advisory</span></div>
     <p style="font-size:22px;max-width:840px;color:#fff">Which film plays in which hall at what time, decided once a week <span class="tag">assumed</span>. A small, testable tool learns demand from purchase records and drafts that week for one venue, with reasons per cell. Approval required before proceeding: a data audit and an offline replay, not adoption.</p>
     <div style="display:flex;gap:14px;margin-top:22px">
@@ -243,11 +251,20 @@ body.chrome-on .vig{pointer-events:none}
       <tr><td class="nw"><b class="up">Must have</b></td><td>One venue, one week (Mon-Sun), booked films; film x hall x show time; one film per hall-time; no film in two halls at once; min / max shows per film; runtime + cleaning time fits the slot; demand from the six fields; side-by-side with a baseline; advisory only (pin, block, re-run; nothing published automatically).</td></tr>
       <tr><td class="nw"><b class="up">Should have</b></td><td>Caution on untried combinations; optimality certificate; reasons and runner-up per cell; clear messages when rules cannot be met; thin-evidence warning.</td></tr>
       <tr><td class="nw"><b class="amber">Could have</b></td><td>Flagged test screenings of untried combinations (exploration, trial stage); revenue objective once prices exist; holiday calendar.</td></tr>
-      <tr><td class="nw"><b style="color:#ff6b72">Won't have now</b></td><td>Film booking; pricing and concessions; several venues; mid-week changes; shows starting whenever a hall is free (fixed show times instead); a film in two halls at once; after-midnight shows; staff rosters.</td></tr>
+      <tr><td class="nw"><b style="color:#ff6b72">Won't have now</b></td><td>Common in practice, left out of step one: see the list on the right, each with the reason.</td></tr>
     </tbody></table></div>
     <div style="display:grid;gap:14px;align-content:start">
-      <div class="card small"><h3>What "won't have" costs</h3><ul><li>Booking: cannot say which films to acquire (input).</li><li>Revenue: objective is admissions (KPI to confirm).</li><li>Fixed show times: some hall minutes idle between a short film and the next slot; in return demand is learned at the times the records cover, and the plan stays a certified LP.</li><li>Mid-week: no reaction to a flop (needs purchase times).</li></ul></div>
-      <div class="card small"><h3>Structure (course classification)</h3><p>One decision, <code>weekly-plan</code>: <b>Flat</b> (booking upstream), <b>Stateless</b> (nothing links days in the week; audience depletion to check), <b>Open-loop</b> (fixed before sales). Objective and rules: <b>Formulation</b>; the demand estimate supplies their parameters.</p></div>
+      <div class="card small"><h3>Won't have now: done in practice, not here</h3><ul class="wont">
+        <li><b>Film booking</b>, run length, distributor terms: upstream; the film list is an input.</li>
+        <li><b>Pricing</b>, dynamic pricing, concessions, ad revenue: no price or cost data.</li>
+        <li><b>Demand signals</b>: social-media buzz and audience retention, reviews, search trends, national box office, pre-sales: not in the records.</li>
+        <li><b>Location</b>: nearby cinemas, catchment and travel time, competitor schedules: one venue, no location data.</li>
+        <li><b>Calendar</b>: weather, holidays, local events: not in the records.</li>
+        <li><b>Several venues</b>; <b>mid-week reprogramming</b>: single venue; needs purchase times.</li>
+        <li><b>Flexible or staggered start times</b>: the fixed grid keeps the evidence and the certificate; cost: idle hall minutes.</li>
+        <li>A film in two halls, after-midnight shows, premium formats, language versions, accessible screenings, event cinema, private hire.</li>
+        <li>Staff and cleaning rosters; personal offers via loyalty accounts (privacy).</li></ul></div>
+      <div class="card small"><h3>Structure (course classification)</h3><p style="font-size:15.5px">One decision, <code>weekly-plan</code>: <b>Flat</b>, <b>Stateless</b>, <b>Open-loop</b>; objective and rules are <b>Formulation</b>, the demand estimate supplies their parameters.</p></div>
     </div>
   </div>
 </section>
@@ -286,14 +303,18 @@ body.chrome-on .vig{pointer-events:none}
     <div class="box"><span class="n">5</span><b>Weekly LP</b><span>Best week under the rules; certified by duality.</span></div>
     <div class="box io"><b>Outputs</b><span>Week grid, reasons and runner-up per cell, untried flags, cost of each rule, baseline next to it.</span></div>
   </div>
-  <div class="cols c2" style="margin-top:16px">
-    <div class="card small"><h3>The calculation</h3>
-      <p>\(P_{fsd} = F_f\,S_{g(f),s}\,D_d\): pattern by maximum likelihood, time index per audience group \(g\) (Lecture 2)</p>
-      <p>\(\mathbb{E}[\theta\mid y] = \dfrac{k}{k+\sum w}\,P + \dfrac{\sum w}{k+\sum w}\,\bar y\): Poisson-Gamma posterior mean, a weighted average; prior worth \(k = 4\) screenings (Lecture 2, Example 2.1)</p>
-      <p>\(v_{fhds} = \mathbb{E}[\min(D,\ \text{seats}_h)]\), \(D\) negative binomial (fitted spread + estimation uncertainty, "integrate, don't plug in"); planning value with mean \(\mu\,(1 - c\cdot k/(k+\sum w))\), \(c = 0.5\); new releases exempt (robust LP, Lecture 1)</p>
-      <p>\(\max \sum v\,x\) s.t. one film per hall-time, no film in two halls at once, \(\min_f \le \text{shows}_f \le \max_f\), runtime + cleaning fits; optimum at a vertex = a whole schedule (Lecture 1)</p>
-      <div class="card" style="margin-top:8px;background:#121212"><b style="color:#fff">Worked example from the demo:</b> {{exFilm}}, {{exTime}}, {{exType}}. Pattern P = {{exPattern}}; {{exN}} screenings sold {{exSumY}} tickets, exposure {{exW}} (own average {{exOwn}}). k = {{exK}}: ({{exK}} x {{exPattern}} + {{exSumY}}) / ({{exK}} + {{exW}}) = {{exAlpha}} / {{exBeta}} = <b>{{exPost}}</b> per screening, {{exWeight}} from own evidence.</div></div>
-    <div class="card small"><h3>The weekly workflow (proposed)</h3><ol style="margin:0;padding-left:20px"><li>Export last weeks' rows (six fields) for the venue.</li><li>Confirm halls, closures, show times, cleaning time, films, runtimes, min / max shows.</li><li>Run: draft next to the baseline, with flags for untried combinations and new releases.</li><li>Inspect cells, pin or block, re-run; the plan stays optimal around the pins.</li><li>Approve and publish as today; the tool never publishes.</li><li>After the week, sales flow back into the records.</li></ol><p class="tiny" style="margin-top:6px">All of this runs in the demo ({{lpVars}} variables, {{lpRows}} rules, solved in the browser in well under a second).</p></div>
+  <div class="cols" style="margin-top:12px;grid-template-columns:1.75fr 1fr">
+    <div class="card small" style="padding:10px 14px"><h3 style="margin-bottom:4px">The calculation, every step</h3><table class="calc"><tbody>
+      <tr><td class="nw"><b>1</b> Screenings</td><td>\(y_i = \sum \text{passes\_bought}\); read as sold out if \(y_i\) equals a hall's seats</td><td class="src">assumed</td></tr>
+      <tr><td class="nw"><b>2</b> Pattern</td><td>\(\max \sum_i \big(y_i \log \mu_i - \mu_i\big)\), \(\mu_i = F_f\,S_{g(f),s}\,D_d\); each factor \(\leftarrow\) observed \(\div\) expected</td><td class="src">L2 MLE</td></tr>
+      <tr><td class="nw"><b>3</b> Bayes</td><td>\(\theta \sim \text{Gamma}(kP, k) \Rightarrow \text{Gamma}\big(kP + \sum y,\ k + \sum w\big)\), mean \(\tfrac{k}{k+\sum w}P + \tfrac{\sum w}{k+\sum w}\bar y\), \(k = 4\)</td><td class="src">L2 Ex. 2.1</td></tr>
+      <tr><td class="nw"><b>3b</b> Spread</td><td>\(r = \arg\max_r \sum_i \log \text{NB}\big(y_i \mid \hat\mu_{-i}, r\big)\) (leave-one-out cell means)</td><td class="src">L2 MLE</td></tr>
+      <tr><td class="nw"><b>4</b> Value</td><td>\(D \sim \text{NB}\), mean \(\mu\), variance \(\mu + \mu^2/r + w^2\,\text{Var}\,\theta\); \(v = \mathbb{E}\min(D, \text{seats}_h)\); planning mean \(\mu\big(1 - c\,\tfrac{k}{k+\sum w}\big)\), \(c = 0.5\), new releases exempt</td><td class="src">L2 p. 31; L1 robust LP</td></tr>
+      <tr><td class="nw"><b>5</b> Week LP</td><td>\(\max \sum v\,x\) s.t. \(\sum_f x \le 1\), \(\sum_h x \le 1\), \(\min_f \le \sum_{h,d,s} x \le \max_f\), \(x = 0\) if runtime + cleaning \(>\) slot, \(0 \le x \le 1\); optimum at a vertex = whole schedule</td><td class="src">L1</td></tr>
+      <tr><td class="nw"><b>5b</b> Certificate</td><td>planning value \(=\) dual bound \(b^\top y\), all reduced costs \(\le 0\)</td><td class="src">L1 duality</td></tr>
+    </tbody></table>
+      <p style="font-size:16.5px;margin:10px 0 0;color:var(--text2)"><b style="color:#fff">Worked example:</b> {{exFilm}}, {{exTime}}, {{exType}}: ({{exK}} x {{exPattern}} + {{exSumY}}) / ({{exK}} + {{exW}}) = {{exAlpha}} / {{exBeta}} = <b>{{exPost}}</b> tickets per screening ({{exN}} screenings, {{exWeight}} own evidence). The baseline uses only step 1 (last week's film averages) and a greedy fill.</p></div>
+    <div class="card small"><h3>The weekly workflow (proposed)</h3><ol style="margin:0;padding-left:20px"><li>Export last weeks' rows (six fields) for the venue.</li><li>Confirm halls, closures, show times, cleaning time, films, runtimes, min / max shows.</li><li>Run: draft next to the baseline, with flags for untried combinations and new releases.</li><li>Inspect cells, pin or block, re-run; the plan stays optimal around the pins.</li><li>Approve and publish as today; the tool never publishes.</li><li>After the week, sales flow back into the records.</li></ol><p class="tiny" style="margin-top:6px">Every step runs in the demo ({{lpVars}} variables, {{lpRows}} rules, solved in the browser in well under a second).</p></div>
   </div>
 </section>
 
@@ -446,6 +467,8 @@ body.chrome-on .vig{pointer-events:none}
     document.querySelectorAll('#listItems button').forEach((b, k) => b.classList.toggle('on', k === cur));
     try { history.replaceState(null, '', '#' + (cur + 1)); } catch (e) { /* ignore */ }
   }
+  // name and student number in one bottom corner, the arrow keys in the other, on every slide
+  slides.forEach((s) => s.insertAdjacentHTML('beforeend', '<div class="byl">Louis Wellmeyer - 20264059</div><div class="keys" aria-hidden="true"><kbd>&larr;</kbd><kbd>&rarr;</kbd><span>to move</span></div>'));
   document.getElementById('listItems').innerHTML = slides.map((s, k) => '<button type="button" data-k="' + k + '"><span>' + (k + 1) + '</span>' + s.dataset.title + '</button>').join('');
   document.querySelectorAll('#listItems button').forEach((b) => b.addEventListener('click', () => { go(+b.dataset.k); toggleList(false); }));
   function toggleList(on) {

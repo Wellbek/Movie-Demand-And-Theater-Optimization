@@ -15,7 +15,7 @@ with sync_playwright() as p:
         for _ in range(i): page.keyboard.press('ArrowRight')
         page.wait_for_timeout(600)
         ov = page.evaluate("""() => { const s = document.querySelector('.slide.on'); const r = s.getBoundingClientRect(); const sc = r.width/1600; let worst = 0, who='';
-          s.querySelectorAll('*').forEach(el => { if (el.closest('.art')) return; const q = el.getBoundingClientRect(); if (q.width===0||q.height===0) return;
+          s.querySelectorAll('*').forEach(el => { if (el.closest('.art, .byl, .keys')) return; const q = el.getBoundingClientRect(); if (q.width===0||q.height===0) return;
             const over = Math.max(q.bottom - (r.bottom - 40*sc), q.right - r.right)/sc; if (over > worst) { worst = over; who = el.tagName + ' ' + (el.textContent||'').trim().slice(0,50); } });
           s.querySelectorAll('.card, .stage-card, .kpi, .box').forEach(c => { const o = (c.scrollHeight - c.clientHeight); if (o > 2 && o > worst) { worst = o; who = 'clipped inside ' + c.className + ': ' + (c.textContent||'').trim().slice(0,40); } });
           return [Math.round(worst), who]; }""")
