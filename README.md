@@ -75,3 +75,5 @@ python video/scripts/capture.py   # offline captures into video/public
 cd video && npm install
 npx remotion render src/Root.tsx MainVideo out/walkthrough.mp4
 ```
+
+Video made with [Remotion](https://www.remotion.dev/) and the [demo-video skill](https://github.com/Leihyn/claude-demo-video-skill).
