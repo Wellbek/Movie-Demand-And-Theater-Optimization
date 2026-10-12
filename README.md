@@ -4,9 +4,7 @@ Decision support for the weekly cinema schedule: which film plays in which hall 
 The tool learns demand from purchase records and drafts next week for one venue, with reasons per cell.
 It runs **entirely offline**: open `demo.html` in any desktop browser, with no server, install, account or network.
 
-[![Walkthrough video](media/walkthrough-poster.jpg)](media/walkthrough.mp4)
-
-**[Watch the 2.5-minute walkthrough](media/walkthrough.mp4)**
+https://github.com/user-attachments/assets/e80b79be-df06-4627-9e83-36f8f78cda99
 
 > Titles, venue, halls and purchases are invented.
 > Figures illustrate the mechanism, not a forecast.
